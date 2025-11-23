@@ -860,128 +860,162 @@ return (
 
           {/* MATCH */}
           {currentQuestion.type === "matching" && (
-            <DragDropContext
-              onDragEnd={(result) => {
-                if (!result.destination || submitted || !started) return;
+  <DragDropContext
+    onDragEnd={(result) => {
+      if (!result.destination || submitted || !started) return;
 
-                const currentOrder =
-                  answers[currentQuestion.id] ??
-                  currentQuestion.rightOptions.map((_, idx) => idx);
+      const currentOrder =
+        answers[currentQuestion.id] ??
+        currentQuestion.rightOptions.map((_, idx) => idx);
 
-                const newOrder = reorder(
-                  currentOrder,
-                  result.source.index,
-                  result.destination.index
-                );
+      const newOrder = reorder(
+        currentOrder,
+        result.source.index,
+        result.destination.index
+      );
 
-                setAnswers((prev) => ({ ...prev, [currentQuestion.id]: newOrder }));
-              }}
-            >
-              <Stack direction="row" spacing={4} justifyContent="center" sx={{ width: "100%" }}>
+      setAnswers((prev) => ({ ...prev, [currentQuestion.id]: newOrder }));
+    }}
+  >
+    <Stack
+      direction="row"
+      spacing={2}
+      justifyContent="center"
+      sx={{
+        width: "100%",
+        maxWidth: "100%",
+        boxSizing: "border-box",
+        // đảm bảo không tràn ngang
+        overflowX: "hidden",
+        px: 1,
+      }}
+    >
+      {/* Cột trái: width = 50% - gap */}
+      <Stack
+        spacing={2}
+        sx={{
+          width: { xs: "calc(50% - 8px)", sm: "calc(50% - 8px)" },
+          boxSizing: "border-box",
+          // nếu danh sách dài, cuộn riêng từng cột
+          maxHeight: { xs: "60vh", sm: "none" },
+          overflowY: { xs: "auto", sm: "visible" },
+          pr: 0.5,
+        }}
+      >
+        {currentQuestion.leftOptions.map((left, i) => (
+          <Paper
+            key={i}
+            sx={{
+              width: "100%",           // chiếm toàn bộ cột
+              boxSizing: "border-box",
+              minHeight: 35,
+              py: 0.6,
+              px: 1,
 
-                {/* Cột trái */}
-                <Stack spacing={2} sx={{ flex: 1 }}>
-                  {currentQuestion.leftOptions.map((left, i) => (
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+
+              textAlign: "center",
+              bgcolor: "#fafafa",
+              border: "1px solid #90caf9",
+
+              fontSize: "0.95rem",
+              fontWeight: 400,
+              fontFamily: "Arial, Helvetica, sans-serif",
+
+              wordBreak: "break-word", // cho xuống hàng
+              whiteSpace: "normal",
+            }}
+          >
+            {left}
+          </Paper>
+        ))}
+      </Stack>
+
+      {/* Cột phải: Droppable */}
+      <Droppable droppableId="right-options">
+        {(provided) => (
+          <Stack
+            spacing={2}
+            ref={provided.innerRef}
+            {...provided.droppableProps}
+            sx={{
+              width: { xs: "calc(50% - 8px)", sm: "calc(50% - 8px)" },
+              boxSizing: "border-box",
+              maxHeight: { xs: "60vh", sm: "none" },
+              overflowY: { xs: "auto", sm: "visible" },
+              pl: 0.5,
+            }}
+          >
+            {(answers[currentQuestion.id] ??
+              currentQuestion.rightOptions.map((_, idx) => idx)
+            ).map((optIdx, pos) => {
+              const isCorrect = submitted && currentQuestion.correct[pos] === optIdx;
+
+              return (
+                <Draggable
+                  key={optIdx}
+                  draggableId={String(optIdx)}
+                  index={pos}
+                  isDragDisabled={submitted || !started}
+                >
+                  {(provided, snapshot) => (
                     <Paper
-                      key={i}
+                      ref={provided.innerRef}
+                      {...provided.draggableProps}
+                      {...provided.dragHandleProps}
                       sx={{
-                        minWidth: 240,
+                        width: "100%",        // chiếm toàn bộ cột
+                        boxSizing: "border-box",
                         minHeight: 35,
                         py: 0.6,
                         px: 1,
 
-                        // ⭐ căn giữa chữ
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
 
                         textAlign: "center",
-                        bgcolor: "#fafafa",
-                        border: "1px solid #90caf9",
 
-                        fontSize: "1rem",
+                        fontSize: "0.95rem",
                         fontWeight: 400,
                         fontFamily: "Arial, Helvetica, sans-serif",
+
+                        wordBreak: "break-word",
+                        whiteSpace: "normal",
+
+                        bgcolor:
+                          submitted && choXemDapAn
+                            ? isCorrect
+                              ? "#c8e6c9"
+                              : "#ffcdd2"
+                            : snapshot.isDragging
+                            ? "#e3f2fd"
+                            : "#fafafa",
+
+                        border: "1px solid #90caf9",
+                        cursor: submitted || !started ? "default" : "grab",
+
+                        boxShadow: snapshot.isDragging ? 3 : 1,
+                        transition: "box-shadow 0.2s ease",
                       }}
                     >
-                      {left}
+                      {currentQuestion.rightOptions[optIdx]}
                     </Paper>
-                  ))}
-                </Stack>
-
-                {/* Cột phải */}
-                <Droppable droppableId="right-options">
-                  {(provided) => (
-                    <Stack
-                      spacing={2}
-                      ref={provided.innerRef}
-                      {...provided.droppableProps}
-                      sx={{ flex: 1 }}
-                    >
-                      {(answers[currentQuestion.id] ??
-                        currentQuestion.rightOptions.map((_, idx) => idx)
-                      ).map((optIdx, pos) => {
-                        const isCorrect = submitted && currentQuestion.correct[pos] === optIdx;
-
-                        return (
-                          <Draggable
-                            key={optIdx}
-                            draggableId={String(optIdx)}
-                            index={pos}
-                            isDragDisabled={submitted || !started}
-                          >
-                            {(provided, snapshot) => (
-                              <Paper
-                                ref={provided.innerRef}
-                                {...provided.draggableProps}
-                                {...provided.dragHandleProps}
-                                sx={{
-                                  minWidth: 240,
-                                  minHeight: 35,
-                                  py: 0.6,
-                                  px: 1,
-
-                                  // ⭐ căn giữa chữ
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-
-                                  textAlign: "center",
-
-                                  fontSize: "1rem",
-                                  fontWeight: 400,
-                                  fontFamily: "Arial, Helvetica, sans-serif",
-
-                                  bgcolor:
-                                    submitted && choXemDapAn
-                                      ? isCorrect
-                                        ? "#c8e6c9"
-                                        : "#ffcdd2"
-                                      : snapshot.isDragging
-                                      ? "#e3f2fd"
-                                      : "#fafafa",
-
-                                  border: "1px solid #90caf9",
-                                  cursor: submitted || !started ? "default" : "grab",
-
-                                  boxShadow: snapshot.isDragging ? 3 : 1,
-                                  transition: "box-shadow 0.2s ease",
-                                }}
-                              >
-                                {currentQuestion.rightOptions[optIdx]}
-                              </Paper>
-                            )}
-                          </Draggable>
-                        );
-                      })}
-
-                      {provided.placeholder}
-                    </Stack>
                   )}
-                </Droppable>
-              </Stack>
-            </DragDropContext>
-          )}
+                </Draggable>
+              );
+            })}
+
+            {provided.placeholder}
+          </Stack>
+        )}
+      </Droppable>
+    </Stack>
+  </DragDropContext>
+)}
+
 
           {/* 1. Single */}
           {currentQuestion.type === "single" && (
@@ -1183,14 +1217,15 @@ return (
             </Stack>
           )}
 
-        
           {/* IMAGE MULTIPLE */}
           {currentQuestion.type === "image" && (
             <Stack
-              direction="row"
-              spacing={4} // khoảng cách giữa các ô
+              direction={{ xs: "column", sm: "row" }}
+              gap={2}
               flexWrap="wrap"
               justifyContent="center"
+              alignItems="center"
+              width="100%"
             >
               {currentQuestion.displayOrder.map((optIdx) => {
                 const userAns = answers[currentQuestion.id] || [];
@@ -1211,8 +1246,11 @@ return (
                       p: 1,
                       border: "1px solid #90caf9",
                       cursor: submitted || !started ? "default" : "pointer",
-                      width: 150,
-                      height: 150,
+
+                      // --- FIX MOBILE ---
+                      width: { xs: "100%", sm: 150 },
+                      height: { xs: "auto", sm: 150 },
+                      boxSizing: "border-box",
                     }}
                     onClick={() => {
                       if (submitted || !started) return;
@@ -1222,19 +1260,30 @@ return (
                     <img
                       src={currentQuestion.options[optIdx]}
                       alt={`option ${optIdx + 1}`}
-                      style={{ maxHeight: 80, maxWidth: "100%", objectFit: "contain", marginBottom: 4 }}
+                      style={{
+                        maxHeight: 80,
+                        maxWidth: "100%",
+                        objectFit: "contain",
+                        marginBottom: 8,
+                      }}
                     />
                     <Checkbox
                       checked={checked}
                       disabled={submitted || !started}
-                      onChange={() => handleMultipleSelect(currentQuestion.id, optIdx, !checked)}
+                      onChange={() =>
+                        handleMultipleSelect(
+                          currentQuestion.id,
+                          optIdx,
+                          !checked
+                        )
+                      }
                       sx={{
                         color: !submitted
                           ? undefined
                           : isCorrect
-                          ? "#388e3c" // hoặc có thể dùng màu xanh đậm để tương phản tốt trên nền #c8e6c9
+                          ? "#388e3c"
                           : isWrong
-                          ? "#d32f2f" // đỏ đậm để tương phản nền #ffcdd2
+                          ? "#d32f2f"
                           : undefined,
                         "&.Mui-checked": {
                           color: !submitted
@@ -1252,6 +1301,7 @@ return (
               })}
             </Stack>
           )}
+
         </>
       )}
 

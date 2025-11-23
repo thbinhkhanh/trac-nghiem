@@ -80,7 +80,18 @@ export default function TracNghiem() {
   const navigate = useNavigate();
   const [started, setStarted] = useState(false);
   const [timeLeft, setTimeLeft] = useState(0);
-  
+  const [startTime, setStartTime] = useState(null);
+  const [timeLimitMinutes, setTimeLimitMinutes] = useState(0);
+
+  const [hocKi, setHocKi] = useState("");
+  const [monHoc, setMonHoc] = useState("");
+  const [choXemDiem, setChoXemDiem] = useState(false);
+  const [choXemDapAn, setChoXemDapAn] = useState(false);
+
+  const [openResultDialog, setOpenResultDialog] = useState(false);
+  const [studentResult, setStudentResult] = useState(null);
+
+
   //const { fullname, lop, school, studentId, selectedWeek, mon } = location.state || {};
   const { fullname, lop, school } = location.state || {};
 
@@ -89,33 +100,21 @@ export default function TracNghiem() {
     class: lop,
     school: school
   };
-
-  // 🔹 Hàm xuất PDF
-  const exportQuizToPDF = async () => {
-    const input = document.getElementById("quiz-pdf");
-    const canvas = await html2canvas(input, { 
-      scale: 2,
-      backgroundColor: "#ffffff" // ép nền trắng
-    });
-    const imgData = canvas.toDataURL("image/png");
-
-    const pdf = new jsPDF("p", "mm", "a4");
-    const pdfWidth = pdf.internal.pageSize.getWidth();
-    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-
-    pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
-    pdf.save(`${studentInfo.name}_ketqua.pdf`);
-  };
-
   
   // Đồng bộ thời gian
   useEffect(() => {
     if (config?.timeLimit) setTimeLeft(config.timeLimit * 60);
   }, [config?.timeLimit]);
 
+  useEffect(() => {
+    if (started && !startTime) {
+      setStartTime(Date.now());
+    }
+  }, [started, startTime]);
+
   // Timer
   useEffect(() => {
-    if (!started || submitted) return;
+    if (!started || submitted) return; // <-- thêm !started
     if (timeLeft <= 0) {
       autoSubmit();
       return;
@@ -123,6 +122,7 @@ export default function TracNghiem() {
     const timer = setInterval(() => setTimeLeft(prev => prev - 1), 1000);
     return () => clearInterval(timer);
   }, [started, timeLeft, submitted]);
+
 
   const formatTime = (sec) => {
     const m = Math.floor(sec / 60).toString().padStart(2, "0");
@@ -147,9 +147,12 @@ export default function TracNghiem() {
 
       let docId = null;
       let collectionName = "TRACNGHIEM";
+      let hocKiFromConfig = "";
+      let monHocFromConfig = "";
+      let timeLimitMinutes = 0; // ⬅ để lưu thời gian
 
+      // 🔹 Lấy config dựa vào trường
       if (school === "TH Lâm Văn Bền") {
-        // 🔹 Lấy tên đề từ LAMVANBEN/config/deTracNghiem
         const lvbConfigRef = doc(db, "LAMVANBEN", "config");
         const lvbConfigSnap = await getDoc(lvbConfigRef);
         prog += 30;
@@ -163,28 +166,54 @@ export default function TracNghiem() {
 
         const lvbConfigData = lvbConfigSnap.data();
         docId = lvbConfigData.deTracNghiem;
+        hocKiFromConfig = lvbConfigData.hocKy || "";
+        monHocFromConfig = lvbConfigData.mon || "";
+        timeLimitMinutes = lvbConfigData.timeLimit ?? 0;      // ⬅ lấy timeLimit
+        setTimeLimitMinutes(timeLimitMinutes);                // ⬅ lưu vào state để dùng sau
+        setChoXemDiem(lvbConfigData.choXemDiem ?? false);
+        setChoXemDapAn(lvbConfigData.choXemDapAn ?? false);
+
         if (!docId) {
           setSnackbar({ open: true, message: "❌ Chưa có đề trắc nghiệm cho Lâm Văn Bền!", severity: "warning" });
           setLoading(false);
           return;
         }
+
         collectionName = "TRACNGHIEM_LVB";
       } else {
-        // 🔹 Các trường khác lấy từ CONFIG/config
         const configRef = doc(db, "CONFIG", "config");
         const configSnap = await getDoc(configRef);
         prog += 30;
         setProgress(prog);
 
-        if (!configSnap.exists()) return;
+        if (!configSnap.exists()) {
+          setSnackbar({ open: true, message: "❌ Không tìm thấy config!", severity: "error" });
+          setLoading(false);
+          return;
+        }
 
         const configData = configSnap.data();
         docId = configData.deTracNghiem;
-        if (!docId) return;
+        hocKiFromConfig = configData.hocKy || "";
+        monHocFromConfig = configData.mon || "";
+        timeLimitMinutes = configData.timeLimit ?? 0;   // ⬅ lấy timeLimit
+        setTimeLimitMinutes(timeLimitMinutes);           // ⬅ lưu vào state
+        setChoXemDiem(configData.choXemDiem ?? false);
+        setChoXemDapAn(configData.choXemDapAn ?? false);
+
+        if (!docId) {
+          setSnackbar({ open: true, message: "❌ Chưa có đề trắc nghiệm!", severity: "warning" });
+          setLoading(false);
+          return;
+        }
+
         collectionName = "TRACNGHIEM";
       }
 
-      // 🔹 Lấy dữ liệu trắc nghiệm
+      // 🔹 Set thời gian làm bài (giây)
+      setTimeLeft(timeLimitMinutes * 60);
+
+      // 🔹 Lấy dữ liệu đề
       const docRef = doc(db, collectionName, docId);
       const docSnap = await getDoc(docRef);
       prog += 30;
@@ -199,76 +228,86 @@ export default function TracNghiem() {
       const data = docSnap.data();
       setQuizClass(data.class || "");
 
-      // --- Xử lý câu hỏi như cũ ---
+      // 🔹 Lấy học kỳ và môn học từ đề nếu có, ưu tiên config
+      const hocKiFromDoc = data.semester || hocKiFromConfig;
+      const monHocFromDoc = data.subject || monHocFromConfig;
+
+      setHocKi(hocKiFromDoc);
+      setMonHoc(monHocFromDoc);
+
+      // 🔹 Lưu tạm để submit + xuất PDF
+      window.currentHocKi = hocKiFromDoc;
+      window.currentMonHoc = monHocFromDoc;
+
+      // --- Xử lý câu hỏi ---
       let saved = Array.isArray(data.questions) ? data.questions : [];
       saved = shuffleArray(saved);
 
-      const loadedQuestions = saved
-        .map((q, index) => {
-          const questionId = q.id ?? `q_${index}`;
-          const questionText = typeof q.question === "string" ? q.question.trim() : "";
-          let rawType = (q.type || "").toString().trim().toLowerCase();
-          const type = ["sort", "matching", "single", "multiple", "image", "truefalse"].includes(rawType)
-            ? rawType
-            : null;
-          if (!type) return null;
+      const loadedQuestions = saved.map((q, index) => {
+        const questionId = q.id ?? `q_${index}`;
+        const questionText = typeof q.question === "string" ? q.question.trim() : "";
+        const rawType = (q.type || "").toString().trim().toLowerCase();
+        const type = ["sort", "matching", "single", "multiple", "image", "truefalse"].includes(rawType)
+          ? rawType
+          : null;
+        if (!type) return null;
 
-          if (type === "matching") {
-            const pairs = Array.isArray(q.pairs) ? q.pairs : [];
-            if (pairs.length === 0) return null;
-            const leftOptions = pairs.map(p => p.left);
-            const rightOptionsOriginal = pairs.map((p, idx) => ({ opt: p.right, idx }));
-            const processedRightOptions = shuffleArray(rightOptionsOriginal);
-            const originalRightIndexMap = {};
-            processedRightOptions.forEach((item, newIndex) => {
-              originalRightIndexMap[item.idx] = newIndex;
-            });
-            const newCorrect = leftOptions.map((_, i) => originalRightIndexMap[i]);
-            return { ...q, id: questionId, type, question: questionText, leftOptions, rightOptions: processedRightOptions.map(i => i.opt), correct: newCorrect, score: q.score ?? 1 };
-          }
+        if (type === "matching") {
+          const pairs = Array.isArray(q.pairs) ? q.pairs : [];
+          if (pairs.length === 0) return null;
+          const leftOptions = pairs.map(p => p.left);
+          const rightOptionsOriginal = pairs.map((p, idx) => ({ opt: p.right, idx }));
+          const processedRightOptions = shuffleArray(rightOptionsOriginal);
+          const originalRightIndexMap = {};
+          processedRightOptions.forEach((item, newIndex) => {
+            originalRightIndexMap[item.idx] = newIndex;
+          });
+          const newCorrect = leftOptions.map((_, i) => originalRightIndexMap[i]);
+          return { ...q, id: questionId, type, question: questionText, leftOptions, rightOptions: processedRightOptions.map(i => i.opt), correct: newCorrect, score: q.score ?? 1 };
+        }
 
-          if (type === "sort") {
-            const options = Array.isArray(q.options) && q.options.length > 0 ? [...q.options] : ["", "", "", ""];
-            const indexed = options.map((opt, idx) => ({ opt, idx }));
-            const processed = q.sortType === "shuffle" ? shuffleArray(indexed) : indexed;
-            return { ...q, id: questionId, type, question: questionText, options, initialSortOrder: processed.map(i => i.idx), correct: options.map((_, i) => i), score: q.score ?? 1 };
-          }
+        if (type === "sort") {
+          const options = Array.isArray(q.options) && q.options.length > 0 ? [...q.options] : ["", "", "", ""];
+          const indexed = options.map((opt, idx) => ({ opt, idx }));
+          const processed = q.sortType === "shuffle" ? shuffleArray(indexed) : indexed;
+          return { ...q, id: questionId, type, question: questionText, options, initialSortOrder: processed.map(i => i.idx), correct: options.map((_, i) => i), score: q.score ?? 1 };
+        }
 
-          if (type === "single" || type === "multiple") {
-            const options = Array.isArray(q.options) && q.options.length > 0 ? q.options : ["", "", "", ""];
-            const indexed = options.map((opt, idx) => ({ opt, idx }));
-            const shouldShuffle = q.sortType === "shuffle" || q.shuffleOptions === true;
-            const shuffled = shouldShuffle ? shuffleArray(indexed) : indexed;
-            return { ...q, id: questionId, type, question: questionText, options, displayOrder: shuffled.map(i => i.idx), correct: Array.isArray(q.correct) ? q.correct.map(Number) : typeof q.correct === "number" ? [q.correct] : [], score: q.score ?? 1 };
-          }
+        if (type === "single" || type === "multiple") {
+          const options = Array.isArray(q.options) && q.options.length > 0 ? q.options : ["", "", "", ""];
+          const indexed = options.map((opt, idx) => ({ opt, idx }));
+          const shouldShuffle = q.sortType === "shuffle" || q.shuffleOptions === true;
+          const shuffled = shouldShuffle ? shuffleArray(indexed) : indexed;
+          return { ...q, id: questionId, type, question: questionText, options, displayOrder: shuffled.map(i => i.idx), correct: Array.isArray(q.correct) ? q.correct.map(Number) : typeof q.correct === "number" ? [q.correct] : [], score: q.score ?? 1 };
+        }
 
-          if (type === "image") {
-            const options = Array.isArray(q.options) && q.options.length > 0 ? q.options : ["", "", "", ""];
-            const correct = Array.isArray(q.correct) ? q.correct : [];
-            return { ...q, id: questionId, type, question: questionText, options, displayOrder: shuffleArray(options.map((_, idx) => idx)), correct, score: q.score ?? 1 };
-          }
+        if (type === "image") {
+          const options = Array.isArray(q.options) && q.options.length > 0 ? q.options : ["", "", "", ""];
+          const correct = Array.isArray(q.correct) ? q.correct : [];
+          return { ...q, id: questionId, type, question: questionText, options, displayOrder: shuffleArray(options.map((_, idx) => idx)), correct, score: q.score ?? 1 };
+        }
 
-          if (type === "truefalse") {
-            const options = Array.isArray(q.options) && q.options.length >= 2 ? q.options : ["Đúng", "Sai"];
-            const correct = Array.isArray(q.correct) && q.correct.length === options.length ? q.correct : options.map(() => "");
-            return { ...q, id: questionId, type, question: questionText, options, correct, score: q.score ?? 1 };
-          }
+        if (type === "truefalse") {
+          const options = Array.isArray(q.options) && q.options.length >= 2 ? q.options : ["Đúng", "Sai"];
+          const correct = Array.isArray(q.correct) && q.correct.length === options.length ? q.correct : options.map(() => "");
+          return { ...q, id: questionId, type, question: questionText, options, correct, score: q.score ?? 1 };
+        }
 
-          return null;
-        })
-        .filter(Boolean);
+        return null;
+      }).filter(Boolean);
 
-      // Lọc câu hợp lệ
+      // --- Lọc câu hợp lệ ---
       const validQuestions = loadedQuestions.filter(q => {
         if (q.type === "matching") return q.question.trim() !== "" && q.leftOptions.length > 0 && q.rightOptions.length > 0;
         if (q.type === "sort") return q.question.trim() !== "" && q.options.length > 0;
-        if (q.type === "single" || q.type === "multiple" || q.type === "image") return q.question.trim() !== "" && q.options.length > 0 && Array.isArray(q.correct);
+        if (["single", "multiple", "image"].includes(q.type)) return q.question.trim() !== "" && q.options.length > 0 && Array.isArray(q.correct);
         if (q.type === "truefalse") return q.question.trim() !== "" && q.options.length >= 2 && Array.isArray(q.correct);
         return false;
       });
 
       setQuestions(validQuestions);
       setProgress(100);
+      setStarted(true);
 
     } catch (err) {
       console.error("❌ Lỗi khi load câu hỏi:", err);
@@ -307,108 +346,33 @@ export default function TracNghiem() {
   const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "info" });
   const handleCloseSnackbar = (event, reason) => { if (reason === "clickaway") return; setSnackbar(prev => ({ ...prev, open: false })); };
 
-// handleSubmit
-const handleSubmit = async () => {
-  if (!studentClass || !studentName) {
-    setSnackbar({ open: true, message: "Thiếu thông tin học sinh", severity: "info" });
-    return;
-  }
-
-  // Kiểm tra câu chưa trả lời
-  const unanswered = questions.filter(q => {
-    const userAnswer = answers[q.id];
-    if (q.type === "single") {
-      return userAnswer === undefined || userAnswer === null || userAnswer === "";
+  // handleSubmit
+  const handleSubmit = async () => {
+    if (!studentClass || !studentName) {
+      setSnackbar({ open: true, message: "Thiếu thông tin học sinh", severity: "info" });
+      return;
     }
-    if (q.type === "multiple" || q.type === "image") {
-      return !Array.isArray(userAnswer) || userAnswer.length === 0;
-    }
-    if (q.type === "truefalse") {
-      return !Array.isArray(userAnswer) || userAnswer.length !== q.options.length;
-    }
-    return false;
-  });
 
-  if (unanswered.length > 0) {
-    setUnansweredQuestions(unanswered.map(q => questions.findIndex(item => item.id === q.id) + 1));
-    setOpenAlertDialog(true);
-    return;
-  }
-
-  try {
-    setSaving(true);
-
-    // Tính điểm thô
-    let total = 0;
-    questions.forEach(q => {
-      const rawAnswer = answers[q.id];
+    // Kiểm tra câu chưa trả lời
+    const unanswered = questions.filter(q => {
+      const userAnswer = answers[q.id];
       if (q.type === "single") {
-        const ua = Number(rawAnswer);
-        if (Array.isArray(q.correct) ? q.correct.includes(ua) : q.correct === ua) total += q.score ?? 1;
-      } else if (q.type === "multiple" || q.type === "image") {
-        const userSet = new Set(Array.isArray(rawAnswer) ? rawAnswer : []);
-        const correctSet = new Set(Array.isArray(q.correct) ? q.correct : [q.correct]);
-        if (userSet.size === correctSet.size && [...correctSet].every(x => userSet.has(x))) total += q.score ?? 1;
-      } else if (q.type === "sort" || q.type === "matching") {
-        const userArray = Array.isArray(rawAnswer) ? rawAnswer : [];
-        if (userArray.length > 0 && userArray.every((val, i) => val === q.correct[i])) total += q.score ?? 1;
-      } else if (q.type === "truefalse") {
-        const userArray = Array.isArray(rawAnswer) ? rawAnswer : [];
-        if (userArray.length === q.correct.length && userArray.every((val, i) => val === q.correct[i])) total += q.score ?? 1;
+        return userAnswer === undefined || userAnswer === null || userAnswer === "";
       }
+      if (q.type === "multiple" || q.type === "image") {
+        return !Array.isArray(userAnswer) || userAnswer.length === 0;
+      }
+      if (q.type === "truefalse") {
+        return !Array.isArray(userAnswer) || userAnswer.length !== q.options.length;
+      }
+      return false;
     });
 
-    setScore(total);
-    setSubmitted(true);
-
-    // ⏱ Tính thời gian làm bài
-    const durationSec = config?.timeLimit ? (config.timeLimit * 60 - timeLeft) : 0;
-    const durationStr = formatTime(durationSec);
-
-    // Xuất PDF
-    exportQuizPDF(studentInfo, quizClass, questions, answers, total, durationStr);
-
-    // Ngày theo định dạng Việt Nam
-    const ngayKiemTra = new Date().toLocaleDateString("vi-VN");
-
-    const normalizeName = (name) =>
-      name.normalize("NFD")
-          .replace(/[\u0300-\u036f]/g, "")
-          .replace(/đ/g, "d").replace(/Đ/g, "D")
-          .toLowerCase().trim()
-          .replace(/\s+/g, "_")
-          .replace(/[^a-z0-9_]/g, "");
-
-    // --- LƯU FIRESTORE ---
-    const hocKi = config?.hocKi ?? "GKI";
-    const monHoc = config?.mon ?? "Không rõ";
-    const lop = studentClass;
-    const docId = normalizeName(studentName);
-
-    const collectionRoot = school === "TH Lâm Văn Bền" ? "LAMVANBEN" : "BINHKHANH";
-
-    const docRef = doc(db, `${collectionRoot}/${hocKi}/${lop}/${docId}`);
-    await setDoc(docRef, {
-      hoVaTen: capitalizeName(studentName),
-      lop: lop,
-      mon: monHoc,
-      diem: total,
-      ngayKiemTra,
-      thoiGianLamBai: durationStr,
-    }, { merge: true });
-
-    console.log(`✔ LƯU VÀO ${collectionRoot}:`, hocKi, lop, docId);
-
-  } catch (err) {
-    console.error("❌ Lỗi khi lưu điểm:", err);
-  } finally {
-    setSaving(false);
-  }
-};
-
-
-  const autoSubmit = async () => {
-    if (!studentClass || !studentName) return;
+    if (unanswered.length > 0) {
+      setUnansweredQuestions(unanswered.map(q => questions.findIndex(item => item.id === q.id) + 1));
+      setOpenAlertDialog(true);
+      return;
+    }
 
     try {
       setSaving(true);
@@ -421,29 +385,52 @@ const handleSubmit = async () => {
         if (q.type === "single") {
           const ua = Number(rawAnswer);
           if (Array.isArray(q.correct) ? q.correct.includes(ua) : q.correct === ua) total += q.score ?? 1;
+
         } else if (q.type === "multiple" || q.type === "image") {
           const userSet = new Set(Array.isArray(rawAnswer) ? rawAnswer : []);
           const correctSet = new Set(Array.isArray(q.correct) ? q.correct : [q.correct]);
           if (userSet.size === correctSet.size && [...correctSet].every(x => userSet.has(x))) total += q.score ?? 1;
-        } else if (q.type === "sort" || q.type === "matching") {
-          const userArray = Array.isArray(rawAnswer) ? rawAnswer : [];
-          if (userArray.length > 0 && userArray.every((val, i) => val === q.correct[i])) total += q.score ?? 1;
+
+        } else if (q.type === "sort") {
+          // Nếu HS chưa tương tác, dùng initialSortOrder
+          const userArray = Array.isArray(rawAnswer) && rawAnswer.length > 0 ? rawAnswer : q.initialSortOrder;
+          if (userArray.length === q.correct.length && userArray.every((val, i) => val === q.correct[i])) {
+            total += q.score ?? 1;
+          }
+
+        } else if (q.type === "matching") {
+          // Nếu HS chưa tương tác, mặc định coi như sắp xếp đúng nếu muốn
+          const userArray = Array.isArray(rawAnswer) && rawAnswer.length > 0 ? rawAnswer : q.correct;
+          if (userArray.length === q.correct.length && userArray.every((val, i) => val === q.correct[i])) {
+            total += q.score ?? 1;
+          }
+
         } else if (q.type === "truefalse") {
           const userArray = Array.isArray(rawAnswer) ? rawAnswer : [];
           if (userArray.length === q.correct.length && userArray.every((val, i) => val === q.correct[i])) total += q.score ?? 1;
         }
       });
 
+
       setScore(total);
       setSubmitted(true);
-
-      // ⏱ Thời gian làm bài
-      const durationSec = config?.timeLimit ? (config.timeLimit * 60 - timeLeft) : 0;
+      
+      // ⏱ Tính thời gian làm bài
+      const durationSec = startTime ? Math.floor((Date.now() - startTime) / 1000) : 0;
       const durationStr = formatTime(durationSec);
-      const ngayKiemTra = new Date().toLocaleDateString("vi-VN");
 
-      // Xuất PDF
-      exportQuizPDF(studentInfo, quizClass, questions, answers, total, durationStr);
+      // Tạo biến chứa tiêu đề hiển thị
+      const hocKi = window.currentHocKi || "GKI";
+      const monHoc = window.currentMonHoc || "Không rõ";
+
+      // Tạo tiêu đề PDF
+      const quizTitle = `KTĐK${hocKi ? ` ${hocKi.toUpperCase()}` : ""}${monHoc ? ` - ${monHoc.toUpperCase()}` : ""}`;
+
+      // Gọi export PDF
+      exportQuizPDF(studentInfo, quizClass, questions, answers, total, durationStr, quizTitle);
+
+      // Ngày theo định dạng Việt Nam
+      const ngayKiemTra = new Date().toLocaleDateString("vi-VN");
 
       const normalizeName = (name) =>
         name.normalize("NFD")
@@ -453,11 +440,115 @@ const handleSubmit = async () => {
             .replace(/\s+/g, "_")
             .replace(/[^a-z0-9_]/g, "");
 
-      const hocKi = config?.hocKi ?? "GKI";
-      const monHoc = config?.mon ?? "Không rõ";
+      setStudentResult({
+        hoVaTen: capitalizeName(studentName),
+        lop: studentClass,
+        diem: total,
+      });
+      setOpenResultDialog(true);
+
+            // --- LƯU FIRESTORE ---
       const lop = studentClass;
       const docId = normalizeName(studentName);
 
+      const collectionRoot = school === "TH Lâm Văn Bền" ? "LAMVANBEN" : "BINHKHANH";
+
+      const docRef = doc(db, `${collectionRoot}/${hocKi}/${lop}/${docId}`);
+      await setDoc(docRef, {
+        hoVaTen: capitalizeName(studentName),
+        lop: lop,
+        mon: monHoc,
+        diem: total,
+        ngayKiemTra,
+        thoiGianLamBai: durationStr,
+      }, { merge: true });
+
+      console.log(`✔ LƯU VÀO ${collectionRoot}:`, hocKi, lop, docId);
+
+    } catch (err) {
+      console.error("❌ Lỗi khi lưu điểm:", err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const autoSubmit = async () => {
+    if (!studentClass || !studentName) return;
+
+    try {
+      setSaving(true);
+
+      // --- Tính điểm thô ---
+      let total = 0;
+      questions.forEach(q => {
+        const rawAnswer = answers[q.id];
+
+        if (q.type === "single") {
+          const ua = Number(rawAnswer);
+          if (Array.isArray(q.correct) ? q.correct.includes(ua) : q.correct === ua) total += q.score ?? 1;
+
+        } else if (q.type === "multiple" || q.type === "image") {
+          const userSet = new Set(Array.isArray(rawAnswer) ? rawAnswer : []);
+          const correctSet = new Set(Array.isArray(q.correct) ? q.correct : [q.correct]);
+          if (userSet.size === correctSet.size && [...correctSet].every(x => userSet.has(x))) total += q.score ?? 1;
+
+        } else if (q.type === "sort") {
+          // Nếu HS chưa tương tác, dùng initialSortOrder
+          const userArray = Array.isArray(rawAnswer) && rawAnswer.length > 0 ? rawAnswer : q.initialSortOrder;
+          if (userArray.length === q.correct.length && userArray.every((val, i) => val === q.correct[i])) {
+            total += q.score ?? 1;
+          }
+
+        } else if (q.type === "matching") {
+          // Nếu HS chưa tương tác, mặc định coi như sắp xếp đúng nếu muốn
+          const userArray = Array.isArray(rawAnswer) && rawAnswer.length > 0 ? rawAnswer : q.correct;
+          if (userArray.length === q.correct.length && userArray.every((val, i) => val === q.correct[i])) {
+            total += q.score ?? 1;
+          }
+
+        } else if (q.type === "truefalse") {
+          const userArray = Array.isArray(rawAnswer) ? rawAnswer : [];
+          if (userArray.length === q.correct.length && userArray.every((val, i) => val === q.correct[i])) total += q.score ?? 1;
+        }
+      });
+
+
+      // --- Hiển thị điểm ngay ---
+      setScore(total);
+      setSubmitted(true);
+
+      // --- Lấy trực tiếp thời gian từ fetchQuestions ---
+      const durationSec = timeLimitMinutes > 0 ? timeLimitMinutes * 60 : 0;
+      const durationStr = formatTime(durationSec);
+
+      const hocKi = window.currentHocKi || "GKI";
+      const monHoc = window.currentMonHoc || "Không rõ";
+
+      // --- Tạo tiêu đề PDF ---
+      const quizTitle = `KTĐK${hocKi ? ` ${hocKi.toUpperCase()}` : ""}${monHoc ? ` - ${monHoc.toUpperCase()}` : ""}`;
+      const ngayKiemTra = new Date().toLocaleDateString("vi-VN");
+
+      exportQuizPDF(studentInfo, quizClass, questions, answers, total, durationStr, quizTitle);
+
+      // --- Lưu kết quả vào state để hiển thị dialog ---
+      setStudentResult({
+        hoVaTen: capitalizeName(studentName),
+        lop: studentClass,
+        diem: total,
+      });
+      setOpenResultDialog(true);
+
+      // --- Lưu Firestore ---
+      const normalizeName = (name) =>
+        name.normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/đ/g, "d").replace(/Đ/g, "D")
+            .toLowerCase().trim()
+            .replace(/\s+/g, "_")
+            .replace(/[^a-z0-9_]/g, "");
+
+      const lop = studentClass;
+      const docId = normalizeName(studentName);
       const collectionRoot = school === "TH Lâm Văn Bền" ? "LAMVANBEN" : "BINHKHANH";
 
       const docRef = doc(db, `${collectionRoot}/${hocKi}/${lop}/${docId}`);
@@ -478,7 +569,6 @@ const handleSubmit = async () => {
       setSaving(false);
     }
   };
-
 
 
 
@@ -611,7 +701,9 @@ return (
         fontWeight="bold"
         sx={{ color: "#1976d2", mb: { xs: 1, sm: -1 }, textAlign: "center" }}
       >
-        KIỂM TRA ĐỊNH KÌ {quizClass ? ` - ${quizClass.toUpperCase()}` : ""}
+        {!loading && hocKi && monHoc
+          ? `KTĐK ${hocKi.toUpperCase()} - ${monHoc.toUpperCase()}`
+          : "TRẮC NGHIỆM"}
       </Typography>
 
       {/* Đồng hồ với vị trí cố định */}
@@ -683,47 +775,82 @@ return (
             <DragDropContext
               onDragEnd={(result) => {
                 if (!result.destination || submitted || !started) return;
+
                 const currentOrder =
-                  answers[currentQuestion.id] ?? currentQuestion.options.map((_, idx) => idx);
-                const newOrder = reorder(currentOrder, result.source.index, result.destination.index);
+                  answers[currentQuestion.id] ??
+                  currentQuestion.options.map((_, idx) => idx);
+
+                const newOrder = reorder(
+                  currentOrder,
+                  result.source.index,
+                  result.destination.index
+                );
+
                 setAnswers((prev) => ({ ...prev, [currentQuestion.id]: newOrder }));
               }}
             >
               <Droppable droppableId="sort-options">
                 {(provided) => (
-                  <Stack {...provided.droppableProps} ref={provided.innerRef} spacing={1.5}>
-                    {(answers[currentQuestion.id] ?? currentQuestion.initialSortOrder).map((optIdx, pos) => {
-                      const isCorrect = submitted && currentQuestion.correct[pos] === optIdx;
-                      return (
-                        <Draggable key={optIdx} draggableId={String(optIdx)} index={pos} isDragDisabled={submitted || !started}>
-                          {(provided, snapshot) => (
-                            <Box
-                              ref={provided.innerRef}
-                              {...provided.draggableProps}
-                              {...provided.dragHandleProps}
-                              sx={{
-                                p: 1.5,
-                                borderRadius: 1,
-                                bgcolor: submitted
-                                  ? isCorrect
-                                    ? "#c8e6c9"
-                                    : "#ffcdd2"
-                                  : snapshot.isDragging
-                                  ? "#e3f2fd"
-                                  : "#fafafa",
-                                border: "1px solid #90caf9",
-                                cursor: submitted || !started ? "default" : "grab",
-                                boxShadow: snapshot.isDragging ? 2 : 0,
-                              }}
-                            >
-                              <Typography variant="body1" fontWeight="400">
-                                {currentQuestion.options[optIdx]}
-                              </Typography>
-                            </Box>
-                          )}
-                        </Draggable>
-                      );
-                    })}
+                  <Stack
+                    {...provided.droppableProps}
+                    ref={provided.innerRef}
+                    spacing={2}
+                  >
+                    {(answers[currentQuestion.id] ?? currentQuestion.initialSortOrder).map(
+                      (optIdx, pos) => {
+                        const isCorrect =
+                          submitted && currentQuestion.correct[pos] === optIdx;
+
+                        return (
+                          <Draggable
+                            key={optIdx}
+                            draggableId={String(optIdx)}
+                            index={pos}
+                            isDragDisabled={submitted || !started}
+                          >
+                            {(provided, snapshot) => (
+                              <Box
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                {...provided.dragHandleProps}
+                                sx={{
+                                  borderRadius: 1,
+
+                                  // ⭐ MÀU SẮC KHI NỘP BÀI + KHI ĐANG DRAG
+                                  bgcolor:
+                                    submitted && choXemDapAn
+                                      ? isCorrect
+                                        ? "#c8e6c9"
+                                        : "#ffcdd2"
+                                      : snapshot.isDragging
+                                      ? "#e3f2fd"
+                                      : "#fafafa",
+
+                                  border: "1px solid #90caf9",
+                                  cursor:
+                                    submitted || !started ? "default" : "grab",
+
+                                  // ⭐ ĐỔ BÓNG
+                                  boxShadow: snapshot.isDragging ? 3 : 1,
+                                  transition: "box-shadow 0.2s ease",
+
+                                  // ⭐ CHIỀU CAO GIỐNG SINGLE / MULTIPLE
+                                  minHeight: 35,
+                                  py: 0.75,
+                                  px: 1,
+                                  display: "flex",
+                                  alignItems: "center",
+                                }}
+                              >
+                                <Typography variant="body1" fontWeight="400" sx={{ userSelect: "none" }}>
+                                  {currentQuestion.options[optIdx]}
+                                </Typography>
+                              </Box>
+                            )}
+                          </Draggable>
+                        );
+                      }
+                    )}
                     {provided.placeholder}
                   </Stack>
                 )}
@@ -736,24 +863,42 @@ return (
             <DragDropContext
               onDragEnd={(result) => {
                 if (!result.destination || submitted || !started) return;
+
                 const currentOrder =
-                  answers[currentQuestion.id] ?? currentQuestion.rightOptions.map((_, idx) => idx);
-                const newOrder = reorder(currentOrder, result.source.index, result.destination.index);
+                  answers[currentQuestion.id] ??
+                  currentQuestion.rightOptions.map((_, idx) => idx);
+
+                const newOrder = reorder(
+                  currentOrder,
+                  result.source.index,
+                  result.destination.index
+                );
+
                 setAnswers((prev) => ({ ...prev, [currentQuestion.id]: newOrder }));
               }}
             >
               <Stack direction="row" spacing={4} justifyContent="center" sx={{ width: "100%" }}>
-                {/* Cột trái: câu hỏi ghép đôi */}
+
+                {/* Cột trái */}
                 <Stack spacing={2} sx={{ flex: 1 }}>
                   {currentQuestion.leftOptions.map((left, i) => (
                     <Paper
                       key={i}
                       sx={{
-                        p: 1.5,
                         minWidth: 240,
+                        minHeight: 35,
+                        py: 0.6,
+                        px: 1,
+
+                        // ⭐ căn giữa chữ
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+
                         textAlign: "center",
                         bgcolor: "#fafafa",
                         border: "1px solid #90caf9",
+
                         fontSize: "1rem",
                         fontWeight: 400,
                         fontFamily: "Arial, Helvetica, sans-serif",
@@ -764,50 +909,72 @@ return (
                   ))}
                 </Stack>
 
-                {/* Cột phải: đáp án kéo thả */}
+                {/* Cột phải */}
                 <Droppable droppableId="right-options">
                   {(provided) => (
-                    <Stack spacing={2} ref={provided.innerRef} {...provided.droppableProps} sx={{ flex: 1 }}>
-                      {(answers[currentQuestion.id] ?? currentQuestion.rightOptions.map((_, idx) => idx)).map(
-                        (optIdx, pos) => {
-                          const isCorrect = submitted && currentQuestion.correct[pos] === optIdx;
-                          return (
-                            <Draggable
-                              key={optIdx}
-                              draggableId={String(optIdx)}
-                              index={pos}
-                              isDragDisabled={submitted || !started}
-                            >
-                              {(provided, snapshot) => (
-                                <Paper
-                                  ref={provided.innerRef}
-                                  {...provided.draggableProps}
-                                  {...provided.dragHandleProps}
-                                  sx={{
-                                    p: 1.5,
-                                    minWidth: 240,
-                                    textAlign: "center",
-                                    fontSize: "1rem",
-                                    fontWeight: 400,
-                                    fontFamily: "Arial, Helvetica, sans-serif",
-                                    bgcolor: submitted
+                    <Stack
+                      spacing={2}
+                      ref={provided.innerRef}
+                      {...provided.droppableProps}
+                      sx={{ flex: 1 }}
+                    >
+                      {(answers[currentQuestion.id] ??
+                        currentQuestion.rightOptions.map((_, idx) => idx)
+                      ).map((optIdx, pos) => {
+                        const isCorrect = submitted && currentQuestion.correct[pos] === optIdx;
+
+                        return (
+                          <Draggable
+                            key={optIdx}
+                            draggableId={String(optIdx)}
+                            index={pos}
+                            isDragDisabled={submitted || !started}
+                          >
+                            {(provided, snapshot) => (
+                              <Paper
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                {...provided.dragHandleProps}
+                                sx={{
+                                  minWidth: 240,
+                                  minHeight: 35,
+                                  py: 0.6,
+                                  px: 1,
+
+                                  // ⭐ căn giữa chữ
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+
+                                  textAlign: "center",
+
+                                  fontSize: "1rem",
+                                  fontWeight: 400,
+                                  fontFamily: "Arial, Helvetica, sans-serif",
+
+                                  bgcolor:
+                                    submitted && choXemDapAn
                                       ? isCorrect
                                         ? "#c8e6c9"
                                         : "#ffcdd2"
                                       : snapshot.isDragging
                                       ? "#e3f2fd"
                                       : "#fafafa",
-                                    border: "1px solid #90caf9",
-                                    cursor: submitted || !started ? "default" : "grab",
-                                  }}
-                                >
-                                  {currentQuestion.rightOptions[optIdx]}
-                                </Paper>
-                              )}
-                            </Draggable>
-                          );
-                        }
-                      )}
+
+                                  border: "1px solid #90caf9",
+                                  cursor: submitted || !started ? "default" : "grab",
+
+                                  boxShadow: snapshot.isDragging ? 3 : 1,
+                                  transition: "box-shadow 0.2s ease",
+                                }}
+                              >
+                                {currentQuestion.rightOptions[optIdx]}
+                              </Paper>
+                            )}
+                          </Draggable>
+                        );
+                      })}
+
                       {provided.placeholder}
                     </Stack>
                   )}
@@ -829,34 +996,46 @@ return (
                 const isCorrect = submitted && correctArray.includes(optIdx);
                 const isWrong = submitted && selected && !correctArray.includes(optIdx);
 
+                const handleSelect = () => {
+                  if (submitted || !started) return;
+                  handleSingleSelect(currentQuestion.id, optIdx);
+                };
+
                 return (
                   <Paper
                     key={optIdx}
+                    onClick={handleSelect}
                     sx={{
                       display: "flex",
                       alignItems: "center",
                       borderRadius: 1,
-                      bgcolor: submitted
-                        ? isCorrect
-                          ? "#c8e6c9"
-                          : isWrong
-                          ? "#ffcdd2"
-                          : "#fafafa"
-                        : "#fafafa",
+                      cursor: submitted || !started ? "default" : "pointer",
+
+                      // ⭐ màu nền khi nộp
+                      bgcolor:
+                        submitted && choXemDapAn
+                          ? isCorrect
+                            ? "#c8e6c9"
+                            : isWrong
+                            ? "#ffcdd2"
+                            : "#fafafa"
+                          : "#fafafa",
+
                       border: "1px solid #90caf9",
-                      minHeight: 30,
+
+                      // ⭐ CHIỀU CAO GIỐNG SORT
+                      minHeight: 30,   // tương đương p:1.5 của sort
+                      py: 0.3,
+                      px: 1,
                     }}
                   >
                     <Radio
                       checked={selected}
-                      onChange={() => {
-                        if (submitted || !started) return;
-                        // Lưu index gốc của option
-                        handleSingleSelect(currentQuestion.id, optIdx);
-                      }}
+                      onChange={handleSelect}
                       sx={{ mr: 1 }}
                     />
-                    <Typography variant="body1">
+
+                    <Typography variant="body1" sx={{ userSelect: "none" }}>
                       {currentQuestion.options[optIdx]}
                     </Typography>
                   </Paper>
@@ -872,37 +1051,50 @@ return (
                 const userAns = answers[currentQuestion.id] || [];
                 const checked = userAns.includes(optIdx);
 
-                const isCorrect = submitted && currentQuestion.correct.includes(optIdx);
-                const isWrong = submitted && checked && !currentQuestion.correct.includes(optIdx);
+                const isCorrect =
+                  submitted && currentQuestion.correct.includes(optIdx);
+                const isWrong =
+                  submitted && checked && !currentQuestion.correct.includes(optIdx);
+
+                const handleSelect = () => {
+                  if (submitted || !started) return;
+                  handleMultipleSelect(currentQuestion.id, optIdx, !checked);
+                };
 
                 return (
                   <Paper
                     key={optIdx}
+                    onClick={handleSelect}
                     sx={{
                       display: "flex",
                       alignItems: "center",
                       borderRadius: 1,
-                      bgcolor: submitted
-                        ? isCorrect
-                          ? "#c8e6c9"
-                          : isWrong
-                          ? "#ffcdd2"
-                          : "#fafafa"
-                        : "#fafafa",
+                      cursor: submitted || !started ? "default" : "pointer",
+
+                      bgcolor:
+                        submitted && choXemDapAn
+                          ? isCorrect
+                            ? "#c8e6c9"
+                            : isWrong
+                            ? "#ffcdd2"
+                            : "#fafafa"
+                          : "#fafafa",
+
                       border: "1px solid #90caf9",
+
+                      // ⭐ CHIỀU CAO GIỐNG SORT
                       minHeight: 30,
+                      py: 0.3,
+                      px: 1,
                     }}
                   >
                     <Checkbox
                       checked={checked}
-                      onChange={() => {
-                        if (submitted || !started) return;
-                        // Lưu index gốc của option
-                        handleMultipleSelect(currentQuestion.id, optIdx, !checked);
-                      }}
+                      onChange={handleSelect}
                       sx={{ mr: 1 }}
                     />
-                    <Typography variant="body1">
+
+                    <Typography variant="body1" sx={{ userSelect: "none" }}>
                       {currentQuestion.options[optIdx]}
                     </Typography>
                   </Paper>
@@ -913,76 +1105,84 @@ return (
 
           {/* TRUE / FALSE */}
           {currentQuestion.type === "truefalse" && (
-          <Stack spacing={2}>
-            {currentQuestion.options.map((opt, i) => {
+            <Stack spacing={2}>
+              {currentQuestion.options.map((opt, i) => {
+                const userAns = answers[currentQuestion.id] || [];
+                const selected = userAns[i] ?? "";
 
-              const userAns = answers[currentQuestion.id] || [];
-              const selected = userAns[i] ?? "";
+                const correctArray = Array.isArray(currentQuestion.correct)
+                  ? currentQuestion.correct
+                  : [];
 
-              const correctArray = Array.isArray(currentQuestion.correct)
-                ? currentQuestion.correct
-                : [];
+                const correctVal = correctArray[i] ?? "";
 
-              const correctVal = correctArray[i] ?? "";
+                const isCorrect = submitted && selected !== "" && selected === correctVal;
+                const isWrong   = submitted && selected !== "" && selected !== correctVal;
 
-              const isCorrect = submitted && selected !== "" && selected === correctVal;
-              const isWrong   = submitted && selected !== "" && selected !== correctVal;
+                return (
+                  <Paper
+                    key={i}
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
 
-              return (
-                <Paper
-                  key={i}
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    borderRadius: 1,
-                    p: "3px 0", // padding top/bottom 3px
-                    bgcolor: submitted
-                      ? isCorrect
-                        ? "#c8e6c9"
-                        : isWrong
-                        ? "#ffcdd2"
-                        : "#fafafa"
-                      : "#fafafa",
-                    border: "1px solid #90caf9",
-                  }}
-                >
-                  {/* Text cách trái 10px */}
-                  <Typography
-                    variant="body1"
-                    sx={{ pl: "10px" }}
+                      // ⭐ ÁP DỤNG CHIỀU CAO ĐỒNG NHẤT
+                      minHeight: 30,
+                      py: 0.4,
+                      px: 1,
+
+                      borderRadius: 1,
+                      bgcolor:
+                        submitted && choXemDapAn
+                          ? isCorrect
+                            ? "#c8e6c9"
+                            : isWrong
+                            ? "#ffcdd2"
+                            : "#fafafa"
+                          : "#fafafa",
+                      border: "1px solid #90caf9",
+                    }}
                   >
-                    {opt}
-                  </Typography>
-
-                  {/* Gap giữa text và Select */}
-                  <FormControl size="small" sx={{ width: 90, mr: "3px" }}>
-                    <Select
-                      value={selected}
-                      onChange={(e) => {
-                        if (submitted || !started) return;
-
-                        const val = e.target.value; // "Đ" | "S"
-
-                        setAnswers((prev) => {
-                          const arr = Array.isArray(prev[currentQuestion.id])
-                            ? [...prev[currentQuestion.id]]
-                            : Array(currentQuestion.options.length).fill("");
-
-                          arr[i] = val;
-                          return { ...prev, [currentQuestion.id]: arr };
-                        });
+                    {/* Text bên trái */}
+                    <Typography
+                      variant="body1"
+                      sx={{
+                        userSelect: "none",
                       }}
                     >
-                      <MenuItem value="Đ">Đúng</MenuItem>
-                      <MenuItem value="S">Sai</MenuItem>
-                    </Select>
-                  </FormControl>
-                </Paper>
-              );
-            })}
-          </Stack>
-        )}
+                      {opt}
+                    </Typography>
+
+                    {/* Select bên phải */}
+                    <FormControl size="small" sx={{ width: 90 }}>
+                      <Select
+                        value={selected}
+                        onChange={(e) => {
+                          if (submitted || !started) return;
+
+                          const val = e.target.value; // "Đ" | "S"
+
+                          setAnswers((prev) => {
+                            const arr = Array.isArray(prev[currentQuestion.id])
+                              ? [...prev[currentQuestion.id]]
+                              : Array(currentQuestion.options.length).fill("");
+
+                            arr[i] = val;
+                            return { ...prev, [currentQuestion.id]: arr };
+                          });
+                        }}
+                      >
+                        <MenuItem value="Đ">Đúng</MenuItem>
+                        <MenuItem value="S">Sai</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Paper>
+                );
+              })}
+            </Stack>
+          )}
+
         
           {/* IMAGE MULTIPLE */}
           {currentQuestion.type === "image" && (
@@ -1057,7 +1257,7 @@ return (
 
       {/* Nút điều hướng và bắt đầu/nộp bài */}
       <Stack direction="column" sx={{ width: "100%", mt: 3 }} spacing={0}>
-        {!started && !loading ? (
+        {/*{!started && !loading ? (
           <Box sx={{ width: "100%", display: "flex", justifyContent: "center" }}>
             <Button
               variant="contained"
@@ -1068,7 +1268,7 @@ return (
               Bắt đầu
             </Button>
           </Box>
-        ) : null}
+        ) : null}*/}
 
         {started && !loading && (
           <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ width: "100%" }}>
@@ -1087,34 +1287,6 @@ return (
             >
               Câu trước
             </Button>
-
-            {!loading && submitted && (
-              <Typography
-                variant="h6"
-                sx={{
-                  fontWeight: "bold",
-                  color: "#1976d2",
-                  textAlign: "center",
-                  bgcolor: "#e3f2fd",
-                  px: 3,
-                  py: 1,
-                  borderRadius: 2,
-                  boxShadow: 1,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 1,
-                  fontSize: { xs: "1rem", sm: "1.2rem" },
-                }}
-              >
-                {score >= questions.reduce((sum, q) => sum + (q.score ?? 1), 0) / 2 ? (
-                  <CheckCircleIcon sx={{ color: "#4caf50" }} />
-                ) : (
-                  <HighlightOffIcon sx={{ color: "#f44336" }} />
-                )}
-                Điểm của bạn: {score} / {questions.reduce((sum, q) => sum + (q.score ?? 1), 0)}
-              </Typography>
-            )}
-
 
             {currentIndex < questions.length - 1 ? (
               <Button
@@ -1265,6 +1437,97 @@ return (
           Thoát
         </Button>
       </DialogActions>
+    </Dialog>
+
+    <Dialog
+      open={openResultDialog}
+      onClose={(event, reason) => {
+        if (reason === "backdropClick" || reason === "escapeKeyDown") return;
+        setOpenResultDialog(false);
+      }}
+      disableEscapeKeyDown
+      maxWidth="xs"
+      fullWidth
+      PaperProps={{
+        sx: {
+          borderRadius: 2,
+          overflow: "hidden",
+          bgcolor: "#e3f2fd",
+          boxShadow: 6,
+        },
+      }}
+    >
+
+      {/* Thanh tiêu đề */}
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          bgcolor: "#1976d2",
+          color: "#fff",
+          px: 2,
+          py: 1.2,
+        }}
+      >
+        <Typography
+          variant="subtitle1"
+          sx={{ fontWeight: "bold", fontSize: "1.1rem", letterSpacing: 0.5 }}
+        >
+          KẾT QUẢ
+        </Typography>
+
+        <IconButton
+          onClick={() => setOpenResultDialog(false)}
+          sx={{ color: "#fff", p: 0.6 }}
+        >
+          <CloseIcon fontSize="small" />
+        </IconButton>
+      </Box>
+
+      {/* Nội dung */}
+      <DialogContent sx={{ mt: 1 }}>
+        <Stack spacing={2} sx={{ pl: 2.5 }}>
+          
+          {/* Họ và tên */}
+          <Typography sx={{ fontSize: "1.15rem" }}>
+            Họ và tên:&nbsp;
+            <span style={{ fontWeight: 600 }}>
+              {studentResult?.hoVaTen?.toUpperCase()}
+            </span>
+          </Typography>
+
+          {/* Lớp */}
+          <Typography sx={{ fontSize: "1.15rem" }}>
+            Lớp:&nbsp;
+            <span style={{ fontWeight: 600 }}>
+              {studentResult?.lop}
+            </span>
+          </Typography>
+
+          {/* Nếu được xem điểm */}
+          {choXemDiem ? (
+            <Typography sx={{ fontSize: "1.15rem", mb: 1 }}>
+              Điểm:&nbsp;
+              <span style={{ fontWeight: 700, color: "red" }}>
+                {studentResult?.diem}
+              </span>
+            </Typography>
+          ) : (
+            <Typography
+                sx={{
+                  fontSize: "1.15rem",
+                  mb: 2,
+                  textAlign: "center",     // căn giữa
+                  fontWeight: 700,
+                  color: "red"
+                }}
+              >
+                ĐÃ HOÀN THÀNH BÀI KIỂM TRA
+              </Typography>
+          )}
+        </Stack>
+      </DialogContent>
     </Dialog>
 
     {/* Snackbar */}
