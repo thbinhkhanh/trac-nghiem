@@ -14,7 +14,8 @@ export const ConfigProvider = ({ children }) => {
     tracNghiem: false,
     deTracNghiem: "",
     timeLimit: 1, 
-    choXemDiem: false,      
+    choXemDiem: false,  
+    choXemDapAn: false,     
     xuatFileBaiLam: false,  
   };
 

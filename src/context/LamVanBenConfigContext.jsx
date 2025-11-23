@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect, useContext } from "react";
+import React, { createContext, useState, useEffect } from "react";
 import { doc, getDoc, onSnapshot, setDoc } from "firebase/firestore";
 import { db } from "../firebase";
 
@@ -18,27 +18,41 @@ export const LamVanBenConfigProvider = ({ children }) => {
 
   const [config, setConfigState] = useState(defaultConfig);
 
-  // 🔹 Lấy config từ Firestore
+  // 🔹 Lấy config từ Firestore ngay khi tải + realtime
   useEffect(() => {
     const docRef = doc(db, "LAMVANBEN", "config");
-    const unsubscribe = onSnapshot(docRef, snapshot => {
+
+    // Lấy dữ liệu ban đầu
+    getDoc(docRef).then((snap) => {
+      if (snap.exists()) {
+        setConfigState((prev) => ({ ...prev, ...snap.data() }));
+      }
+    });
+
+    // Lắng nghe realtime
+    const unsubscribe = onSnapshot(docRef, (snapshot) => {
       if (!snapshot.exists()) return;
-      setConfigState(prev => ({ ...prev, ...snapshot.data() }));
+      setConfigState((prev) => ({ ...prev, ...snapshot.data() }));
     });
 
     return () => unsubscribe();
   }, []);
 
   // 🔹 Hàm update config và lưu Firestore
-  const setConfig = async (newConfig) => {
-    setConfigState(prev => ({ ...prev, ...newConfig }));
-    try {
+  const setConfig = async (newConfigOrUpdater) => {
+    setConfigState((prev) => {
+      const newConfig =
+        typeof newConfigOrUpdater === "function"
+          ? newConfigOrUpdater(prev)
+          : { ...prev, ...newConfigOrUpdater };
+
       const docRef = doc(db, "LAMVANBEN", "config");
-      await setDoc(docRef, newConfig, { merge: true });
-      console.log("✅ LAMVANBEN/config updated:", newConfig);
-    } catch (err) {
-      console.error("❌ Lỗi lưu LamVanBen config:", err);
-    }
+      setDoc(docRef, newConfig, { merge: true })
+        .then(() => console.log("✅ LAMVANBEN/config updated:", newConfig))
+        .catch((err) => console.error("❌ Lỗi lưu LamVanBen config:", err));
+
+      return newConfig; // cập nhật UI ngay
+    });
   };
 
   return (

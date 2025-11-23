@@ -22,68 +22,77 @@ const convertPercentToScore = (percent) => {
   return Math.ceil(raw);
 };
 
-export const exportQuizPDF = async (studentInfo, quizClass, questions, answers, total, durationStr) => {
+const capitalizeName = (name) => {
+  if (!name) return "";
+  return name
+    .trim()
+    .toLowerCase()
+    .split(/\s+/)           // tách theo khoảng trắng
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+};
+
+export const exportQuizPDF = async (studentInfo, quizClass, questions, answers, total, durationStr, quizTitle ) => {                  
   const pdf = new jsPDF("p", "mm", "a4");
   const margin = 15;
-   const lineHeight = 7;
+  const lineHeight = 7;
   const lineSpacing = lineHeight * 1.5;
   let y = margin;
 
   pdf.setFont("DejaVuSans", "normal");
 
   // ===== HEADER (khung bảng 2 cột) =====
-    pdf.setFontSize(12);
-    pdf.setDrawColor(0);
-    pdf.setLineWidth(0.5);
+  pdf.setFontSize(12);
+  pdf.setDrawColor(0);
+  pdf.setLineWidth(0.5);
 
-    const boxHeight = lineSpacing * 3.5;
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    pdf.rect(margin, y, pageWidth - 2*margin, boxHeight);
+  const boxHeight = lineSpacing * 4; // tăng chút để thêm trường
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  pdf.rect(margin, y, pageWidth - 2 * margin, boxHeight);
 
-    // Nội dung cột trái (xanh dương)
-    pdf.setTextColor(0, 0, 255);
-    pdf.text(`Họ tên: ${studentInfo.name}`, margin + 5, y + lineSpacing);
-    pdf.text(`Lớp: ${studentInfo.class}`, margin + 5, y + lineSpacing * 2);
+  // Nội dung cột trái (xanh dương)
+  pdf.setTextColor(0, 0, 255);
 
-    // Tính điểm thang 10
-    const maxScore = questions.reduce((sum, q) => sum + (q.score ?? 1), 0);
-    const percent = maxScore > 0 ? (total / maxScore) * 100 : 0;
-    const score10 = convertPercentToScore(percent);
+  // Thêm trường
+  if (studentInfo.school) {
+    pdf.text(`Trường: ${studentInfo.school}`, margin + 5, y + lineSpacing);
+  }
 
-    // Nội dung cột phải
-    // Ngày kiểm tra (xanh dương)
-    // Lấy thời gian hiện tại theo giờ Việt Nam
-    const currentDate = new Date();
+  pdf.text(`Họ tên: ${capitalizeName(studentInfo.name)}`, margin + 5, y + lineSpacing * 2);
+  pdf.text(`Lớp: ${studentInfo.class}`, margin + 5, y + lineSpacing * 3);
 
-    // Tách riêng ngày và giờ
-    const datePart = currentDate.toLocaleDateString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" });
-    const timePart = currentDate.toLocaleTimeString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh", hour: "2-digit", minute: "2-digit" });
+  // Tính điểm thang 10
+  const maxScore = questions.reduce((sum, q) => sum + (q.score ?? 1), 0);
+  const percent = maxScore > 0 ? (total / maxScore) * 100 : 0;
 
-    // Ghép lại theo thứ tự Ngày trước, Giờ sau
-    const vnTime = `${datePart} ${timePart}`;
+  // Nội dung cột phải
+  const currentDate = new Date();
+  const datePart = currentDate.toLocaleDateString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" });
+  const timePart = currentDate.toLocaleTimeString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh", hour: "2-digit", minute: "2-digit" });
+  const vnTime = `${datePart} ${timePart}`;
 
-    // In ra PDF
-    pdf.text(`Ngày: ${vnTime}`, pageWidth/2 + 10, y + lineSpacing);
+  pdf.text(`Ngày: ${vnTime}`, pageWidth / 2 + 10, y + lineSpacing);
+  if (durationStr) {
+    pdf.text(`Thời gian: ${durationStr}`, pageWidth / 2 + 10, y + lineSpacing * 2);
+  }
+  pdf.setTextColor(255, 0, 0);
+  pdf.text(`Kết quả: ${total} điểm`, pageWidth / 2 + 10, y + lineSpacing * 3);
 
-    // In ra PDF
-    pdf.text(`Ngày: ${vnTime}`, pageWidth/2 + 10, y + lineSpacing);
+  // Tiêu đề căn giữa dưới khung
+  pdf.setFontSize(16);
+  pdf.setTextColor(0, 0, 255);
 
-    // Thời gian làm bài (xanh dương)
-    if (durationStr) {
-    pdf.text(`Thời gian: ${durationStr}`, pageWidth/2 + 10, y + lineSpacing * 2);
-    }
+  const titleY = y + boxHeight + lineSpacing;
+  // Tiêu đề PDF mới
+  pdf.text(
+    quizTitle,
+    pageWidth / 2,
+    titleY,
+    { align: "center" }
+  );
 
-    // Kết quả kiểm tra (màu đỏ, cuối cùng)
-    pdf.setTextColor(255, 0, 0);
-    pdf.text(`Kết quả: ${score10} điểm`, pageWidth/2 + 10, y + lineSpacing * 3);
-
-    // Tiêu đề căn giữa dưới khung
-    pdf.setFontSize(16);
-    pdf.setTextColor(0, 0, 255);
-    pdf.text(`LUYỆN TẬP - ${quizClass.toUpperCase()}`, pageWidth / 2, y + boxHeight + lineSpacing, { align: "center" });
-
-    pdf.setTextColor(0, 0, 0);
-    y += boxHeight + lineSpacing * 2;
+  pdf.setTextColor(0, 0, 0);
+  y += boxHeight + lineSpacing * 2;
 
   // ===== NỘI DUNG CÂU HỎI =====
   pdf.setFontSize(12);
@@ -246,9 +255,8 @@ export const exportQuizPDF = async (studentInfo, quizClass, questions, answers, 
   }
 
   // ===== LƯU FILE =====
-const safeName = studentInfo.name.replace(/\s+/g, "_");
 
-// Tạo mã số duy nhất từ thời gian (hhmmssms)
+  // Tạo mã số duy nhất từ thời gian (hhmmssms)
 const now = new Date();
 const hh = String(now.getHours()).padStart(2, "0");
 const mm = String(now.getMinutes()).padStart(2, "0");
@@ -257,6 +265,7 @@ const ms = String(now.getMilliseconds()).padStart(3, "0");
 const code = `${hh}${mm}${ss}${ms}`;
 
 // Ghép tên file: Lớp_HọTên_Code.pdf
+const safeName = capitalizeName(studentInfo.name).replace(/\s+/g, "_");
 const fileName = `${studentInfo.class}_${safeName}_${code}.pdf`;
 
 pdf.save(fileName);

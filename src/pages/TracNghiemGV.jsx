@@ -43,7 +43,7 @@ import DialogActions from "@mui/material/DialogActions";
  * - Chỉ còn 2 loại: "sort" (sắp xếp) và "matching" (ghép đôi)
  */
 
-export default function TracNghiemGV() {
+export default function TracNghiemGV_KTDK() {
   // ⚙️ State cho dialog mở đề
   const [openDialog, setOpenDialog] = useState(false);
   const [docList, setDocList] = useState([]);
@@ -118,42 +118,99 @@ export default function TracNghiemGV() {
   const [selectedClass, setSelectedClass] = useState("");
   const [selectedSubject, setSelectedSubject] = useState("");
 
-  const classes = ["Lớp 4", "Lớp 5"];
+  const classes = ["Lớp 1", "Lớp 2", "Lớp 3", "Lớp 4", "Lớp 5"];
   const subjects = ["Tin học", "Công nghệ"];
 
   useEffect(() => {
-    const cfg = JSON.parse(localStorage.getItem("teacherConfig") || "{}");
-    const savedQuiz = JSON.parse(localStorage.getItem("teacherQuiz") || "[]");
+    const fetchInitialQuiz = async () => {
+      try {
+        // 1️⃣ ƯU TIÊN school từ state -> rồi mới đến localStorage
+        const schoolFromState = location?.state?.school;
+        const schoolToUse = schoolFromState || localStorage.getItem("school") || "";
 
-    const isEditingNew = !quizConfig.deTracNghiem; // đang soạn đề mới
+        // 2️⃣ Không được dùng localStorage nếu đang mở đề để học sinh làm bài
+        // (chỉ dùng localStorage khi soạn đề editor)
+        const isEditor = location?.pathname?.includes("editor");
 
-    if (!cfg.selectedClass && !cfg.selectedSubject && !savedQuiz.length && !isEditingNew) {
-      const fetchInitialQuiz = async () => {
-        try {
-          const colRef = collection(db, "TRACNGHIEM");
-          const snap = await getDocs(colRef);
-          const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        if (isEditor) {
+          const cfg = JSON.parse(localStorage.getItem("teacherConfig") || "{}");
+          const savedQuiz = JSON.parse(localStorage.getItem("teacherQuiz") || "[]");
 
-          const initialQuiz = docs.find(d => d.id === quizConfig.deTracNghiem) || docs[0];
-
-          if (initialQuiz) {
-            updateQuizConfig({ deTracNghiem: initialQuiz.id });
-
-            setQuestions(initialQuiz.questions || []);
-            setSelectedClass(initialQuiz.class || "");
-            setSelectedSubject(initialQuiz.subject || "");
-            setSemester(initialQuiz.semester || "");
-            setWeek(initialQuiz.week || 1);
+          if (Array.isArray(savedQuiz) && savedQuiz.length) {
+            setQuestions(savedQuiz);
+            if (cfg?.selectedClass) setSelectedClass(cfg.selectedClass);
+            if (cfg?.selectedSubject) setSelectedSubject(cfg.selectedSubject);
+            return;
           }
-        } catch (err) {
-          console.error("❌ Lỗi khi fetch danh sách đề:", err);
-        }
-      };
 
-      fetchInitialQuiz();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+          setQuestions([createEmptyQuestion()]);
+          return;
+        }
+
+        // 3️⃣ HỌC SINH LÀM BÀI —> luôn tải đề đúng theo school
+        let docId = null;
+        let collectionName = "";
+
+        if (schoolToUse === "TH Lâm Văn Bền") {
+          // Lấy tên đề từ LAMVANBEN/config
+          const cfgRef = doc(db, "LAMVANBEN", "config");
+          const cfgSnap = await getDoc(cfgRef);
+
+          if (!cfgSnap.exists()) {
+            console.warn("Không tìm thấy config LAMVANBEN");
+            setQuestions([]);
+            return;
+          }
+
+          docId = cfgSnap.data()?.deTracNghiem || null;
+          collectionName = "TRACNGHIEM_LVB";
+        } else {
+          // Các trường khác → lấy từ CONFIG/config
+          const cfgRef = doc(db, "CONFIG", "config");
+          const cfgSnap = await getDoc(cfgRef);
+
+          if (!cfgSnap.exists()) {
+            console.warn("Không tìm thấy CONFIG/config");
+            setQuestions([]);
+            return;
+          }
+
+          docId = cfgSnap.data()?.deTracNghiem || null;
+          collectionName = "TRACNGHIEM";
+        }
+
+        if (!docId) {
+          console.warn("Không có deTracNghiem trong config");
+          setQuestions([]);
+          return;
+        }
+
+        // 4️⃣ MỞ ĐÚNG ĐỀ TƯƠNG ỨNG TRƯỜNG
+        const quizRef = doc(db, collectionName, docId);
+        const quizSnap = await getDoc(quizRef);
+
+        if (!quizSnap.exists()) {
+          console.warn("Không tìm thấy đề:", collectionName, docId);
+          setQuestions([]);
+          return;
+        }
+
+        const data = quizSnap.data();
+        const list = Array.isArray(data.questions) ? data.questions : [];
+
+        setQuestions(list);
+        setSelectedClass(data.class || "");
+        setSelectedSubject(data.subject || "");
+        setSemester(data.semester || "");
+
+      } catch (err) {
+        console.error("❌ Lỗi load đề:", err);
+        setQuestions([]);
+      }
+    };
+
+    fetchInitialQuiz();
+  }, [location?.state?.school]);
 
   // -----------------------
   // Load dữ liệu khi mount
@@ -208,9 +265,6 @@ export default function TracNghiemGV() {
       setQuestions([createEmptyQuestion()]);
     }
   }, []);
-
-
-
 
   // 🔹 Lưu config vào localStorage khi thay đổi
   useEffect(() => {
@@ -317,8 +371,6 @@ export default function TracNghiemGV() {
     return false; // fallback cho các type chưa xử lý
   };
 
-
-
   function extractMatchingCorrect(pairs) {
     const correct = {};
     pairs.forEach((p) => {
@@ -342,77 +394,83 @@ export default function TracNghiemGV() {
     }
 
     try {
-      // 🔹 Hàm upload hình lên Cloudinary
       const uploadImage = async (file) => {
         const formData = new FormData();
         formData.append("file", file);
-        formData.append("upload_preset", "tracnghiem_upload"); // preset của bạn
+        formData.append("upload_preset", "tracnghiem_upload");
 
-        const response = await fetch("https://api.cloudinary.com/v1_1/YOUR_CLOUD_NAME/image/upload", {
-          method: "POST",
-          body: formData,
-        });
+        const response = await fetch(
+          "https://api.cloudinary.com/v1_1/YOUR_CLOUD_NAME/image/upload",
+          { method: "POST", body: formData }
+        );
 
         if (!response.ok) throw new Error("Upload hình thất bại");
         const data = await response.json();
         return data.secure_url;
       };
 
-      // 🔹 Map lại questions để đảm bảo correct hợp lệ theo từng loại
       const questionsToSave = [];
 
       for (let q of questions) {
         let updatedQ = { ...q };
 
-        // Nếu type = "image", upload tất cả file chưa phải URL
         if (q.type === "image") {
           const uploadedOptions = await Promise.all(
             (q.options || []).map(async (opt) => {
-              if (opt instanceof File) {
-                const url = await uploadImage(opt);
-                return url;
-              }
-              return opt; // nếu đã là URL thì giữ nguyên
+              if (opt instanceof File) return await uploadImage(opt);
+              return opt;
             })
           );
-
           updatedQ.options = uploadedOptions;
-          updatedQ.correct = updatedQ.correct || []; // đảm bảo correct không rỗng
+          updatedQ.correct = updatedQ.correct || [];
         }
 
-        // Các loại khác xử lý như cũ
         if (q.type === "matching") updatedQ.correct = q.pairs.map((_, i) => i);
         if (q.type === "sort") updatedQ.correct = q.options.map((_, i) => i);
         if (q.type === "single") updatedQ.correct = q.correct?.length ? q.correct : [0];
         if (q.type === "multiple") updatedQ.correct = q.correct || [];
-        if (q.type === "truefalse") updatedQ.correct =
-          q.correct?.length === q.options?.length ? q.correct : q.options.map(() => "");
+        if (q.type === "truefalse")
+          updatedQ.correct =
+            q.correct?.length === q.options?.length ? q.correct : q.options.map(() => "");
 
         questionsToSave.push(updatedQ);
       }
 
-      // 🔹 Lưu vào localStorage
       localStorage.setItem("teacherQuiz", JSON.stringify(questionsToSave));
-      const cfg = { selectedClass, selectedSubject, semester, week };
+      const cfg = { selectedClass, selectedSubject, semester };
       localStorage.setItem("teacherConfig", JSON.stringify(cfg));
 
-      if (!selectedClass || !selectedSubject || !week) {
-        throw new Error("Vui lòng chọn lớp, môn và tuần trước khi lưu");
+      if (!selectedClass || !selectedSubject) {
+        throw new Error("Vui lòng chọn lớp và môn trước khi lưu");
       }
 
-      const docId = `quiz_${selectedClass}_${selectedSubject}_${week}`;
-      const quizRef = doc(db, "TRACNGHIEM", docId);
+      // 🔹 Lấy school từ localStorage
+      const school = localStorage.getItem("school") || "";
+      console.log("🏫 School:", school);
+
+      // 🔹 Chọn collection dựa trên school
+      let collectionName;
+      if (school === "TH Lâm Văn Bền") {
+        collectionName = "TRACNGHIEM_LVB";
+      } else {
+        collectionName = "TRACNGHIEM";
+      }
+
+      // 🔹 Document ID không có tuần
+      const docId = `quiz_${selectedClass}_${selectedSubject}`;
+      console.log("📁 Document path:", `${collectionName} / ${docId}`);
+
+      const quizRef = doc(db, collectionName, docId);
 
       await setDoc(quizRef, {
         class: selectedClass,
         subject: selectedSubject,
-        week,
         semester,
         questions: questionsToSave,
       });
 
       // 🔄 Cập nhật context nếu là đề mới
-      const newDoc = { id: docId, class: selectedClass, subject: selectedSubject, week, semester, questions: questionsToSave };
+      const newDoc = { id: docId, class: selectedClass, subject: selectedSubject, semester, questions: questionsToSave };
       const existed = quizConfig.quizList?.some((d) => d.id === docId);
       if (!existed) {
         const updatedList = [...(quizConfig.quizList || []), newDoc];
@@ -425,7 +483,6 @@ export default function TracNghiemGV() {
         severity: "success",
       });
       setIsEditingNewDoc(false);
-
     } catch (err) {
       console.error(err);
       setSnackbar({
@@ -435,8 +492,6 @@ export default function TracNghiemGV() {
       });
     }
   };
-
-
 
   // --- Hàm mở dialog và fetch danh sách document ---
   const handleOpenDialog = () => {
@@ -451,28 +506,27 @@ export default function TracNghiemGV() {
     setFilterClass("Tất cả"); // ← reset mỗi khi mở dialog
 
     try {
-      // Nếu context đã có danh sách đề, dùng luôn
-      if (quizConfig.quizList && quizConfig.quizList.length > 0) {
-        setDocList(quizConfig.quizList);
-        // Nếu context có deTracNghiem, đánh dấu là selected
-        if (quizConfig.deTracNghiem) setSelectedDoc(quizConfig.deTracNghiem);
-      } else {
-        // Nếu context chưa có → fetch từ Firestore
-        const colRef = collection(db, "TRACNGHIEM");
-        const snap = await getDocs(colRef);
-        const docs = snap.docs.map((d) => ({
-          id: d.id,
-          ...d.data(),
-        }));
+      const school = localStorage.getItem("school") || "";
+      
+      // Chọn collection theo school
+      const colName = school === "TH Lâm Văn Bền" ? "TRACNGHIEM_LVB" : "TRACNGHIEM";
 
-        setDocList(docs);
+      // Lấy tất cả document trong collection
+      const colRef = collection(db, colName);
+      const snap = await getDocs(colRef);
 
-        // Lưu danh sách đề vào context
-        updateQuizConfig({ quizList: docs });
+      // Lấy trực tiếp id (tên đề) từ Firestore
+      const docs = snap.docs.map((d) => ({
+        id: d.id,           // đây chính là tên đề: quiz_Lớp 4_Tin học
+        name: d.id,         // có thể dùng name để hiển thị
+        ...d.data(),
+      }));
 
-        // Nếu context có deTracNghiem → đánh dấu selected
-        if (quizConfig.deTracNghiem) setSelectedDoc(quizConfig.deTracNghiem);
-      }
+      setDocList(docs);
+
+      // Tự động chọn đề đầu tiên nếu có
+      if (docs.length > 0) setSelectedDoc(docs[0].id);
+
     } catch (err) {
       console.error("❌ Lỗi khi lấy danh sách đề:", err);
       setSnackbar({
@@ -498,13 +552,18 @@ export default function TracNghiemGV() {
     }
 
     try {
-      const docRef = doc(db, "TRACNGHIEM", selectedDoc);
+      // 🔹 Lấy tên trường từ localStorage
+      const school = localStorage.getItem("school") || "";
+
+      // 🔹 Chọn collection dựa trên tài khoản đăng nhập
+      const collectionName = school === "TH Lâm Văn Bền" ? "TRACNGHIEM_LVB" : "TRACNGHIEM";
+
+      const docRef = doc(db, collectionName, selectedDoc);
       const docSnap = await getDoc(docRef);
 
       if (docSnap.exists()) {
         const data = docSnap.data();
 
-        // 🔹 Chỉ sửa phần hình ảnh: đảm bảo mỗi câu hỏi "image" có đủ 4 options và correct
         const fixedQuestions = (data.questions || []).map((q) => {
           if (q.type === "image") {
             return {
@@ -516,17 +575,14 @@ export default function TracNghiemGV() {
           return q;
         });
 
-        // 🔹 Cập nhật dữ liệu lên UI
         setQuestions(fixedQuestions);
         setSelectedClass(data.class || "");
         setSelectedSubject(data.subject || "");
         setSemester(data.semester || "");
         setWeek(data.week || 1);
 
-        // 🔹 Cập nhật context
         updateQuizConfig({ deTracNghiem: data });
 
-        // 🔹 Ghi vào localStorage để khôi phục sau này
         localStorage.setItem(
           "teacherConfig",
           JSON.stringify({
@@ -538,23 +594,40 @@ export default function TracNghiemGV() {
         );
         localStorage.setItem("teacherQuiz", JSON.stringify(fixedQuestions));
 
-        // 🔹 Đóng dialog
         setOpenDialog(false);
 
-        // 🔹 Ghi lại tên đề vào CONFIG/config/deTracNghiem
         try {
-          const configRef = doc(db, "CONFIG", "config");
-          await setDoc(
-            configRef,
-            { deTracNghiem: selectedDoc },
-            { merge: true }
-          );
-          console.log(`✅ Đã ghi deTracNghiem = "${selectedDoc}" vào CONFIG/config`);
+          if (school === "TH Lâm Văn Bền") {
+            // 🔹 Ghi vào LAMVANBEN/config
+            const lvbConfigRef = doc(db, "LAMVANBEN", "config");
+            await setDoc(
+              lvbConfigRef,
+              {
+                choXemDiem: true,
+                hocKy: "Giữa kỳ I",
+                lop: "3A",
+                mon: "Tin học",
+                xuatFileBaiLam: true,
+                deTracNghiem: selectedDoc, // tên đề mở
+              },
+              { merge: true }
+            );
+            console.log(`✅ Đã ghi deTracNghiem = "${selectedDoc}" vào LAMVANBEN/config`);
+          } else {
+            // 🔹 Ghi vào CONFIG/config cho các trường khác
+            const configRef = doc(db, "CONFIG", "config");
+            await setDoc(
+              configRef,
+              { deTracNghiem: selectedDoc },
+              { merge: true }
+            );
+            console.log(`✅ Đã ghi deTracNghiem = "${selectedDoc}" vào CONFIG/config`);
+          }
+
           setIsEditingNewDoc(false);
         } catch (err) {
-          console.error("❌ Lỗi khi ghi CONFIG/config/deTracNghiem:", err);
+          console.error("❌ Lỗi khi ghi CONFIG:", err);
         }
-
       } else {
         setSnackbar({
           open: true,
@@ -571,6 +644,8 @@ export default function TracNghiemGV() {
       });
     }
   };
+
+
 
 
   const addQuestion = () => {
@@ -592,18 +667,23 @@ export default function TracNghiemGV() {
 
     const docToDelete = docList.find(d => d.id === selectedDoc);
     const confirm = window.confirm(
-      `❗ Bạn có chắc muốn xóa đề: ${docToDelete?.class || "?"} - ${docToDelete?.subject || "?"} - Tuần ${docToDelete?.week || "?"}?`
+      `❗ Bạn có chắc muốn xóa đề: ${docToDelete?.id || "?"}?`
     );
 
-    // Đóng dialog ngay sau khi xác nhận
     setOpenDialog(false);
 
     if (!confirm) return;
 
     try {
-      await deleteDoc(doc(db, "TRACNGHIEM", selectedDoc));
+      // 🔹 Lấy trường học đăng nhập
+      const school = localStorage.getItem("school") || "";
 
-      const updatedList = docList.filter((d) => d.id !== selectedDoc);
+      // 🔹 Chọn collection theo trường
+      const collectionName = school === "TH Lâm Văn Bền" ? "TRACNGHIEM_LVB" : "TRACNGHIEM";
+
+      await deleteDoc(doc(db, collectionName, selectedDoc));
+
+      const updatedList = docList.filter(d => d.id !== selectedDoc);
       setDocList(updatedList);
       updateQuizConfig({ quizList: updatedList });
       setSelectedDoc(null);
@@ -633,6 +713,7 @@ export default function TracNghiemGV() {
       });
     }
   };
+
 
   useEffect(() => {
     if (deTracNghiem) {
@@ -718,47 +799,62 @@ export default function TracNghiemGV() {
         >
           {isEditingNewDoc || !selectedClass || !selectedSubject
             ? "🆕 Đang soạn đề mới"
-            : `📝 Đề: ${selectedClass} - ${selectedSubject} - Tuần ${week}`}
+            : `📝 Đề: ${selectedSubject} - ${selectedClass} `}
         </Typography>
 
         {/* FORM LỚP / MÔN / HỌC KỲ / TUẦN */}
         <Paper elevation={2} sx={{ p: 2, mb: 3 }}>
-          <Stack spacing={2}>
-            <Stack direction={{ xs: "row", sm: "row" }} spacing={2}>
-              <FormControl size="small" sx={{ flex: 1 }}>
-                <InputLabel>Lớp</InputLabel>
-                <Select value={selectedClass || ""} onChange={(e) => setSelectedClass(e.target.value)} label="Lớp">
-                  {classes?.map((lop) => <MenuItem key={lop} value={lop}>{lop}</MenuItem>)}
-                </Select>
-              </FormControl>
+            <Stack spacing={2}>
+                <Stack direction={{ xs: "row", sm: "row" }} spacing={2}>
+                <FormControl size="small" sx={{ flex: 1 }}>
+                  <InputLabel>Lớp</InputLabel>
+                  <Select
+                    value={selectedClass || ""}
+                    onChange={(e) => setSelectedClass(e.target.value)}
+                    label="Lớp"
+                  >
+                    {classes.map((lop) => (
+                      <MenuItem key={lop} value={lop}>
+                        {lop}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
 
-              <FormControl size="small" sx={{ flex: 1 }}>
-                <InputLabel>Môn học</InputLabel>
-                <Select value={selectedSubject || ""} onChange={(e) => setSelectedSubject(e.target.value)} label="Môn học">
-                  {subjects?.map((mon) => <MenuItem key={mon} value={mon}>{mon}</MenuItem>)}
-                </Select>
-              </FormControl>
+
+                <FormControl size="small" sx={{ flex: 1 }}>
+                    <InputLabel>Môn học</InputLabel>
+                    <Select
+                    value={selectedSubject || ""}
+                    onChange={(e) => setSelectedSubject(e.target.value)}
+                    label="Môn học"
+                    >
+                    {subjects?.map((mon) => (
+                        <MenuItem key={mon} value={mon}>
+                        {mon}
+                        </MenuItem>
+                    ))}
+                    </Select>
+                </FormControl>
+
+                <FormControl size="small" sx={{ flex: 1 }}>
+                    <InputLabel>Học kỳ</InputLabel>
+                    <Select
+                    value={semester || ""}
+                    onChange={(e) => setSemester(e.target.value)}
+                    label="Học kỳ"
+                    >
+                    {Object.keys(hocKyMap || {}).map((hk) => (
+                        <MenuItem key={hk} value={hk}>
+                        {hk}
+                        </MenuItem>
+                    ))}
+                    </Select>
+                </FormControl>
+                </Stack>
             </Stack>
+            </Paper>
 
-            <Stack direction={{ xs: "row", sm: "row" }} spacing={2}>
-              <FormControl size="small" sx={{ flex: 1 }}>
-                <InputLabel>Học kỳ</InputLabel>
-                <Select value={semester || ""} onChange={(e) => setSemester(e.target.value)} label="Học kỳ">
-                  {Object.keys(hocKyMap || {}).map((hk) => <MenuItem key={hk} value={hk}>{hk}</MenuItem>)}
-                </Select>
-              </FormControl>
-
-              <FormControl size="small" sx={{ flex: 1 }}>
-                <InputLabel>Tuần</InputLabel>
-                <Select value={week || ""} onChange={(e) => setWeek(Number(e.target.value))} label="Tuần">
-                  {semester &&
-                    Array.from({ length: hocKyMap[semester].to - hocKyMap[semester].from + 1 }, (_, i) => i + hocKyMap[semester].from)
-                      .map((t) => <MenuItem key={t} value={t}>Tuần {t}</MenuItem>)}
-                </Select>
-              </FormControl>
-            </Stack>
-          </Stack>
-        </Paper>
 
         {/* DANH SÁCH CÂU HỎI */}
         <Stack spacing={3}>
@@ -1195,13 +1291,17 @@ export default function TracNghiemGV() {
                 <Select
                   value={filterClass}
                   onChange={(e) => setFilterClass(e.target.value)}
-                  displayEmpty // để hiển thị giá trị mặc định
+                  displayEmpty
                 >
                   <MenuItem value="Tất cả">Tất cả</MenuItem>
-                  <MenuItem value="Lớp 4">Lớp 4</MenuItem>
-                  <MenuItem value="Lớp 5">Lớp 5</MenuItem>
+                  {classes.map((lop) => (
+                    <MenuItem key={lop} value={lop}>
+                      {lop}
+                    </MenuItem>
+                  ))}
                 </Select>
               </FormControl>
+
             </Stack>
 
             {loadingList ? (
@@ -1213,45 +1313,34 @@ export default function TracNghiemGV() {
                 Không có đề nào.
               </Typography>
             ) : (
-              <Stack spacing={1}>
+              <Stack spacing={0.5}> {/* giảm khoảng cách giữa các thẻ */}
                 {docList
                   .filter((doc) =>
                     filterClass === "Tất cả" ? true : doc.class === filterClass
                   )
-                  .map((doc) => {
-                    const isSelected = selectedDoc === doc.id;
-                    return (
-                      <Paper
-                        key={doc.id}
-                        elevation={isSelected ? 4 : 1}
-                        onClick={() => setSelectedDoc(doc.id)}
-                        onDoubleClick={() => {
-                          setSelectedDoc(doc.id);
-                          handleOpenSelectedDoc(doc.id);
-                        }}
-                        sx={{
-                          px: 2,
-                          py: 1.1,
-                          borderRadius: 2,
-                          cursor: "pointer",
-                          userSelect: "none",
-                          transition: "all 0.2s ease",
-                          border: isSelected
-                            ? "2px solid #1976d2"
-                            : "1px solid #e0e0e0",
-                          bgcolor: isSelected ? "#e3f2fd" : "#fff",
-                          "&:hover": {
-                            boxShadow: 3,
-                            bgcolor: isSelected ? "#e3f2fd" : "#f5f5f5",
-                          },
-                        }}
-                      >
-                        <Typography variant="body1" fontWeight="600" color="#1976d2">
-                          {doc.class} - {doc.subject} - Tuần {doc.week}
-                        </Typography>
-                      </Paper>
-                    );
-                  })}
+                  .map((doc) => (
+                    <Box
+                      key={doc.id}
+                      onClick={() => setSelectedDoc(doc.id)}
+                      onDoubleClick={() => handleOpenSelectedDoc(doc.id)}
+                      sx={{
+                        px: 2,
+                        py: 1,
+                        border: "1px solid #e0e0e0", // viền xám nhạt
+                        borderRadius: 0,             // bỏ bo góc
+                        cursor: "pointer",
+                        userSelect: "none",
+                        bgcolor: "#fff",             // nền trắng
+                        "&:hover": {                  // hover nhẹ
+                          bgcolor: "#f5f5f5",
+                        },
+                      }}
+                    >
+                      <Typography variant="body1" color="text.primary">
+                        {doc.id} {/* tên document */}
+                      </Typography>
+                    </Box>
+                  ))}
               </Stack>
             )}
           </DialogContent>

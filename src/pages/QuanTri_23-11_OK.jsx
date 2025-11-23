@@ -33,7 +33,6 @@ export default function QuanTri() {
     hocKy: "Giữa kỳ I",
     choXemDiem: false,
     xuatFileBaiLam: false,
-    choXemDapAn: false,
   });
   const [classes, setClasses] = useState([]);
   const [selectedClass, setSelectedClass] = useState("");
@@ -77,7 +76,6 @@ export default function QuanTri() {
               lop: data.lop ?? "",
               hocKy: data.hocKy ?? "Giữa kỳ I",
               choXemDiem: data.choXemDiem ?? false,
-              choXemDapAn: data.choXemDapAn ?? false,
               xuatFileBaiLam: data.xuatFileBaiLam ?? false,
             });
             setSelectedClass(data.lop ?? "");
@@ -236,15 +234,6 @@ export default function QuanTri() {
             />
             <Typography>Cho xem điểm</Typography>
           </Box>
-
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <Checkbox
-              checked={renderConfig.choXemDapAn || false}
-              onChange={(e) => updateConfigField("choXemDapAn", e.target.checked)}
-            />
-            <Typography>Cho xem đáp án</Typography>
-          </Box>
-
 
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
             <Checkbox
