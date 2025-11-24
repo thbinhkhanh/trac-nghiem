@@ -17,6 +17,8 @@ export const ConfigProvider = ({ children }) => {
     choXemDiem: false,  
     choXemDapAn: false,     
     xuatFileBaiLam: false,  
+    truyCap_BinhKhanh: false,
+    truyCap_LamVanBen: false,
   };
 
   const storedConfig = JSON.parse(localStorage.getItem("appConfig") || "{}");

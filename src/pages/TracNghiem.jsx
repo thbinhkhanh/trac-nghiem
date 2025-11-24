@@ -20,7 +20,7 @@ import {
   Select,
   MenuItem,
 } from "@mui/material";
-import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
+import { doc, getDoc, getDocs, setDoc, collection, updateDoc } from "firebase/firestore";
 // Thay cho react-beautiful-dnd
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 
@@ -146,13 +146,24 @@ export default function TracNghiem() {
       let prog = 0;
 
       let docId = null;
-      let collectionName = "TRACNGHIEM";
+      let collectionName = "TRACNGHIEM_BK";
       let hocKiFromConfig = "";
       let monHocFromConfig = "";
       let timeLimitMinutes = 0; // ⬅ để lưu thời gian
 
       // 🔹 Lấy config dựa vào trường
       if (school === "TH Lâm Văn Bền") {
+        // 🔹 Lấy lớp học sinh từ studentInfo
+        const studentClass = studentInfo?.class || ""; // ví dụ: "3A"
+        const classNumber = studentClass.match(/\d+/)?.[0]; // "3A" -> "3"
+        if (!classNumber) {
+          setSnackbar({ open: true, message: "❌ Không xác định được lớp của học sinh!", severity: "error" });
+          setLoading(false);
+          return;
+        }
+        const classLabel = `Lớp ${classNumber}`; // "Lớp 3"
+
+        // 🔹 Lấy config vẫn từ LAMVANBEN/config
         const lvbConfigRef = doc(db, "LAMVANBEN", "config");
         const lvbConfigSnap = await getDoc(lvbConfigRef);
         prog += 30;
@@ -165,22 +176,29 @@ export default function TracNghiem() {
         }
 
         const lvbConfigData = lvbConfigSnap.data();
-        docId = lvbConfigData.deTracNghiem;
         hocKiFromConfig = lvbConfigData.hocKy || "";
         monHocFromConfig = lvbConfigData.mon || "";
-        timeLimitMinutes = lvbConfigData.timeLimit ?? 0;      // ⬅ lấy timeLimit
-        setTimeLimitMinutes(timeLimitMinutes);                // ⬅ lưu vào state để dùng sau
+        timeLimitMinutes = lvbConfigData.timeLimit ?? 0; // ⬅ lấy timeLimit
+        setTimeLimitMinutes(timeLimitMinutes);
         setChoXemDiem(lvbConfigData.choXemDiem ?? false);
         setChoXemDapAn(lvbConfigData.choXemDapAn ?? false);
 
-        if (!docId) {
-          setSnackbar({ open: true, message: "❌ Chưa có đề trắc nghiệm cho Lâm Văn Bền!", severity: "warning" });
+        // 🔹 Lấy docId dựa vào lớp học sinh trong DETHI_LVB
+        const deThiRef = collection(db, "DETHI_LVB");
+        const deThiSnap = await getDocs(deThiRef);
+        const matchedDoc = deThiSnap.docs.find(d => d.id.includes(classLabel));
+
+        if (!matchedDoc) {
+          setSnackbar({ open: true, message: `❌ Không tìm thấy đề kiểm tra ${classLabel}!`, severity: "warning" });
           setLoading(false);
           return;
         }
 
+        docId = matchedDoc.id;
         collectionName = "TRACNGHIEM_LVB";
+
       } else {
+        // 🔹 Trường khác, lấy config từ CONFIG/config
         const configRef = doc(db, "CONFIG", "config");
         const configSnap = await getDoc(configRef);
         prog += 30;
@@ -193,22 +211,37 @@ export default function TracNghiem() {
         }
 
         const configData = configSnap.data();
-        docId = configData.deTracNghiem;
         hocKiFromConfig = configData.hocKy || "";
         monHocFromConfig = configData.mon || "";
         timeLimitMinutes = configData.timeLimit ?? 0;   // ⬅ lấy timeLimit
-        setTimeLimitMinutes(timeLimitMinutes);           // ⬅ lưu vào state
+        setTimeLimitMinutes(timeLimitMinutes);
         setChoXemDiem(configData.choXemDiem ?? false);
         setChoXemDapAn(configData.choXemDapAn ?? false);
 
-        if (!docId) {
-          setSnackbar({ open: true, message: "❌ Chưa có đề trắc nghiệm!", severity: "warning" });
+        // 🔹 Lấy docId dựa vào lớp học sinh trong DETHI_BK
+        const studentClass = studentInfo?.class || "";
+        const classNumber = studentClass.match(/\d+/)?.[0];
+        if (!classNumber) {
+          setSnackbar({ open: true, message: "❌ Không xác định được lớp của học sinh!", severity: "error" });
+          setLoading(false);
+          return;
+        }
+        const classLabel = `Lớp ${classNumber}`;
+
+        const deThiRef = collection(db, "DETHI_BK");
+        const deThiSnap = await getDocs(deThiRef);
+        const matchedDoc = deThiSnap.docs.find(d => d.id.includes(classLabel));
+
+        if (!matchedDoc) {
+          setSnackbar({ open: true, message: `❌ Không tìm thấy đề kiểm tra ${classLabel}!`, severity: "warning" });
           setLoading(false);
           return;
         }
 
-        collectionName = "TRACNGHIEM";
+        docId = matchedDoc.id;
+        collectionName = "TRACNGHIEM_BK";
       }
+
 
       // 🔹 Set thời gian làm bài (giây)
       setTimeLeft(timeLimitMinutes * 60);
@@ -908,8 +941,8 @@ return (
                       sx={{
                         width: "100%",           // chiếm toàn bộ cột
                         boxSizing: "border-box",
-                        minHeight: 35,
-                        py: 0.6,
+                        minHeight: 48,
+                        py: 1,
                         px: 1,
 
                         display: "flex",
@@ -968,8 +1001,8 @@ return (
                                 sx={{
                                   width: "100%",        // chiếm toàn bộ cột
                                   boxSizing: "border-box",
-                                  minHeight: 35,
-                                  py: 0.6,
+                                  minHeight: 48,
+                                  py: 1,
                                   px: 1,
 
                                   display: "flex",

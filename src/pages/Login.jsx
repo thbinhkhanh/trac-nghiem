@@ -11,30 +11,62 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  Snackbar,
+  Alert,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import { useNavigate } from "react-router-dom";
 
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "../firebase";
+
 // ⭐ Danh sách tài khoản
-const ACCOUNTS = ["Admin", "TH Bình Khánh", "TH Lâm Văn Bền"];
-const PASSWORD = "1"; // tất cả cùng mật khẩu 1
+const ACCOUNTS = ["TH Bình Khánh", "TH Lâm Văn Bền", "Admin"];
 
 export default function Login() {
   const [username, setUsername] = useState(ACCOUNTS[0]);
   const [password, setPassword] = useState("");
+  const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "info" });
   const navigate = useNavigate();
 
-  const handleLogin = () => {
-    if (ACCOUNTS.includes(username) && password === PASSWORD) {
-      // 🔹 Lưu thông tin login và trường vào localStorage
-      localStorage.setItem("loggedIn", "true");
-      localStorage.setItem("account", username);
-      localStorage.setItem("school", username); // lưu trường để các trang khác dùng
+  const handleLogin = async () => {
+    if (!ACCOUNTS.includes(username)) {
+      setSnackbar({ open: true, message: "❌ Tài khoản không tồn tại!", severity: "error" });
+      return;
+    }
 
-      window.dispatchEvent(new Event("storage"));
-      navigate("/tracnghiem-gv"); // chuyển sang trang TracNghiem
-    } else {
-      alert("❌ Tài khoản hoặc mật khẩu sai!");
+    if (username === "Admin") {
+      // admin vẫn dùng password cố định 1
+      if (password === "1") {
+        localStorage.setItem("loggedIn", "true");
+        localStorage.setItem("account", username);
+        localStorage.setItem("school", username);
+        window.dispatchEvent(new Event("storage"));
+        navigate("/tracnghiem-gv");
+      } else {
+        setSnackbar({ open: true, message: "❌ Mật khẩu sai!", severity: "error" });
+      }
+      return;
+    }
+
+    try {
+      const folder = username === "TH Lâm Văn Bền" ? "LAMVANBEN" : "BINHKHANH";
+      const docRef = doc(db, folder, "password");
+      const snap = await getDoc(docRef);
+      const savedPw = snap.exists() ? snap.data().pass : null;
+
+      if (savedPw === password) {
+        localStorage.setItem("loggedIn", "true");
+        localStorage.setItem("account", username);
+        localStorage.setItem("school", username);
+        window.dispatchEvent(new Event("storage"));
+        navigate("/tracnghiem-gv");
+      } else {
+        setSnackbar({ open: true, message: "❌ Mật khẩu sai!", severity: "error" });
+      }
+    } catch (err) {
+      console.error(err);
+      setSnackbar({ open: true, message: "❌ Lỗi kết nối Firestore!", severity: "error" });
     }
   };
 
@@ -99,6 +131,17 @@ export default function Login() {
           </Stack>
         </Card>
       </Box>
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+      >
+        <Alert severity={snackbar.severity} variant="filled">
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

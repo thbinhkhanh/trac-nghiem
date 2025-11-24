@@ -6,57 +6,20 @@ import { ConfigContext } from "../context/ConfigContext";
 import { doc, getDoc, getDocs, collection } from "firebase/firestore";
 import { db } from "../firebase";
 
-// Danh sách trường gốc
-const SCHOOL_LIST = ["TH Lâm Văn Bền", "TH Bình Khánh"];
+const SCHOOL_LIST = ["TH Lâm Văn Bền","TH Bình Khánh" ];
 
 export default function Info() {
-  const [school, setSchool] = useState("");
+  const [school, setSchool] = useState(SCHOOL_LIST[0]);
   const [fullname, setFullname] = useState("");
   const [lop, setLop] = useState("");
   const [classes, setClasses] = useState([]);
   const [errorMsg, setErrorMsg] = useState("");
-  const [allowedSchool, setAllowedSchool] = useState({
-    "TH Lâm Văn Bền": true,
-    "TH Bình Khánh": true,
-  });
 
   const navigate = useNavigate();
   const { setConfig } = useContext(ConfigContext);
 
-  // 🔹 Fetch quyền truy cập từ Firestore
+  // 🔹 Fetch danh sách lớp dựa trên trường
   useEffect(() => {
-    const fetchAccess = async () => {
-      try {
-        // Lấy ở CONFIG/config (cấu hình chung)
-        const configRef = doc(db, "CONFIG", "config");
-        const snap = await getDoc(configRef);
-
-        if (snap.exists()) {
-          const data = snap.data();
-
-          setAllowedSchool({
-            "TH Bình Khánh": data.truyCap_BinhKhanh !== false,
-            "TH Lâm Văn Bền": data.truyCap_LamVanBen !== false,
-          });
-        }
-      } catch (err) {
-        console.error("❌ Lỗi fetch quyền truy cập:", err);
-      }
-    };
-
-    fetchAccess();
-  }, []);
-
-  // 🔹 Khi tải xong quyền truy cập → set trường mặc định theo trường được phép
-  useEffect(() => {
-    const enabledSchools = SCHOOL_LIST.filter(s => allowedSchool[s]);
-    setSchool(enabledSchools[0] || "");
-  }, [allowedSchool]);
-
-  // 🔹 Fetch danh sách lớp theo trường
-  useEffect(() => {
-    if (!school) return;
-
     const fetchClasses = async () => {
       try {
         let classList = [];
@@ -68,6 +31,7 @@ export default function Info() {
           const snapshot = await getDocs(collection(db, "DANHSACH"));
           classList = snapshot.docs.map((doc) => doc.id);
         }
+        // Có thể sắp xếp theo 5A,5B... nếu muốn
         classList.sort((a, b) => a.localeCompare(b));
         setClasses(classList);
         setLop(classList[0] || "");
@@ -80,16 +44,17 @@ export default function Info() {
 
   const handleStart = () => {
     if (!school) {
-      setErrorMsg("❌ Trường của bạn hiện không được phép truy cập!");
+      setErrorMsg("❌ Vui lòng chọn Trường!");
     } else if (!fullname.trim()) {
       setErrorMsg("❌ Vui lòng nhập Họ và tên!");
     } else if (!lop) {
       setErrorMsg("❌ Vui lòng chọn lớp!");
     } else {
       setErrorMsg("");
-
+      // Cập nhật ConfigContext
       setConfig(prev => ({ ...prev, lop, mon: prev.mon || "Tin học" }));
 
+      // Chuyển sang TracNghiem và truyền state
       navigate("/tracnghiem", { state: { school, fullname, lop } });
     }
   };
@@ -107,19 +72,9 @@ export default function Info() {
             {/* Ô Trường */}
             <FormControl fullWidth size="small">
               <InputLabel>Trường</InputLabel>
-              <Select
-                value={school}
-                label="Trường"
-                onChange={(e) => setSchool(e.target.value)}
-              >
+              <Select value={school} label="Trường" onChange={(e) => setSchool(e.target.value)}>
                 {SCHOOL_LIST.map(sc => (
-                  <MenuItem
-                    key={sc}
-                    value={sc}
-                    disabled={!allowedSchool[sc]}   // 🔥 khóa trường nếu không được truy cập
-                  >
-                    {sc}
-                  </MenuItem>
+                  <MenuItem key={sc} value={sc}>{sc}</MenuItem>
                 ))}
               </Select>
             </FormControl>

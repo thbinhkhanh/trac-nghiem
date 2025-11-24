@@ -14,6 +14,8 @@ import {
   Checkbox,
   Snackbar,
   Alert,
+  Dialog,
+  DialogContent,
 } from "@mui/material";
 import { Add, Delete, Close, ChevronRight, ChevronLeft } from "@mui/icons-material";
 
@@ -21,12 +23,24 @@ import { ConfigContext } from "../context/ConfigContext";
 import { StudentContext } from "../context/StudentContext";
 import { doc, getDoc, getDocs, setDoc, collection, deleteDoc } from "firebase/firestore";
 import { db } from "../firebase";
+import VpnKeyIcon from "@mui/icons-material/VpnKey";
+import CloseIcon from "@mui/icons-material/Close";
 
 export default function QuanTri() {
   const account = localStorage.getItem("account") || "";
   const isLamVanBen = account === "TH Lâm Văn Bền";
+  const isAdmin = account === "Admin";
 
   const { classData, setClassData } = useContext(StudentContext);
+
+  const [openChangePw, setOpenChangePw] = useState(false);
+  const [oldPw, setOldPw] = useState("");
+  const [newPw, setNewPw] = useState("");
+  const [confirmPw, setConfirmPw] = useState("");
+  const [pwError, setPwError] = useState("");
+
+  const currentPassword = localStorage.getItem("password") || "1"; // mặc định 1
+
 
   // ===== Lâm Văn Bền: state local =====
   const [configLocal, setConfigLocal] = useState({
@@ -36,6 +50,8 @@ export default function QuanTri() {
     choXemDiem: false,
     xuatFileBaiLam: false,
     choXemDapAn: false,
+    truyCap_BinhKhanh: false,
+    truyCap_LamVanBen: false,
   });
   const [classes, setClasses] = useState([]);
   const [selectedClass, setSelectedClass] = useState("");
@@ -81,6 +97,8 @@ export default function QuanTri() {
               choXemDiem: data.choXemDiem ?? false,
               choXemDapAn: data.choXemDapAn ?? false,
               xuatFileBaiLam: data.xuatFileBaiLam ?? false,
+              truyCap_BinhKhanh: data.truyCap_BinhKhanh ?? false,
+              truyCap_LamVanBen: data.truyCap_LamVanBen ?? false,
             });
             setSelectedClass(data.lop ?? "");
             setSubject(data.mon ?? "Tin học");
@@ -167,6 +185,53 @@ export default function QuanTri() {
     updateConfigField("timeLimit", v);
   };
 
+  const handleChangePassword = async () => {
+    if (oldPw !== currentPassword) {
+      setPwError("❌ Mật khẩu cũ không đúng!");
+      return;
+    }
+    if (!newPw.trim()) {
+      setPwError("❌ Mật khẩu mới không được để trống!");
+      return;
+    }
+    if (newPw !== confirmPw) {
+      setPwError("❌ Mật khẩu nhập lại không khớp!");
+      return;
+    }
+
+    try {
+      const folder = account === "TH Lâm Văn Bền" ? "LAMVANBEN" : "BINHKHANH";
+      const ref = doc(db, folder, "password");
+      await setDoc(ref, { pass: newPw }, { merge: true });
+
+      setPwError("");
+      setOpenChangePw(false);
+
+      // Thay alert bằng Snackbar
+      setSnackbar({
+        open: true,
+        message: "✅ Đổi mật khẩu thành công!",
+        severity: "success",
+      });
+
+      // Reset input
+      setOldPw("");
+      setNewPw("");
+      setConfirmPw("");
+
+    } catch (err) {
+      console.error("❌ Lỗi lưu mật khẩu Firestore:", err);
+      setPwError("❌ Lỗi khi lưu mật khẩu!");
+
+      setSnackbar({
+        open: true,
+        message: "❌ Lỗi khi lưu mật khẩu!",
+        severity: "error",
+      });
+    }
+  };
+
+
   // ===== Đề thi =====
   const [examList, setExamList] = useState([]);       // tất cả đề
   const [selectedExam, setSelectedExam] = useState([]); // mảng đề đã chọn
@@ -178,7 +243,7 @@ export default function QuanTri() {
   useEffect(() => {
     const fetchExams = async () => {
       try {
-        const folder = isLamVanBen ? "TRACNGHIEM_LVB" : "TRACNGHIEM";
+        const folder = isLamVanBen ? "TRACNGHIEM_LVB" : "TRACNGHIEM_BK";
         const ref = collection(db, folder);
         const snap = await getDocs(ref);
 
@@ -266,7 +331,7 @@ export default function QuanTri() {
 
     try {
       // 🔹 Lấy thư mục đề đúng theo trường
-      const folder = isLamVanBen ? "TRACNGHIEM_LVB" : "TRACNGHIEM";
+      const folder = isLamVanBen ? "TRACNGHIEM_LVB" : "TRACNGHIEM_BK";
 
       // 🔹 Xóa trên Firestore
       await deleteDoc(doc(db, folder, selectedExamToDelete.id));
@@ -334,13 +399,31 @@ export default function QuanTri() {
             CẤU HÌNH HỆ THỐNG
           </Typography>
 
-        <Typography
-          variant="subtitle1"
-          color="textSecondary"
-          sx={{ mb: 2, fontWeight: "bold" }}
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            mb: 2,
+            gap: 1,
+          }}
         >
-          {account || "Chưa đăng nhập"}
-        </Typography>
+          <Typography
+            variant="subtitle1"
+            color="textSecondary"
+            sx={{ fontWeight: "bold" }}
+          >
+            {account || "Chưa đăng nhập"}
+          </Typography>
+
+          <IconButton
+            size="small"
+            sx={{ color: "orange" }}
+            onClick={() => setOpenChangePw(true)}
+          >
+            <VpnKeyIcon fontSize="small" />
+          </IconButton>
+        </Box>
 
         <Stack spacing={2}>
           {/* Học kỳ */}
@@ -441,33 +524,67 @@ export default function QuanTri() {
           </Box>
 
           {/* Checkboxes */}
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <Checkbox
-              checked={renderConfig.choXemDiem || false}
-              onChange={(e) => updateConfigField("choXemDiem", e.target.checked)}
-            />
-            <Typography>Cho xem điểm</Typography>
+          <Box sx={{ ml: 4, mt: 1 }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
+              <Checkbox
+                checked={renderConfig.choXemDiem || false}
+                onChange={(e) => updateConfigField("choXemDiem", e.target.checked)}
+              />
+              <Typography>Cho xem điểm</Typography>
+            </Box>
+
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
+              <Checkbox
+                checked={renderConfig.choXemDapAn || false}
+                onChange={(e) =>
+                  updateConfigField("choXemDapAn", e.target.checked)
+                }
+              />
+              <Typography>Cho xem đáp án</Typography>
+            </Box>
+
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <Checkbox
+                checked={renderConfig.xuatFileBaiLam || false}
+                onChange={(e) =>
+                  updateConfigField("xuatFileBaiLam", e.target.checked)
+                }
+              />
+              <Typography>Xuất file bài làm</Typography>
+            </Box>
           </Box>
 
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <Checkbox
-              checked={renderConfig.choXemDapAn || false}
-              onChange={(e) =>
-                updateConfigField("choXemDapAn", e.target.checked)
-              }
-            />
-            <Typography>Cho xem đáp án</Typography>
-          </Box>
 
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <Checkbox
-              checked={renderConfig.xuatFileBaiLam || false}
-              onChange={(e) =>
-                updateConfigField("xuatFileBaiLam", e.target.checked)
-              }
-            />
-            <Typography>Xuất file bài làm</Typography>
-          </Box>
+          {/* Nhóm truy cập – CHỈ HIỂN THỊ KHI LÀ ADMIN */}
+          {isAdmin && (
+            <Box sx={{ mt: 1, ml: 4 }}>
+              <Typography sx={{ fontWeight: "bold", mb: 1 }}>
+                Cho phép truy cập:
+              </Typography>
+
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <Checkbox
+                  checked={renderConfig.truyCap_BinhKhanh || false}
+                  onChange={(e) =>
+                    updateConfigField("truyCap_BinhKhanh", e.target.checked)
+                  }
+                />
+                <Typography>TH Bình Khánh</Typography>
+              </Box>
+
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <Checkbox
+                  checked={renderConfig.truyCap_LamVanBen || false}
+                  onChange={(e) =>
+                    updateConfigField("truyCap_LamVanBen", e.target.checked)
+                  }
+                />
+                <Typography>TH Lâm Văn Bền</Typography>
+              </Box>
+            </Box>
+          )}
+
+
         </Stack>
       </Card>
 
@@ -519,51 +636,51 @@ export default function QuanTri() {
                 </Typography>
               ) : (
                 examList.map((ex) => (
-                  <Box key={ex.id} sx={{ mb: 1 }}>
-                    <Stack
-                      direction="row"
-                      alignItems="center"
-                      justifyContent="space-between"
-                      sx={{
-                        px: 2,
-                        py: 1,
-                        height: 30,
-                        cursor: "pointer",
-                        backgroundColor:
-                          selectedExamToDelete?.id === ex.id
-                            ? "#ffebee"
-                            : pendingExam?.id === ex.id
-                            ? "#bbdefb"
-                            : "transparent",
-                        "&:hover": { background: "#e3f2fd" },
-                        borderRadius: 1,
-                      }}
-                      onClick={() => setSelectedExamToDelete(ex)}
-                      onMouseEnter={() => setPendingExam(ex)}
-                      onMouseLeave={() => setPendingExam(null)}
-                    >
-                      <Typography variant="subtitle1">
-                        {ex.tenDe || ex.id}
-                      </Typography>
+                  <Stack
+                    key={ex.id}
+                    direction="row"
+                    alignItems="center"
+                    justifyContent="space-between"
+                    sx={{
+                      px: 2,
+                      py: 1,
+                      height: 30,
+                      cursor: "pointer",
+                      backgroundColor:
+                        selectedExamToDelete?.id === ex.id
+                          ? "#ffebee"
+                          : pendingExam?.id === ex.id
+                          ? "#bbdefb"
+                          : "transparent",
+                      "&:hover": { background: "#e3f2fd" },
+                      borderRadius: 1,
+                      mb: 0, // bỏ khoảng trắng giữa các dòng
+                    }}
+                    onClick={() => setSelectedExamToDelete(ex)}
+                    onMouseEnter={() => setPendingExam(ex)}
+                    onMouseLeave={() => setPendingExam(null)}
+                  >
+                    <Typography variant="subtitle1">
+                      {ex.tenDe || ex.id}
+                    </Typography>
 
-                      <IconButton
-                        color="primary"
-                        size="small"
-                        onClick={async (e) => {
-                          e.stopPropagation();
-                          setSelectedExam((prev) => {
-                            if (!prev) return [ex];
-                            if (prev.some((e) => e.id === ex.id)) return prev;
-                            return [...prev, ex];
-                          });
-                          await addExamToFirestore(ex);
-                          setPendingExam(null);
-                        }}
-                      >
-                        <ChevronRight />
-                      </IconButton>
-                    </Stack>
-                  </Box>
+                    <IconButton
+                      color="primary"
+                      size="small"
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        setSelectedExam((prev) => {
+                          if (!prev) return [ex];
+                          if (prev.some((e) => e.id === ex.id)) return prev;
+                          return [...prev, ex];
+                        });
+                        await addExamToFirestore(ex);
+                        setPendingExam(null);
+                      }}
+                    >
+                      <ChevronRight />
+                    </IconButton>
+                  </Stack>
                 ))
               )}
             </Box>
@@ -572,8 +689,12 @@ export default function QuanTri() {
             <Box sx={{ display: "flex", justifyContent: "center", mt: 2 }}>
               <Button
                 variant="contained"
-                color="error"
-                sx={{ maxWidth: 200, width: "100%" }}
+                sx={{ 
+                  maxWidth: 200, 
+                  width: "100%", 
+                  bgcolor: "primary.main",   // nền xanh
+                  "&:hover": { bgcolor: "primary.dark" } // màu hover
+                }}
                 onClick={handleDeleteExam}
               >
                 Xóa đề đã chọn
@@ -653,6 +774,97 @@ export default function QuanTri() {
         {snackbar.message}
       </Alert>
     </Snackbar>
+
+    <Dialog
+      open={openChangePw}
+      onClose={(event, reason) => {
+        if (reason === "backdropClick" || reason === "escapeKeyDown") return;
+        setOpenChangePw(false);
+      }}
+      disableEscapeKeyDown
+      maxWidth="xs"
+      fullWidth
+      PaperProps={{
+        sx: {
+          borderRadius: 2,
+          overflow: "hidden",
+          bgcolor: "#fff", // ❌ đổi nền trắng
+          boxShadow: 6,
+        },
+      }}
+    >
+      {/* Thanh tiêu đề */}
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          bgcolor: "#1976d2",
+          color: "#fff",
+          px: 2,
+          py: 1.2,
+        }}
+      >
+        <Typography
+          variant="subtitle1"
+          sx={{ fontWeight: "bold", fontSize: "1.1rem", letterSpacing: 0.5 }}
+        >
+          ĐỔI MẬT KHẨU
+        </Typography>
+        <IconButton
+          onClick={() => setOpenChangePw(false)}
+          sx={{ color: "#fff", p: 0.6 }}
+        >
+          <CloseIcon fontSize="small" />
+        </IconButton>
+      </Box>
+
+      {/* Nội dung */}
+      <DialogContent sx={{ mt: 1, bgcolor: "#fff" }}> {/* nền trắng */}
+        <Stack spacing={2} sx={{ pl: 2.5, pr: 2.5 }}>
+          <TextField
+            label="Mật khẩu cũ"
+            type="password"
+            fullWidth
+            size="small"
+            value={oldPw}
+            onChange={(e) => setOldPw(e.target.value)}
+          />
+          <TextField
+            label="Mật khẩu mới"
+            type="password"
+            fullWidth
+            size="small"
+            value={newPw}
+            onChange={(e) => setNewPw(e.target.value)}
+          />
+          <TextField
+            label="Nhập lại mật khẩu"
+            type="password"
+            fullWidth
+            size="small"
+            value={confirmPw}
+            onChange={(e) => setConfirmPw(e.target.value)}
+          />
+
+          {pwError && (
+            <Typography color="error" sx={{ fontWeight: 600 }}>
+              {pwError}
+            </Typography>
+          )}
+
+          <Stack direction="row" justifyContent="flex-end" spacing={1} mt={1}>
+            <Button onClick={() => setOpenChangePw(false)}>Hủy</Button>
+            <Button variant="contained" onClick={handleChangePassword}>
+              Lưu
+            </Button>
+          </Stack>
+        </Stack>
+      </DialogContent>
+    </Dialog>
+
+
+
   </Box>
 );
 

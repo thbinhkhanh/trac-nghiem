@@ -36,14 +36,10 @@ import DialogTitle from "@mui/material/DialogTitle";
 import DialogContent from "@mui/material/DialogContent";
 import DialogActions from "@mui/material/DialogActions";
 
-/**
- * Phiên bản sửa:
- * - Giữ nguyên giao diện như cũ
- * - Loại bỏ hoàn toàn loại câu hỏi "single" (1 đáp án) và "multiple" (nhiều đáp án)
- * - Chỉ còn 2 loại: "sort" (sắp xếp) và "matching" (ghép đôi)
- */
+export default function TracNghiemGV() {
+  const { config, setConfig } = useConfig(); // 🔹 thêm dòng này
+  const { config: quizConfig, updateConfig: updateQuizConfig } = useTracNghiem();
 
-export default function TracNghiemGV_KTDK() {
   // ⚙️ State cho dialog mở đề
   const [openDialog, setOpenDialog] = useState(false);
   const [docList, setDocList] = useState([]);
@@ -51,25 +47,35 @@ export default function TracNghiemGV_KTDK() {
   const [selectedDoc, setSelectedDoc] = useState(null);
   const [isEditingNewDoc, setIsEditingNewDoc] = useState(true);
 
-  const { config: quizConfig, updateConfig: updateQuizConfig } = useTracNghiem();
+  // ⚙️ Bộ lọc lớp
   const [filterClass, setFilterClass] = useState("Tất cả");
 
+  // ⚙️ CẤU HÌNH ĐỀ THI – ĐÚNG CHUẨN FIRESTORE
+  const savedConfig = JSON.parse(localStorage.getItem("teacherConfig") || "{}");
+
+const [selectedClass, setSelectedClass] = useState(savedConfig.selectedClass || "");
+const [selectedSubject, setSelectedSubject] = useState(savedConfig.selectedSubject || "");
+const [semester, setSemester] = useState(savedConfig.semester || "");
+const [schoolYear, setSchoolYear] = useState(savedConfig.schoolYear || "2025-2026");
+const [examLetter, setExamLetter] = useState(savedConfig.examLetter || "");
+
+
+  // ⚙️ Dropdown cố định
+  const semesters = ["Giữa kỳ I", "Cuối kỳ I", "Giữa kỳ II", "Cả năm"];
+  const classes = ["Lớp 1", "Lớp 2", "Lớp 3", "Lớp 4", "Lớp 5"];
+  const subjects = ["Tin học", "Công nghệ"];
+  const years = ["2025-2026", "2026-2027", "2027-2028", "2028-2029", "2029-2030"];
+
+
+  // ⚙️ Danh sách câu hỏi
   const [questions, setQuestions] = useState([]);
+
+  // ⚙️ Snackbar
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
     severity: "success",
   });
-
-  const { config } = useConfig();
-  const deTracNghiem = config.deTracNghiem; // ✅ truy xuất đúng cách
-
-  const hocKyMap = {
-    "Giữa kỳ I": { from: 1, to: 9 },
-    "Cuối kỳ I": { from: 10, to: 18 },
-    "Giữa kỳ II": { from: 19, to: 27 },
-    "Cả năm": { from: 28, to: 35 },
-  };
 
   // Hàm upload lên Cloudinary
   const uploadImage = async (file) => {
@@ -96,11 +102,6 @@ export default function TracNghiemGV_KTDK() {
   };
 
 
-
-  // State cho học kỳ và tuần
-  const [semester, setSemester] = useState(config.hocKy || "");
-  const [week, setWeek] = useState(config.tuan || 1);
-
   useEffect(() => {
     const savedId = localStorage.getItem("deTracNghiemId");
     if (savedId) {
@@ -109,162 +110,143 @@ export default function TracNghiemGV_KTDK() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Đồng bộ khi config thay đổi
   useEffect(() => {
-    if (config.hocKy) setSemester(config.hocKy);
-    if (config.tuan) setWeek(config.tuan);
-  }, [config.hocKy, config.tuan]);
-
-  const [selectedClass, setSelectedClass] = useState("");
-  const [selectedSubject, setSelectedSubject] = useState("");
-
-  const classes = ["Lớp 1", "Lớp 2", "Lớp 3", "Lớp 4", "Lớp 5"];
-  const subjects = ["Tin học", "Công nghệ"];
-
-  useEffect(() => {
-    const fetchInitialQuiz = async () => {
-      try {
-        // 1️⃣ ƯU TIÊN school từ state -> rồi mới đến localStorage
-        const schoolFromState = location?.state?.school;
-        const schoolToUse = schoolFromState || localStorage.getItem("school") || "";
-
-        // 2️⃣ Không được dùng localStorage nếu đang mở đề để học sinh làm bài
-        // (chỉ dùng localStorage khi soạn đề editor)
-        const isEditor = location?.pathname?.includes("editor");
-
-        if (isEditor) {
-          const cfg = JSON.parse(localStorage.getItem("teacherConfig") || "{}");
-          const savedQuiz = JSON.parse(localStorage.getItem("teacherQuiz") || "[]");
-
-          if (Array.isArray(savedQuiz) && savedQuiz.length) {
-            setQuestions(savedQuiz);
-            if (cfg?.selectedClass) setSelectedClass(cfg.selectedClass);
-            if (cfg?.selectedSubject) setSelectedSubject(cfg.selectedSubject);
-            return;
-          }
-
-          setQuestions([createEmptyQuestion()]);
-          return;
-        }
-
-        // 3️⃣ HỌC SINH LÀM BÀI —> luôn tải đề đúng theo school
-        let docId = null;
-        let collectionName = "";
-
-        if (schoolToUse === "TH Lâm Văn Bền") {
-          // Lấy tên đề từ LAMVANBEN/config
-          const cfgRef = doc(db, "LAMVANBEN", "config");
-          const cfgSnap = await getDoc(cfgRef);
-
-          if (!cfgSnap.exists()) {
-            console.warn("Không tìm thấy config LAMVANBEN");
-            setQuestions([]);
-            return;
-          }
-
-          docId = cfgSnap.data()?.deTracNghiem || null;
-          collectionName = "TRACNGHIEM_LVB";
-        } else {
-          // Các trường khác → lấy từ CONFIG/config
-          const cfgRef = doc(db, "CONFIG", "config");
-          const cfgSnap = await getDoc(cfgRef);
-
-          if (!cfgSnap.exists()) {
-            console.warn("Không tìm thấy CONFIG/config");
-            setQuestions([]);
-            return;
-          }
-
-          docId = cfgSnap.data()?.deTracNghiem || null;
-          collectionName = "TRACNGHIEM";
-        }
-
-        if (!docId) {
-          console.warn("Không có deTracNghiem trong config");
-          setQuestions([]);
-          return;
-        }
-
-        // 4️⃣ MỞ ĐÚNG ĐỀ TƯƠNG ỨNG TRƯỜNG
-        const quizRef = doc(db, collectionName, docId);
-        const quizSnap = await getDoc(quizRef);
-
-        if (!quizSnap.exists()) {
-          console.warn("Không tìm thấy đề:", collectionName, docId);
-          setQuestions([]);
-          return;
-        }
-
-        const data = quizSnap.data();
-        const list = Array.isArray(data.questions) ? data.questions : [];
-
-        setQuestions(list);
-        setSelectedClass(data.class || "");
-        setSelectedSubject(data.subject || "");
-        setSemester(data.semester || "");
-
-      } catch (err) {
-        console.error("❌ Lỗi load đề:", err);
-        setQuestions([]);
-      }
-    };
-
-    fetchInitialQuiz();
-  }, [location?.state?.school]);
-
-  // -----------------------
-  // Load dữ liệu khi mount
-  // -----------------------
-  useEffect(() => {
+  const fetchInitialQuiz = async () => {
     try {
-      // Load config
-      const cfg = JSON.parse(localStorage.getItem("teacherConfig") || "{}");
-      if (cfg?.selectedClass) setSelectedClass(cfg.selectedClass);
-      if (cfg?.selectedSubject) setSelectedSubject(cfg.selectedSubject);
+      const schoolFromState = location?.state?.school;
+      const schoolToUse = schoolFromState || localStorage.getItem("school") || "";
 
-      // Load quiz
-      const saved = JSON.parse(localStorage.getItem("teacherQuiz") || "[]");
+      let docId = null;
+      let collectionName = "";
 
-      if (Array.isArray(saved) && saved.length) {
-        const fixed = saved.map(q => {
-          switch (q.type) {
-            case "image":
-              return {
-                ...q,
-                options: Array.from({ length: 4 }, (_, i) => q.options?.[i] || ""),
-                correct: Array.isArray(q.correct) ? q.correct : [],
-              };
-            case "truefalse":
-              return {
-                ...q,
-                options: q.options || ["Đúng", "Sai"],
-                correct: q.correct || ["Đúng"],
-              };
-            case "sort":
-            case "matching":
-              return { ...q };
-            default:
-              // fallback cho các type khác
-              return {
-                ...q,
-                type: "sort",
-                options: q.options || ["", "", "", ""],
-                correct: q.options ? q.options.map((_, i) => i) : [],
-                pairs: [],
-              };
-          }
-        });
-
-        setQuestions(fixed);
+      // Chọn config theo trường
+      if (schoolToUse === "TH Lâm Văn Bền") {
+        const cfgRef = doc(db, "LAMVANBEN", "config");
+        const cfgSnap = await getDoc(cfgRef);
+        if (!cfgSnap.exists()) {
+          console.warn("Không tìm thấy config LAMVANBEN");
+          setQuestions([]);
+          return;
+        }
+        docId = cfgSnap.data()?.deTracNghiem || null;
+        collectionName = "TRACNGHIEM_LVB";
       } else {
-        // 🔹 Nếu không có dữ liệu → tạo 1 câu hỏi trống
-        setQuestions([createEmptyQuestion()]);
+        const cfgRef = doc(db, "CONFIG", "config");
+        const cfgSnap = await getDoc(cfgRef);
+        if (!cfgSnap.exists()) {
+          console.warn("Không tìm thấy CONFIG/config");
+          setQuestions([]);
+          return;
+        }
+        docId = cfgSnap.data()?.deTracNghiem || null;
+        collectionName = "TRACNGHIEM_BK";
       }
+
+      if (!docId) {
+        console.warn("Không có deTracNghiem trong config");
+        setQuestions([]);
+        return;
+      }
+
+      // Lấy document đề
+      const quizRef = doc(db, collectionName, docId);
+      const quizSnap = await getDoc(quizRef);
+
+      if (!quizSnap.exists()) {
+        console.warn("Không tìm thấy đề:", collectionName, docId);
+        setQuestions([]);
+        return;
+      }
+
+      const data = quizSnap.data();
+      const list = Array.isArray(data.questions) ? data.questions : [];
+
+      // Đồng bộ trực tiếp state từ document
+      setQuestions(list);
+      setSelectedClass(data.class || "");
+      setSelectedSubject(data.subject || "");
+      setSemester(data.semester || "");
+      setSchoolYear(data.schoolYear || "");
+      setExamLetter(data.examLetter || "");
+
+      // Cập nhật localStorage
+      localStorage.setItem("teacherQuiz", JSON.stringify(list));
+      localStorage.setItem("teacherConfig", JSON.stringify({
+        selectedClass: data.class || "",
+        selectedSubject: data.subject || "",
+        semester: data.semester || "",
+        schoolYear: data.schoolYear || "",
+        examLetter: data.examLetter || "",
+      }));
+
     } catch (err) {
-      console.error("❌ Không thể load dữ liệu:", err);
+      console.error("❌ Lỗi load đề:", err);
+      setQuestions([]);
+    }
+  };
+
+  fetchInitialQuiz();
+}, [location?.state?.school]);
+
+
+// -----------------------
+// Load dữ liệu khi mount
+// -----------------------
+useEffect(() => {
+  try {
+    // Load config
+    const cfg = JSON.parse(localStorage.getItem("teacherConfig") || "{}");
+
+    if (cfg?.selectedClass) setSelectedClass(cfg.selectedClass);
+    if (cfg?.selectedSubject) setSelectedSubject(cfg.selectedSubject);
+
+    // ⭐ Thêm 3 dòng cần thiết
+    if (cfg?.semester) setSemester(cfg.semester);
+    if (cfg?.schoolYear) setSchoolYear(cfg.schoolYear);
+    if (cfg?.examLetter) setExamLetter(cfg.examLetter);
+
+    // Load quiz
+    const saved = JSON.parse(localStorage.getItem("teacherQuiz") || "[]");
+
+    if (Array.isArray(saved) && saved.length) {
+      const fixed = saved.map(q => {
+        switch (q.type) {
+          case "image":
+            return {
+              ...q,
+              options: Array.from({ length: 4 }, (_, i) => q.options?.[i] || ""),
+              correct: Array.isArray(q.correct) ? q.correct : [],
+            };
+          case "truefalse":
+            return {
+              ...q,
+              options: q.options || ["Đúng", "Sai"],
+              correct: q.correct || ["Đúng"],
+            };
+          case "sort":
+          case "matching":
+            return { ...q };
+          default:
+            return {
+              ...q,
+              type: "sort",
+              options: q.options || ["", "", "", ""],
+              correct: q.options ? q.options.map((_, i) => i) : [],
+              pairs: [],
+            };
+        }
+      });
+
+      setQuestions(fixed);
+    } else {
       setQuestions([createEmptyQuestion()]);
     }
-  }, []);
+  } catch (err) {
+    console.error("❌ Không thể load dữ liệu:", err);
+    setQuestions([createEmptyQuestion()]);
+  }
+}, []);
+
 
   // 🔹 Lưu config vào localStorage khi thay đổi
   useEffect(() => {
@@ -272,10 +254,12 @@ export default function TracNghiemGV_KTDK() {
       selectedClass,
       selectedSubject,
       semester,
-      week,
+      schoolYear,
+      examLetter,
     };
     localStorage.setItem("teacherConfig", JSON.stringify(cfg));
-  }, [selectedClass, selectedSubject, semester, week]);
+  }, [selectedClass, selectedSubject, semester, schoolYear, examLetter]);
+
 
   // -----------------------
   // Xử lý câu hỏi
@@ -283,7 +267,7 @@ export default function TracNghiemGV_KTDK() {
   const createEmptyQuestion = () => ({
     id: `q_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
     question: "",
-    type: "sort",        // mặc định
+    type: "single",        // mặc định
     options: ["", "", "", ""],  // dùng cho tất cả loại (text hoặc image)
     score: 1,
     correct: [],
@@ -300,22 +284,31 @@ export default function TracNghiemGV_KTDK() {
   }
 
   const handleCreateNewQuiz = () => {
+    // Xóa đề đang chọn
     setSelectedDoc(null);
-    setQuestions([createEmptyQuestion()]);
-    updateQuizConfig({ deTracNghiem: null });
+
+    // Reset câu hỏi về 1 câu trống
+    const emptyQ = createEmptyQuestion();
+    setQuestions([emptyQ]);
+
+    // Đặt trạng thái là đề mới
     setIsEditingNewDoc(true);
 
+    // 🔹 Reset tất cả dropdown về null / empty string
     setSelectedClass("");
     setSelectedSubject("");
+    setSemester("");
+    setSchoolYear("");
+    setExamLetter("");
 
-    localStorage.setItem("teacherQuiz", JSON.stringify([createEmptyQuestion()]));
-    localStorage.setItem("teacherConfig", JSON.stringify({
-      selectedClass: "",
-      selectedSubject: "",
-      semester: "",
-      week: 1
-    }));
+    // 🔹 KHÔNG update context hay localStorage ở đây
+    // updateQuizConfig({ deTracNghiem: null });
+    // localStorage.setItem(...) → bỏ
+
+    // Khi người dùng bấm "Lưu" mới update context/localStorage
   };
+
+
 
   const handleAddQuestion = () => setQuestions((prev) => [...prev, createEmptyQuestion()]);
 
@@ -453,11 +446,33 @@ export default function TracNghiemGV_KTDK() {
       if (school === "TH Lâm Văn Bền") {
         collectionName = "TRACNGHIEM_LVB";
       } else {
-        collectionName = "TRACNGHIEM";
+        collectionName = "TRACNGHIEM_BK";
       }
 
-      // 🔹 Document ID không có tuần
-      const docId = `quiz_${selectedClass}_${selectedSubject}`;
+      // 🔹 Document ID 
+
+      // Map rút gọn học kỳ
+      const semesterMap = {
+        "Giữa kỳ I": "GKI",
+        "Cuối kỳ I": "CKI",
+        "Giữa kỳ II": "GKII",
+        "Cả năm": "CN",
+      };
+
+      // Hàm rút gọn năm học
+      const shortSchoolYear = (year) => {
+        // ví dụ year = "2026-2027" -> "26-27"
+        const parts = year.split("-");
+        if (parts.length === 2) {
+          return parts[0].slice(2) + "-" + parts[1].slice(2);
+        }
+        return year;
+      };
+
+      // Khi tạo docId
+      const docId = `quiz_${selectedClass}_${selectedSubject}_${semesterMap[semester]}_${shortSchoolYear(schoolYear)} (${examLetter})`;
+
+
       console.log("📁 Document path:", `${collectionName} / ${docId}`);
 
       const quizRef = doc(db, collectionName, docId);
@@ -465,9 +480,12 @@ export default function TracNghiemGV_KTDK() {
       await setDoc(quizRef, {
         class: selectedClass,
         subject: selectedSubject,
-        semester,
+        semester,               // ví dụ: "GKI", "CKI", ...
+        schoolYear,             // ví dụ: "25-26"
+        examLetter,             // ví dụ: "A", "B", ...
         questions: questionsToSave,
       });
+
 
       // 🔄 Cập nhật context nếu là đề mới
       const newDoc = { id: docId, class: selectedClass, subject: selectedSubject, semester, questions: questionsToSave };
@@ -509,7 +527,7 @@ export default function TracNghiemGV_KTDK() {
       const school = localStorage.getItem("school") || "";
       
       // Chọn collection theo school
-      const colName = school === "TH Lâm Văn Bền" ? "TRACNGHIEM_LVB" : "TRACNGHIEM";
+      const colName = school === "TH Lâm Văn Bền" ? "TRACNGHIEM_LVB" : "TRACNGHIEM_BK";
 
       // Lấy tất cả document trong collection
       const colRef = collection(db, colName);
@@ -556,7 +574,7 @@ export default function TracNghiemGV_KTDK() {
       const school = localStorage.getItem("school") || "";
 
       // 🔹 Chọn collection dựa trên tài khoản đăng nhập
-      const collectionName = school === "TH Lâm Văn Bền" ? "TRACNGHIEM_LVB" : "TRACNGHIEM";
+      const collectionName = school === "TH Lâm Văn Bền" ? "TRACNGHIEM_LVB" : "TRACNGHIEM_BK";
 
       const docRef = doc(db, collectionName, selectedDoc);
       const docSnap = await getDoc(docRef);
@@ -579,7 +597,11 @@ export default function TracNghiemGV_KTDK() {
         setSelectedClass(data.class || "");
         setSelectedSubject(data.subject || "");
         setSemester(data.semester || "");
-        setWeek(data.week || 1);
+        setSchoolYear(data.schoolYear || "");
+        setExamLetter(data.examLetter || "");
+        // Cập nhật context và localStorage để lưu tên đề đã mở
+        updateQuizConfig({ deTracNghiem: selectedDoc });
+        localStorage.setItem("deTracNghiemId", selectedDoc);
 
         updateQuizConfig({ deTracNghiem: data });
 
@@ -589,9 +611,11 @@ export default function TracNghiemGV_KTDK() {
             selectedClass: data.class,
             selectedSubject: data.subject,
             semester: data.semester,
-            week: data.week,
+            schoolYear: data.schoolYear,
+            examLetter: data.examLetter,
           })
         );
+
         localStorage.setItem("teacherQuiz", JSON.stringify(fixedQuestions));
 
         setOpenDialog(false);
@@ -645,9 +669,6 @@ export default function TracNghiemGV_KTDK() {
     }
   };
 
-
-
-
   const addQuestion = () => {
     setQuestions((prev) => [
       ...prev,
@@ -679,7 +700,7 @@ export default function TracNghiemGV_KTDK() {
       const school = localStorage.getItem("school") || "";
 
       // 🔹 Chọn collection theo trường
-      const collectionName = school === "TH Lâm Văn Bền" ? "TRACNGHIEM_LVB" : "TRACNGHIEM";
+      const collectionName = school === "TH Lâm Văn Bền" ? "TRACNGHIEM_LVB" : "TRACNGHIEM_BK";
 
       await deleteDoc(doc(db, collectionName, selectedDoc));
 
@@ -692,12 +713,15 @@ export default function TracNghiemGV_KTDK() {
       const isCurrentQuizDeleted =
         selectedClass === docToDelete?.class &&
         selectedSubject === docToDelete?.subject &&
-        week === docToDelete?.week;
+        semester === docToDelete?.semester &&
+        schoolYear === docToDelete?.schoolYear &&
+        examLetter === docToDelete?.examLetter;
 
       if (isCurrentQuizDeleted) {
         setQuestions([createEmptyQuestion()]);
         updateQuizConfig({ deTracNghiem: null });
       }
+
 
       setSnackbar({
         open: true,
@@ -716,12 +740,22 @@ export default function TracNghiemGV_KTDK() {
 
 
   useEffect(() => {
-    if (deTracNghiem) {
-      setIsEditingNewDoc(false);
+    // Ưu tiên lấy từ context nếu có
+    const contextDocId = quizConfig?.deTracNghiem;
+
+    // Nếu không có trong context, thử lấy từ localStorage
+    const storedDocId = localStorage.getItem("deTracNghiemId");
+
+    const docId = contextDocId || storedDocId || null;
+
+    if (docId) {
+      setSelectedDoc(docId);
+      setIsEditingNewDoc(false); // có đề → không phải đề mới
     } else {
-      setIsEditingNewDoc(true);
+      setIsEditingNewDoc(true); // không có đề → là đề mới
     }
-  }, [deTracNghiem]);
+  }, []);
+
 
   const handleImageChange = async (qi, oi, file) => {
     try {
@@ -756,8 +790,6 @@ export default function TracNghiemGV_KTDK() {
       });
     }
   };
-
-
 
   return (
     <Box sx={{ minHeight: "100vh", p: 3, backgroundColor: "#e3f2fd", display: "flex", justifyContent: "center" }}>
@@ -797,10 +829,12 @@ export default function TracNghiemGV_KTDK() {
           fontWeight="bold"
           sx={{ color: "text.secondary", mb: 3 }}
         >
-          {isEditingNewDoc || !selectedClass || !selectedSubject
-            ? "🆕 Đang soạn đề mới"
-            : `📝 Đề: ${selectedSubject} - ${selectedClass} `}
+          {quizConfig.deTracNghiem || localStorage.getItem("deTracNghiemId")
+            ? `📝 Đề: ${selectedSubject || ""} - ${selectedClass || ""}`
+            : "🆕 Đang soạn đề mới"}
         </Typography>
+
+
 
         {/* FORM LỚP / MÔN / HỌC KỲ / TUẦN */}
         <Paper elevation={2} sx={{ p: 2, mb: 3 }}>
@@ -838,18 +872,51 @@ export default function TracNghiemGV_KTDK() {
                 </FormControl>
 
                 <FormControl size="small" sx={{ flex: 1 }}>
-                    <InputLabel>Học kỳ</InputLabel>
-                    <Select
+                  <InputLabel>Học kỳ</InputLabel>
+                  <Select
                     value={semester || ""}
                     onChange={(e) => setSemester(e.target.value)}
                     label="Học kỳ"
-                    >
-                    {Object.keys(hocKyMap || {}).map((hk) => (
-                        <MenuItem key={hk} value={hk}>
+                  >
+                    {semesters.map((hk) => (
+                      <MenuItem key={hk} value={hk}>
                         {hk}
-                        </MenuItem>
+                      </MenuItem>
                     ))}
-                    </Select>
+                  </Select>
+                </FormControl>
+
+                
+                {/* Năm học */}
+                <FormControl size="small" sx={{ flex: 1 }}>
+                  <InputLabel>Năm học</InputLabel>
+                  <Select
+                    value={schoolYear || ""}
+                    onChange={(e) => setSchoolYear(e.target.value)}
+                    label="Năm học"
+                  >
+                    {years.map((y) => (
+                      <MenuItem key={y} value={y}>
+                        {y}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+
+
+                <FormControl size="small" sx={{ flex: 1 }}>
+                  <InputLabel>Đề</InputLabel>
+                  <Select
+                    value={examLetter || ""}         // state để lưu lựa chọn
+                    onChange={(e) => setExamLetter(e.target.value)}
+                    label="Đề"
+                  >
+                    {["A", "B", "C", "D"].map((d) => (
+                      <MenuItem key={d} value={d}>
+                        {d}
+                      </MenuItem>
+                    ))}
+                  </Select>
                 </FormControl>
                 </Stack>
             </Stack>
@@ -913,16 +980,13 @@ export default function TracNghiemGV_KTDK() {
                     }}
                     label="Loại câu hỏi"
                   >
-                    <MenuItem value="single">Một lựa chọn</MenuItem>
-                    <MenuItem value="multiple">Nhiều lựa chọn</MenuItem>
-                    <MenuItem value="sort">Sắp xếp</MenuItem>
-                    <MenuItem value="matching">Ghép đôi</MenuItem>
                     <MenuItem value="truefalse">Đúng – Sai</MenuItem>
+                    <MenuItem value="single">Một lựa chọn</MenuItem>
+                    <MenuItem value="multiple">Nhiều lựa chọn</MenuItem>                    
+                    <MenuItem value="matching">Ghép đôi</MenuItem>                    
                     <MenuItem value="image">Hình ảnh</MenuItem>
+                    <MenuItem value="sort">Sắp xếp</MenuItem>
                   </Select>
-
-
-
                 </FormControl>
 
                 <TextField
