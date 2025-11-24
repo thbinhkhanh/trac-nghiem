@@ -294,51 +294,33 @@ export default function QuanTri() {
     }
   };
 
-
-
   const renderConfig = isLamVanBen ? configLocal : configOther;
 
   return (
-  <Box
-    sx={{
-      minHeight: "100vh",
-      backgroundColor: "#e3f2fd",
-      pt: 3,
-      display: "flex",
-      justifyContent: "center",
-    }}
-  >
-    <Stack
-      direction={{ xs: "column", sm: "row" }} // responsive: cột trên điện thoại
-      spacing={2}
-      sx={{ width: { xs: "95%", sm: "75%" }, maxWidth: 1200, mx: "auto" }}
-    >
+  <Box sx={{ minHeight: "100vh", backgroundColor: "#e3f2fd", pt: 3, display: "flex", justifyContent: "center" }}>
+    <Stack direction="row" spacing={2} sx={{ width: "75%", maxWidth: 1200 }}>      
       {/* ========================== CỘT TRÁI: CẤU HÌNH ========================== */}
       <Card
         elevation={6}
-          sx={{
-            p: 3,
-            borderRadius: 3,
-            flex: 2,
-            height: 600,       // chiều cao cố định, áp dụng cho cả mobile
-            minHeight: 500,    // tối thiểu
-          }}
-        >
-          <Typography
-            variant="h6"
-            fontWeight="bold"
-            color="primary"
-            gutterBottom
-            sx={{ textAlign: "center", mb: 3 }}
-          >
-            CẤU HÌNH HỆ THỐNG
-          </Typography>
-
+        sx={{
+          p: 3,
+          borderRadius: 3,
+          flex: 2,
+          height: 600,       // chiều cao cố định
+          minHeight: 500,    // hoặc tối thiểu
+        }}
+      >
         <Typography
-          variant="subtitle1"
-          color="textSecondary"
-          sx={{ mb: 2, fontWeight: "bold" }}
+          variant="h6"
+          fontWeight="bold"
+          color="primary"
+          gutterBottom
+          sx={{ textAlign: "center", mb: 3 }}
         >
+          CẤU HÌNH HỆ THỐNG
+        </Typography>
+
+        <Typography variant="subtitle1" color="textSecondary" sx={{ mb: 2, fontWeight: "bold" }}>
           {account || "Chưa đăng nhập"}
         </Typography>
 
@@ -384,17 +366,12 @@ export default function QuanTri() {
                 label="Lớp"
               >
                 {classes.map((cls) => (
-                  <MenuItem key={cls} value={cls}>
-                    {cls}
-                  </MenuItem>
+                  <MenuItem key={cls} value={cls}>{cls}</MenuItem>
                 ))}
               </Select>
             </FormControl>
 
-            <IconButton
-              sx={{ color: "green" }}
-              onClick={() => setAddingClass(true)}
-            >
+            <IconButton sx={{ color: "green" }} onClick={() => setAddingClass(true)}>
               <Add />
             </IconButton>
 
@@ -412,25 +389,16 @@ export default function QuanTri() {
                 onChange={(e) => setNewClass(e.target.value)}
                 fullWidth
               />
-              <Button
-                variant="contained"
-                size="small"
-                sx={{ bgcolor: "green" }}
-                onClick={handleAddClass}
-              >
+              <Button variant="contained" size="small" sx={{ bgcolor: "green" }} onClick={handleAddClass}>
                 Lưu
               </Button>
-              <Button size="small" onClick={() => setAddingClass(false)}>
-                Hủy
-              </Button>
+              <Button size="small" onClick={() => setAddingClass(false)}>Hủy</Button>
             </Stack>
           )}
 
           {/* Thời gian */}
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <Typography sx={{ minWidth: 140 }}>
-              Thời gian làm bài (phút)
-            </Typography>
+            <Typography sx={{ minWidth: 140 }}>Thời gian làm bài (phút)</Typography>
             <TextField
               type="number"
               size="small"
@@ -452,9 +420,7 @@ export default function QuanTri() {
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
             <Checkbox
               checked={renderConfig.choXemDapAn || false}
-              onChange={(e) =>
-                updateConfigField("choXemDapAn", e.target.checked)
-              }
+              onChange={(e) => updateConfigField("choXemDapAn", e.target.checked)}
             />
             <Typography>Cho xem đáp án</Typography>
           </Box>
@@ -462,9 +428,7 @@ export default function QuanTri() {
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
             <Checkbox
               checked={renderConfig.xuatFileBaiLam || false}
-              onChange={(e) =>
-                updateConfigField("xuatFileBaiLam", e.target.checked)
-              }
+              onChange={(e) => updateConfigField("xuatFileBaiLam", e.target.checked)}
             />
             <Typography>Xuất file bài làm</Typography>
           </Box>
@@ -478,10 +442,11 @@ export default function QuanTri() {
           p: 3,
           borderRadius: 3,
           flex: 5,
-          minHeight: { xs: "auto", sm: 500 },
-          maxHeight: { xs: "auto", sm: 600 },
+          height: 600,       // chiều cao cố định
+          minHeight: 500,    // hoặc tối thiểu
         }}
       >
+
         <Typography
           variant="h6"
           fontWeight="bold"
@@ -492,11 +457,7 @@ export default function QuanTri() {
           ĐỀ KIỂM TRA
         </Typography>
 
-        <Stack
-          direction={{ xs: "column", sm: "row" }}
-          spacing={2}
-          sx={{ width: "100%" }}
-        >
+        <Stack direction="row" spacing={2}>
           {/* ===== BẢNG 1: Danh sách đề ===== */}
           <Box sx={{ flex: 1 }}>
             <Typography variant="subtitle1" fontWeight="bold" sx={{ mb: 1 }}>
@@ -506,17 +467,15 @@ export default function QuanTri() {
             {/* Danh sách đề có scroll */}
             <Box
               sx={{
-                maxHeight: { xs: 200, sm: 450 },
+                maxHeight: 450,
                 overflowY: "auto",
                 border: "1px solid #ccc",
                 borderRadius: 2,
-                mb: 1,
+                mb: 1, // tạo khoảng cách giữa danh sách và nút xóa
               }}
             >
               {examList.length === 0 ? (
-                <Typography sx={{ p: 2, color: "gray" }}>
-                  Không có đề
-                </Typography>
+                <Typography sx={{ p: 2, color: "gray" }}>Không có đề</Typography>
               ) : (
                 examList.map((ex) => (
                   <Box key={ex.id} sx={{ mb: 1 }}>
@@ -527,15 +486,21 @@ export default function QuanTri() {
                       sx={{
                         px: 2,
                         py: 1,
-                        height: 30,
+                        height: 30, // đồng bộ chiều cao
+                        borderBottom: "1px solid #eee",
                         cursor: "pointer",
+
+                        // highlight đề đang chọn để xóa
                         backgroundColor:
                           selectedExamToDelete?.id === ex.id
                             ? "#ffebee"
                             : pendingExam?.id === ex.id
                             ? "#bbdefb"
                             : "transparent",
-                        "&:hover": { background: "#e3f2fd" },
+
+                        "&:hover": {
+                          background: "#e3f2fd",
+                        },
                         borderRadius: 1,
                       }}
                       onClick={() => setSelectedExamToDelete(ex)}
@@ -546,16 +511,19 @@ export default function QuanTri() {
                         {ex.tenDe || ex.id}
                       </Typography>
 
+                      {/* Nút thêm sang bảng phải */}
                       <IconButton
                         color="primary"
                         size="small"
                         onClick={async (e) => {
-                          e.stopPropagation();
+                          e.stopPropagation(); // tránh chọn nhầm đề để xóa
+
                           setSelectedExam((prev) => {
                             if (!prev) return [ex];
                             if (prev.some((e) => e.id === ex.id)) return prev;
                             return [...prev, ex];
                           });
+
                           await addExamToFirestore(ex);
                           setPendingExam(null);
                         }}
@@ -568,12 +536,12 @@ export default function QuanTri() {
               )}
             </Box>
 
-            {/* Nút xóa đề */}
-            <Box sx={{ display: "flex", justifyContent: "center", mt: 2 }}>
+            {/* Nút xóa đề — luôn hiển thị, không bị khuất */}
+            <Box sx={{ display: "flex", justifyContent: "center", mt: 1 }}>
               <Button
                 variant="contained"
                 color="error"
-                sx={{ maxWidth: 200, width: "100%" }}
+                sx={{ maxWidth: 200, mt: 2 }}
                 onClick={handleDeleteExam}
               >
                 Xóa đề đã chọn
@@ -589,7 +557,7 @@ export default function QuanTri() {
 
             <Box
               sx={{
-                maxHeight: { xs: 200, sm: 400 },
+                maxHeight: 400,
                 overflowY: "auto",
                 border: "1px solid #ccc",
                 borderRadius: 2,
@@ -605,12 +573,9 @@ export default function QuanTri() {
                     sx={{
                       px: 2,
                       py: 1,
-                      height: 30,
+                      height: 30, // đồng bộ chiều cao với bên trái
                       borderBottom: "1px solid #eee",
-                      backgroundColor:
-                        ex.id === pendingSelectedExam?.id
-                          ? "#bbdefb"
-                          : "transparent",
+                      backgroundColor: ex.id === pendingSelectedExam?.id ? "#bbdefb" : "transparent",
                       "&:hover": { background: "#e3f2fd" },
                     }}
                     onMouseEnter={() => setPendingSelectedExam(ex)}
@@ -621,20 +586,17 @@ export default function QuanTri() {
                       color="error"
                       size="small"
                       onClick={async () => {
-                        setSelectedExam((prev) =>
-                          prev.filter((e) => e.id !== ex.id)
-                        );
+                        setSelectedExam((prev) => prev.filter((e) => e.id !== ex.id));
                         await removeExamFromFirestore(ex);
                       }}
                     >
                       <ChevronLeft />
                     </IconButton>
+
                   </Stack>
                 ))
               ) : (
-                <Typography sx={{ p: 2, color: "textSecondary" }}>
-                  Chưa chọn đề
-                </Typography>
+                <Typography sx={{ p: 2, color: "textSecondary" }}>Chưa chọn đề</Typography>
               )}
             </Box>
           </Box>
@@ -642,7 +604,6 @@ export default function QuanTri() {
       </Card>
     </Stack>
 
-    {/* Snackbar */}
     <Snackbar
       open={snackbar.open}
       autoHideDuration={4000}
@@ -655,6 +616,5 @@ export default function QuanTri() {
     </Snackbar>
   </Box>
 );
-
 
 }

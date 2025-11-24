@@ -1130,105 +1130,105 @@ export default function TracNghiemGV_KTDK() {
                 )}
 
                 {q.type === "image" && (
-  <Stack
-    direction={{ xs: "column", sm: "row" }}   // ⭐ đổi direction theo màn hình
-    spacing={2}
-    alignItems="center"
-  >
-    {Array.from({ length: 4 }).map((_, oi) => {
-      const img = q.options?.[oi] || "";
-      const isChecked = q.correct?.includes(oi) || false;
+                  <Stack
+                    direction={{ xs: "column", sm: "row" }}   // ⭐ đổi direction theo màn hình
+                    spacing={2}
+                    alignItems="center"
+                  >
+                    {Array.from({ length: 4 }).map((_, oi) => {
+                      const img = q.options?.[oi] || "";
+                      const isChecked = q.correct?.includes(oi) || false;
 
-      return (
-        <Box key={oi} sx={{ position: "relative" }}>
-          <Paper
-            sx={{
-              width: { xs: "100%", sm: 120 },   // ⭐ mobile: full width
-              height: 120,
-              border: "2px dashed #90caf9",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              position: "relative",
-            }}
-          >
-            {img ? (
-              <>
-                <img
-                  src={img}
-                  alt={`option-${oi}`}
-                  style={{
-                    maxWidth: "100%",
-                    maxHeight: "100%",
-                    objectFit: "contain",
-                  }}
-                />
-                <IconButton
-                  size="small"
-                  sx={{ position: "absolute", top: 2, right: 2 }}
-                  onClick={() => {
-                    const newOptions = [...q.options];
-                    newOptions[oi] = "";
-                    updateQuestionAt(qi, { options: newOptions });
+                      return (
+                        <Box key={oi} sx={{ position: "relative" }}>
+                          <Paper
+                            sx={{
+                              width: { xs: "100%", sm: 120 },   // ⭐ mobile: full width
+                              height: 120,
+                              border: "2px dashed #90caf9",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              position: "relative",
+                            }}
+                          >
+                            {img ? (
+                              <>
+                                <img
+                                  src={img}
+                                  alt={`option-${oi}`}
+                                  style={{
+                                    maxWidth: "100%",
+                                    maxHeight: "100%",
+                                    objectFit: "contain",
+                                  }}
+                                />
+                                <IconButton
+                                  size="small"
+                                  sx={{ position: "absolute", top: 2, right: 2 }}
+                                  onClick={() => {
+                                    const newOptions = [...q.options];
+                                    newOptions[oi] = "";
+                                    updateQuestionAt(qi, { options: newOptions });
 
-                    const newCorrect = (q.correct || []).filter(c => c !== oi);
-                    updateQuestionAt(qi, { correct: newCorrect });
-                  }}
-                >
-                  ✕
-                </IconButton>
-              </>
-            ) : (
-              <label
-                style={{
-                  cursor: "pointer",
-                  width: "100%",
-                  height: "100%",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <Typography variant="body2" sx={{ textAlign: "center" }}>
-                  Tải hình lên
-                </Typography>
-                <input
-                  type="file"
-                  accept="image/*"
-                  style={{ display: "none" }}
-                  onChange={(e) =>
-                    e.target.files?.[0] &&
-                    handleImageChange(qi, oi, e.target.files[0])
-                  }
-                />
-              </label>
-            )}
-          </Paper>
+                                    const newCorrect = (q.correct || []).filter(c => c !== oi);
+                                    updateQuestionAt(qi, { correct: newCorrect });
+                                  }}
+                                >
+                                  ✕
+                                </IconButton>
+                              </>
+                            ) : (
+                              <label
+                                style={{
+                                  cursor: "pointer",
+                                  width: "100%",
+                                  height: "100%",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                }}
+                              >
+                                <Typography variant="body2" sx={{ textAlign: "center" }}>
+                                  Tải hình lên
+                                </Typography>
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  style={{ display: "none" }}
+                                  onChange={(e) =>
+                                    e.target.files?.[0] &&
+                                    handleImageChange(qi, oi, e.target.files[0])
+                                  }
+                                />
+                              </label>
+                            )}
+                          </Paper>
 
-          {img && (
-            <Checkbox
-              checked={isChecked}
-              onChange={(e) => {
-                let newCorrect = [...(q.correct || [])];
-                if (e.target.checked) newCorrect.push(oi);
-                else newCorrect = newCorrect.filter((c) => c !== oi);
+                          {img && (
+                            <Checkbox
+                              checked={isChecked}
+                              onChange={(e) => {
+                                let newCorrect = [...(q.correct || [])];
+                                if (e.target.checked) newCorrect.push(oi);
+                                else newCorrect = newCorrect.filter((c) => c !== oi);
 
-                updateQuestionAt(qi, { correct: newCorrect });
-              }}
-              sx={{
-                position: "absolute",
-                top: -10,
-                left: -10,
-                bgcolor: "background.paper",
-                borderRadius: "50%",
-              }}
-            />
-          )}
-        </Box>
-      );
-    })}
-  </Stack>
-)}
+                                updateQuestionAt(qi, { correct: newCorrect });
+                              }}
+                              sx={{
+                                position: "absolute",
+                                top: -10,
+                                left: -10,
+                                bgcolor: "background.paper",
+                                borderRadius: "50%",
+                              }}
+                            />
+                          )}
+                        </Box>
+                      );
+                    })}
+                  </Stack>
+                )}
 
 
 
