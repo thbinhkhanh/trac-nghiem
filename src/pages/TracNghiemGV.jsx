@@ -1352,8 +1352,9 @@ useEffect(() => {
         >
           <DialogTitle
             sx={{
-              textAlign: "center",
+              textAlign: "left",          // 👈 Căn trái
               py: 1.2,
+              pl: 2,                      // 👈 Thêm khoảng đệm bên trái
               fontWeight: "bold",
               fontSize: "1.1rem",
               background: "linear-gradient(to right, #1976d2, #42a5f5)",
@@ -1362,13 +1363,13 @@ useEffect(() => {
               borderTopRightRadius: 12,
             }}
           >
-            📂 Chọn đề để mở
+            📂 Danh sách đề
           </DialogTitle>
 
           <DialogContent
             dividers
             sx={{
-              maxHeight: 320,
+              maxHeight: 350,
               overflowY: "auto",
               px: 2,
               py: 2,
@@ -1395,48 +1396,55 @@ useEffect(() => {
                   ))}
                 </Select>
               </FormControl>
-
             </Stack>
 
-            {loadingList ? (
-              <Typography align="center" sx={{ py: 4, color: "text.secondary" }}>
-                ⏳ Đang tải danh sách đề...
-              </Typography>
-            ) : docList.length === 0 ? (
-              <Typography align="center" sx={{ py: 4, color: "text.secondary" }}>
-                Không có đề nào.
-              </Typography>
-            ) : (
-              <Stack spacing={0.5}> {/* giảm khoảng cách giữa các thẻ */}
-                {docList
+            {/* --- BẢNG DANH SÁCH ĐỀ --- */}
+            <Box
+              sx={{
+                maxHeight: 260,
+                overflowY: "auto",
+                border: "1px solid #ccc",
+                borderRadius: 2,
+                mb: 1,
+              }}
+            >
+              {loadingList ? (
+                <Typography align="center" sx={{ p: 2, color: "gray" }}>
+                  ⏳ Đang tải danh sách đề...
+                </Typography>
+              ) : docList.length === 0 ? (
+                <Typography align="center" sx={{ p: 2, color: "gray" }}>
+                  Không có đề nào.
+                </Typography>
+              ) : (
+                docList
                   .filter((doc) =>
                     filterClass === "Tất cả" ? true : doc.class === filterClass
                   )
                   .map((doc) => (
-                    <Box
+                    <Stack
                       key={doc.id}
-                      onClick={() => setSelectedDoc(doc.id)}
-                      onDoubleClick={() => handleOpenSelectedDoc(doc.id)}
+                      direction="row"
+                      alignItems="center"
+                      justifyContent="space-between"
                       sx={{
                         px: 2,
                         py: 1,
-                        border: "1px solid #e0e0e0", // viền xám nhạt
-                        borderRadius: 0,             // bỏ bo góc
+                        height: 36,
                         cursor: "pointer",
-                        userSelect: "none",
-                        bgcolor: "#fff",             // nền trắng
-                        "&:hover": {                  // hover nhẹ
-                          bgcolor: "#f5f5f5",
-                        },
+                        borderRadius: 1,
+                        backgroundColor:
+                          selectedDoc === doc.id ? "#E3F2FD" : "transparent",
+                        "&:hover": { backgroundColor: "#f5f5f5" },
                       }}
+                      onClick={() => setSelectedDoc(doc.id)}
+                      onDoubleClick={() => handleOpenSelectedDoc(doc.id)}
                     >
-                      <Typography variant="body1" color="text.primary">
-                        {doc.id} {/* tên document */}
-                      </Typography>
-                    </Box>
-                  ))}
-              </Stack>
-            )}
+                      <Typography variant="subtitle1">{doc.id}</Typography>
+                    </Stack>
+                  ))
+              )}
+            </Box>
           </DialogContent>
 
           <DialogActions
@@ -1450,24 +1458,26 @@ useEffect(() => {
             <Button
               onClick={() => handleOpenSelectedDoc(selectedDoc)}
               variant="contained"
+              disabled={!selectedDoc}
             >
               Mở đề
             </Button>
+
             <Button
               onClick={handleDeleteSelectedDoc}
               variant="outlined"
               color="error"
+              disabled={!selectedDoc}
             >
               Xóa đề
             </Button>
-            <Button
-              onClick={() => setOpenDialog(false)}
-              variant="outlined"
-            >
+
+            <Button onClick={() => setOpenDialog(false)} variant="outlined">
               Đóng
             </Button>
           </DialogActions>
         </Dialog>
+
 
         {/* SNACKBAR */}
         <Snackbar
