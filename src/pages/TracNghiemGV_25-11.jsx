@@ -266,17 +266,15 @@ useEffect(() => {
   // Xử lý câu hỏi
   // -----------------------
   const createEmptyQuestion = () => ({
-  id: `q_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
-    title: "",        // 🔹 ô hướng dẫn / tiêu đề, không liên kết với preview
-    question: "",     // 🔹 ô nội dung câu hỏi, dùng [...] cho preview
-    type: "fillblank",// mặc định fillblank, có thể đổi sang single/multiple/...
-    options: [],      // danh sách từ để điền
+    id: `q_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+    question: "",
+    type: "single",        // mặc định
+    options: ["", "", "", ""],  // dùng cho tất cả loại (text hoặc image)
     score: 1,
-    correct: [],      // dùng cho các type có đáp án
+    correct: [],
     sortType: "fixed",
     pairs: [],
   });
-
 
   // Hàm dùng để reorder khi kéo thả (nếu dùng sau)
   function reorder(list, startIndex, endIndex) {
@@ -330,49 +328,42 @@ useEffect(() => {
   };
 
   const isQuestionValid = (q) => {
-  if (!q.question?.trim()) return false;
-  if (q.score <= 0) return false;
+    if (!q.question?.trim()) return false;
+    if (q.score <= 0) return false;
 
-  if (q.type === "sort") {
-    const nonEmptyOpts = (q.options || []).filter((o) => o?.trim());
-    return nonEmptyOpts.length >= 2;
-  }
+    if (q.type === "sort") {
+      const nonEmptyOpts = (q.options || []).filter((o) => o?.trim());
+      return nonEmptyOpts.length >= 2;
+    }
 
-  if (q.type === "matching") {
-    const pairs = q.pairs || [];
-    return pairs.length > 0 && pairs.every(p => p.left?.trim() && p.right?.trim());
-  }
+    if (q.type === "matching") {
+      const pairs = q.pairs || [];
+      return pairs.length > 0 && pairs.every(p => p.left?.trim() && p.right?.trim());
+    }
 
-  if (q.type === "single") {
-    return q.options.some((o) => o.trim()) && q.correct?.length === 1;
-  }
+    if (q.type === "single") {
+      return q.options.some((o) => o.trim()) && q.correct?.length === 1;
+    }
 
-  if (q.type === "multiple") {
-    return q.options.some((o) => o.trim()) && q.correct?.length > 0;
-  }
+    if (q.type === "multiple") {
+      return q.options.some((o) => o.trim()) && q.correct?.length > 0;
+    }
 
-  if (q.type === "truefalse") {
-    const opts = q.options || [];
-    const correct = q.correct || [];
-    return opts.length > 0 && opts.some(o => o?.trim()) && correct.length === opts.length;
-  }
+    if (q.type === "truefalse") {
+      const opts = q.options || [];
+      const correct = q.correct || [];
+      return opts.length > 0 && opts.some(o => o?.trim()) && correct.length === opts.length;
+    }
 
-  if (q.type === "image") {
-    const hasImage = q.options?.some(o => o); 
-    const hasAnswer = q.correct?.length > 0;
-    return hasImage && hasAnswer;
-  }
+    if (q.type === "image") {
+      // ít nhất 1 hình được upload và ít nhất 1 hình được chọn làm đáp án
+      const hasImage = q.options?.some(o => o); 
+      const hasAnswer = q.correct?.length > 0;
+      return hasImage && hasAnswer;
+    }
 
-  if (q.type === "fillblank") {
-    // ít nhất 1 từ để điền và câu hỏi có ít nhất 1 chỗ trống [...]
-    const hasOptions = q.options?.some(o => o?.trim());
-    const hasBlanks = q.question?.includes("[...]");
-    return hasOptions && hasBlanks;
-  }
-
-  return false; // fallback cho các type chưa xử lý
-};
-
+    return false; // fallback cho các type chưa xử lý
+  };
 
   function extractMatchingCorrect(pairs) {
     const correct = {};
@@ -952,55 +943,6 @@ useEffect(() => {
                 sx={{ mb: 2 }}
               />
 
-              {/* ⭐ Hình minh họa bên dưới nội dung câu hỏi */}
-              <Box sx={{ mt: -1, mb: 2 }}>
-                {q.questionImage ? (
-                  <Box sx={{ position: "relative", display: "inline-block" }}>
-                    <img
-                      src={q.questionImage}
-                      alt="question"
-                      style={{
-                        maxWidth: "100%",
-                        maxHeight: 260,
-                        objectFit: "contain",
-                        borderRadius: 8,
-                        border: "1px solid #ccc",
-                        marginTop: 8
-                      }}
-                    />
-                    <IconButton
-                      size="small"
-                      sx={{
-                        position: "absolute",
-                        top: 4,
-                        right: 4,
-                        backgroundColor: "#fff"
-                      }}
-                      onClick={() => updateQuestionAt(qi, { questionImage: "" })}
-                    >
-                      ✕
-                    </IconButton>
-                  </Box>
-                ) : (
-                  <Button variant="outlined" component="label">
-                    📷 Thêm hình minh họa
-                    <input
-                      type="file"
-                      accept="image/*"
-                      hidden
-                      onChange={(e) => {
-                        const f = e.target.files?.[0];
-                        if (!f) return;
-                        const reader = new FileReader();
-                        reader.onload = () => updateQuestionAt(qi, { questionImage: reader.result });
-                        reader.readAsDataURL(f);
-                      }}
-                    />
-                  </Button>
-                )}
-              </Box>
-
-
               <Stack direction={{ xs: "row", sm: "row" }} spacing={2} sx={{ mb: 2 }}>
                 <FormControl size="small" sx={{ width: 180 }}>
                   <InputLabel>Loại câu hỏi</InputLabel>
@@ -1037,12 +979,6 @@ useEffect(() => {
                         patch.correct = [];
                       }
 
-                      // 🔹 Thêm loại câu hỏi điền khuyết
-                      if (newType === "fillblank") {
-                        patch.options = []; // danh sách từ để kéo thả
-                        patch.answers = []; // học sinh điền vào ô trống
-                      }
-
                       updateQuestionAt(qi, patch);
                     }}
                     label="Loại câu hỏi"
@@ -1053,9 +989,6 @@ useEffect(() => {
                     <MenuItem value="matching">Ghép đôi</MenuItem>                    
                     <MenuItem value="image">Hình ảnh</MenuItem>
                     <MenuItem value="sort">Sắp xếp</MenuItem>
-
-                    {/* 🔹 MenuItem mới cho điền khuyết */}
-                    <MenuItem value="fillblank">Điền khuyết</MenuItem>
                   </Select>
                 </FormControl>
 
@@ -1365,72 +1298,6 @@ useEffect(() => {
                 )}
               </Stack>
 
-              {q.type === "fillblank" && (
-                <Stack spacing={2}>
-                  {/* Ô nhập nội dung câu hỏi */}
-                  <TextField
-                    fullWidth
-                    multiline
-                    minRows={2}
-                    label="Nội dung câu hỏi (dùng [...] cho chỗ trống)"
-                    value={q.question || ""}
-                    onChange={(e) => updateQuestionAt(qi, { question: e.target.value })}
-                  />
-
-                  {/* Danh sách từ cần điền */}
-                  <Stack spacing={1}>
-                    {q.options?.map((opt, oi) => (
-                      <Stack key={oi} direction="row" spacing={1} alignItems="center">
-                        <TextField
-                          value={opt}
-                          size="small"
-                          fullWidth
-                          onChange={(e) => {
-                            const newOptions = [...q.options];
-                            newOptions[oi] = e.target.value;
-                            updateQuestionAt(qi, { options: newOptions }); // ⚠ chỉ update options
-                          }}
-                        />
-                        <IconButton
-                          onClick={() => {
-                            const newOptions = [...q.options];
-                            newOptions.splice(oi, 1);
-                            updateQuestionAt(qi, { options: newOptions }); // ⚠ chỉ update options
-                          }}
-                        >
-                          <RemoveCircleOutlineIcon sx={{ color: "error.main" }} />
-                        </IconButton>
-                      </Stack>
-                    ))}
-                    <Button
-                      variant="outlined"
-                      onClick={() =>
-                        updateQuestionAt(qi, { options: [...(q.options || []), ""] }) // ⚠ chỉ update options
-                      }
-                    >
-                      Thêm từ
-                    </Button>
-                  </Stack>
-
-                  {/* Preview */}
-                  <Box sx={{ p:1, border: "1px dashed #90caf9", borderRadius: 1, minHeight:50 }}>
-                    {q.question
-                      ? q.question.split("[...]").map((part, i, arr) => (
-                          <React.Fragment key={i}>
-                            <span>{part}</span>
-                            {i < arr.length-1 && (
-                              <Box component="span"
-                                  sx={{ display:"inline-block", minWidth:60, borderBottom:"2px solid #000", mx:0.5 }}>
-                              </Box>
-                            )}
-                          </React.Fragment>
-                        ))
-                      : "Câu hỏi chưa có nội dung"
-                    }
-                  </Box>
-                </Stack>
-              )}
-              
               {/* Hàng cuối: Kiểu sắp xếp + Hợp lệ + Xóa câu hỏi */}
               <Stack direction={{ xs: "row", sm: "row" }} spacing={2} alignItems="center" justifyContent="space-between">
                 <FormControl size="small" sx={{ width: 150 }}>
@@ -1471,158 +1338,161 @@ useEffect(() => {
 
         {/* DIALOG MỞ ĐỀ */}
         <Dialog
-          open={openDialog}
-          onClose={() => setOpenDialog(false)}
-          maxWidth="sm"
-          fullWidth
-          PaperProps={{
-            sx: {
-              borderRadius: 3,
-              boxShadow: 6,
-              bgcolor: "#f9f9f9",
-              overflow: "hidden", // để borderRadius và icon X hiển thị đúng
-            },
-          }}
+  open={openDialog}
+  onClose={() => setOpenDialog(false)}
+  maxWidth="sm"
+  fullWidth
+  PaperProps={{
+    sx: {
+      borderRadius: 3,
+      boxShadow: 6,
+      bgcolor: "#f9f9f9",
+      overflow: "hidden", // để borderRadius và icon X hiển thị đúng
+    },
+  }}
+>
+  {/* Thanh tiêu đề với nền gradient xanh và icon X */}
+  <Box
+    sx={{
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      bgcolor: "transparent",
+      background: "linear-gradient(to right, #1976d2, #42a5f5)", // ⭐ nền xanh gradient
+      color: "#fff",
+      px: 2,
+      py: 1.2,
+      borderTopLeftRadius: 12,
+      borderTopRightRadius: 12,
+    }}
+  >
+    <Typography
+      variant="subtitle1"
+      sx={{ fontWeight: "bold", fontSize: "1.1rem", letterSpacing: 0.5 }}
+    >
+      📂 Danh sách đề
+    </Typography>
+
+    <IconButton
+      onClick={() => setOpenDialog(false)}
+      sx={{ color: "#fff", p: 0.6 }}
+    >
+      <CloseIcon fontSize="small" />
+    </IconButton>
+  </Box>
+
+  {/* Nội dung Dialog */}
+  <DialogContent
+    dividers
+    sx={{
+      maxHeight: 350,
+      overflowY: "auto",
+      px: 2,
+      py: 2,
+      bgcolor: "#fff",
+    }}
+  >
+    {/* Bộ lọc lớp */}
+    <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
+      <Typography variant="body2" sx={{ alignSelf: "center" }}>
+        Lọc theo lớp:
+      </Typography>
+
+      <FormControl size="small" sx={{ minWidth: 120 }}>
+        <Select
+          value={filterClass}
+          onChange={(e) => setFilterClass(e.target.value)}
+          displayEmpty
         >
-          {/* Thanh tiêu đề với nền gradient xanh và icon X */}
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              bgcolor: "transparent",
-              background: "linear-gradient(to right, #1976d2, #42a5f5)", // ⭐ nền xanh gradient
-              color: "#fff",
-              px: 2,
-              py: 1.2,
-              borderTopLeftRadius: 12,
-              borderTopRightRadius: 12,
-            }}
-          >
-            <Typography
-              variant="subtitle1"
-              sx={{ fontWeight: "bold", fontSize: "1.1rem", letterSpacing: 0.5 }}
-            >
-              📂 Danh sách đề
-            </Typography>
+          <MenuItem value="Tất cả">Tất cả</MenuItem>
+          {classes.map((lop) => (
+            <MenuItem key={lop} value={lop}>
+              {lop}
+            </MenuItem>
+          ))}
+        </Select>
+      </FormControl>
+    </Stack>
 
-            <IconButton
-              onClick={() => setOpenDialog(false)}
-              sx={{ color: "#fff", p: 0.6 }}
-            >
-              <CloseIcon fontSize="small" />
-            </IconButton>
-          </Box>
-
-          {/* Nội dung Dialog */}
-          <DialogContent
-            dividers
-            sx={{
-              maxHeight: 350,
-              overflowY: "auto",
-              px: 2,
-              py: 2,
-              bgcolor: "#fff",
-            }}
-          >
-            {/* Bộ lọc lớp */}
-            <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
-              <Typography variant="body2" sx={{ alignSelf: "center" }}>
-                Lọc theo lớp:
-              </Typography>
-
-              <FormControl size="small" sx={{ minWidth: 120 }}>
-                <Select
-                  value={filterClass}
-                  onChange={(e) => setFilterClass(e.target.value)}
-                  displayEmpty
-                >
-                  <MenuItem value="Tất cả">Tất cả</MenuItem>
-                  {classes.map((lop) => (
-                    <MenuItem key={lop} value={lop}>
-                      {lop}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Stack>
-
-            {/* Bảng danh sách đề */}
-            <Box
+    {/* Bảng danh sách đề */}
+    <Box
+      sx={{
+        maxHeight: 260,
+        overflowY: "auto",
+        border: "1px solid #ccc",
+        borderRadius: 2,
+        mb: 1,
+      }}
+    >
+      {loadingList ? (
+        <Typography align="center" sx={{ p: 2, color: "gray" }}>
+          ⏳ Đang tải danh sách đề...
+        </Typography>
+      ) : docList.length === 0 ? (
+        <Typography align="center" sx={{ p: 2, color: "gray" }}>
+          Không có đề nào.
+        </Typography>
+      ) : (
+        docList
+          .filter((doc) =>
+            filterClass === "Tất cả" ? true : doc.class === filterClass
+          )
+          .map((doc) => (
+            <Stack
+              key={doc.id}
+              direction="row"
+              alignItems="center"
+              justifyContent="space-between"
               sx={{
-                maxHeight: 260,
-                overflowY: "auto",
-                border: "1px solid #ccc",
-                borderRadius: 2,
-                mb: 1,
+                px: 2,
+                py: 1,
+                height: 36,
+                cursor: "pointer",
+                borderRadius: 1,
+                backgroundColor:
+                  selectedDoc === doc.id ? "#E3F2FD" : "transparent",
+                "&:hover": { backgroundColor: "#f5f5f5" },
               }}
+              onClick={() => setSelectedDoc(doc.id)}
+              onDoubleClick={() => handleOpenSelectedDoc(doc.id)}
             >
-              {loadingList ? (
-                <Typography align="center" sx={{ p: 2, color: "gray" }}>
-                  ⏳ Đang tải danh sách đề...
-                </Typography>
-              ) : docList.length === 0 ? (
-                <Typography align="center" sx={{ p: 2, color: "gray" }}>
-                  Không có đề nào.
-                </Typography>
-              ) : (
-                docList
-                  .filter((doc) =>
-                    filterClass === "Tất cả" ? true : doc.class === filterClass
-                  )
-                  .map((doc) => (
-                    <Stack
-                      key={doc.id}
-                      direction="row"
-                      alignItems="center"
-                      justifyContent="space-between"
-                      sx={{
-                        px: 2,
-                        py: 1,
-                        height: 36,
-                        cursor: "pointer",
-                        borderRadius: 1,
-                        backgroundColor:
-                          selectedDoc === doc.id ? "#E3F2FD" : "transparent",
-                        "&:hover": { backgroundColor: "#f5f5f5" },
-                      }}
-                      onClick={() => setSelectedDoc(doc.id)}
-                      onDoubleClick={() => handleOpenSelectedDoc(doc.id)}
-                    >
-                      <Typography variant="subtitle1">{doc.id}</Typography>
-                    </Stack>
-                  ))
-              )}
-            </Box>
-          </DialogContent>
+              <Typography variant="subtitle1">{doc.id}</Typography>
+            </Stack>
+          ))
+      )}
+    </Box>
+  </DialogContent>
 
-          {/* Các nút hành động */}
-          <DialogActions
-            sx={{
-              px: 3,
-              pb: 2,
-              justifyContent: "center",
-              gap: 1.5,
-            }}
-          >
-            <Button
-              onClick={() => handleOpenSelectedDoc(selectedDoc)}
-              variant="contained"
-              disabled={!selectedDoc}
-            >
-              Mở đề
-            </Button>
+  {/* Các nút hành động */}
+  <DialogActions
+    sx={{
+      px: 3,
+      pb: 2,
+      justifyContent: "center",
+      gap: 1.5,
+    }}
+  >
+    <Button
+      onClick={() => handleOpenSelectedDoc(selectedDoc)}
+      variant="contained"
+      disabled={!selectedDoc}
+    >
+      Mở đề
+    </Button>
 
-            <Button
-              onClick={handleDeleteSelectedDoc}
-              variant="outlined"
-              color="error"
-              disabled={!selectedDoc}
-            >
-              Xóa đề
-            </Button>
-          </DialogActions>
-        </Dialog>
+    <Button
+      onClick={handleDeleteSelectedDoc}
+      variant="outlined"
+      color="error"
+      disabled={!selectedDoc}
+    >
+      Xóa đề
+    </Button>
+  </DialogActions>
+</Dialog>
+
+
+
 
         {/* SNACKBAR */}
         <Snackbar
