@@ -30,94 +30,104 @@ export default function TongHopKQ() {
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [hocKi, setHocKi] = useState(""); // Học kỳ
+  const [hocKi, setHocKi] = useState(""); // Học kỳ lấy từ Firestore
+
+  const school = localStorage.getItem("school") || "";
 
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
 
-  // Lấy học kỳ và danh sách lớp từ Firestore
-  const username = localStorage.getItem("account") || "";
-const folder = username === "TH Lâm Văn Bền" ? "LAMVANBEN" : "BINHKHANH";
-
-// Lấy học kỳ
-useEffect(() => {
-  const fetchHocKi = async () => {
-    try {
-      const folder = username === "TH Lâm Văn Bền" ? "LAMVANBEN" : "BINHKHANH";
-      console.log("📌 Folder (trường):", folder);
-
-      const configRef = doc(db, folder, "config");
-      const configSnap = await getDoc(configRef);
-
-      const hocKiValue = configSnap.exists() ? configSnap.data().hocKy : "GKI";
-      setHocKi(hocKiValue);
-
-      console.log("📌 Học kỳ lấy được từ config:", hocKiValue);
-    } catch (err) {
-      console.error("❌ Lỗi khi lấy học kỳ:", err);
-      setHocKi("GKI");
-    }
-  };
-
-  fetchHocKi();
-}, [username]);
-
-// Lấy danh sách lớp
-useEffect(() => {
-  const fetchClasses = async () => {
-    try {
-      let classList = [];
-      if (folder === "LAMVANBEN") {
-        const lopSnap = await getDoc(doc(db, folder, "lop"));
-        classList = lopSnap.exists() ? lopSnap.data().list ?? [] : [];
-      } else {
-        const snapshot = await getDocs(collection(db, "DANHSACH"));
-        classList = snapshot.docs.map(doc => doc.id);
+  // Lấy học kỳ từ Firestore
+  useEffect(() => {
+    const fetchHocKi = async () => {
+      try {
+        let hocKiValue = "GKI"; // mặc định
+        if (school === "TH Lâm Văn Bền") {
+          const configRef = doc(db, "LAMVANBEN", "config");
+          const configSnap = await getDoc(configRef);
+          if (configSnap.exists()) {
+            hocKiValue = configSnap.data().hocKy || "GKI";
+          }
+        } else {
+          const configRef = doc(db, "CONFIG", "config");
+          const configSnap = await getDoc(configRef);
+          if (configSnap.exists()) {
+            hocKiValue = configSnap.data().hocKy || "GKI";
+          }
+        }
+        setHocKi(hocKiValue);
+      } catch (err) {
+        console.error("❌ Lỗi khi lấy học kỳ:", err);
+        setHocKi("GKI");
       }
-      classList.sort((a, b) => a.localeCompare(b));
-      setClassesList(classList);
-      setSelectedLop(classList[0] || "");
+    };
+
+    fetchHocKi();
+  }, [school]);
+
+  // Lấy danh sách lớp
+  useEffect(() => {
+    const fetchClasses = async () => {
+      try {
+        let classList = [];
+        if (school === "TH Lâm Văn Bền") {
+          const lopSnap = await getDoc(doc(db, "LAMVANBEN", "lop"));
+          classList = lopSnap.exists() ? lopSnap.data().list ?? [] : [];
+        } else {
+          const snapshot = await getDocs(collection(db, "DANHSACH"));
+          classList = snapshot.docs.map((doc) => doc.id);
+        }
+        classList.sort((a, b) => a.localeCompare(b));
+        setClassesList(classList);
+        setSelectedLop(classList[0] || "");
+      } catch (err) {
+        console.error("❌ Lỗi fetch lớp:", err);
+      }
+    };
+    fetchClasses();
+  }, [school]);
+
+  // Load kết quả
+  const loadResults = async () => {
+    if (!selectedLop || !selectedMon || !hocKi) return;
+    setLoading(true);
+
+    try {
+      let data = [];
+      if (school === "TH Lâm Văn Bền") {
+        const colRef = collection(db, `LAMVANBEN/${hocKi}/${selectedLop}`);
+        const snapshot = await getDocs(colRef);
+        data = snapshot.docs.map((docSnap, idx) => ({
+          stt: idx + 1,
+          docId: docSnap.id,
+          ...docSnap.data(),
+        }));
+      } else {
+        const colName = `${selectedLop.replace(/\s/g, "").toUpperCase()}_${selectedMon.replace(/\s/g, "")}`;
+        const colRef = collection(db, `BINHKHANH/${hocKi}/${colName}`);
+        const snapshot = await getDocs(colRef);
+        data = snapshot.docs.map((docSnap, idx) => ({
+          stt: idx + 1,
+          docId: docSnap.id,
+          ...docSnap.data(),
+        }));
+      }
+
+      setResults(data);
     } catch (err) {
-      console.error(err);
+      console.error("❌ Lỗi khi load kết quả:", err);
+      setResults([]);
     }
+
+    setLoading(false);
   };
-  fetchClasses();
-}, [folder]);
-
-// Load kết quả
-const loadResults = async () => {
-  if (!selectedLop || !selectedMon || !hocKi) return;
-  setLoading(true);
-
-  try {
-    const folder = username === "TH Lâm Văn Bền" ? "LAMVANBEN" : "BINHKHANH"; // hoặc từ login/props
-    const colName = `${selectedLop.replace(/\s/g, "")}_${selectedMon.replace(/\s/g, "")}`;
-    const colRef = collection(db, `${folder}/${hocKi}/${selectedLop}`);
-    const snapshot = await getDocs(colRef);
-
-    const data = snapshot.docs.map((docSnap, idx) => ({
-      stt: idx + 1,
-      docId: docSnap.id,
-      ...docSnap.data(),
-    }));
-
-    setResults(data);
-  } catch (err) {
-    console.error("❌ Lỗi khi load kết quả:", err);
-    setResults([]);
-  }
-
-  setLoading(false);
-};
-
-
 
   useEffect(() => {
     loadResults();
   }, [selectedLop, selectedMon, hocKi]);
 
   // Xóa toàn bộ lớp
-  const handleDeleteClass = async () => {
+  const handleDeleteClass = () => {
     const confirmDelete = window.confirm(`Bạn có chắc muốn xóa toàn bộ kết quả của lớp ${selectedLop}?`);
     if (!confirmDelete) return;
 
@@ -134,18 +144,20 @@ const loadResults = async () => {
     setSnackbarMessage("Đã xóa toàn bộ lớp thành công!");
     setSnackbarOpen(true);
 
-    try {
-      const colRef = collection(db, `LAMVANBEN/${hocKi}/${selectedLop}`);
-      const snapshot = await getDocs(colRef);
-      if (!snapshot.empty) {
-        const batch = writeBatch(db);
-        snapshot.docs.forEach(docSnap => batch.delete(docSnap.ref));
-        await batch.commit();
-        console.log(`🔥 Firestore: Xóa lớp ${selectedLop} thành công`);
+    (async () => {
+      try {
+        const colRef = collection(db, `LAMVANBEN/${hocKi}/${selectedLop}`);
+        const snapshot = await getDocs(colRef);
+        if (!snapshot.empty) {
+          const batch = writeBatch(db);
+          snapshot.docs.forEach((docSnap) => batch.delete(docSnap.ref));
+          await batch.commit();
+          console.log(`🔥 Firestore: Xóa lớp ${selectedLop} thành công`);
+        }
+      } catch (err) {
+        console.error("❌ Firestore: Xóa lớp thất bại:", err);
       }
-    } catch (err) {
-      console.error("❌ Firestore: Xóa lớp thất bại:", err);
-    }
+    })();
   };
 
   // Xuất Excel
@@ -154,28 +166,45 @@ const loadResults = async () => {
   };
 
   return (
-    <Box sx={{ minHeight: "100vh", background: "linear-gradient(to bottom, #e3f2fd, #bbdefb)", pt: 3, px: 2, display: "flex", justifyContent: "center" }}>
+    <Box
+      sx={{
+        minHeight: "100vh",
+        background: "linear-gradient(to bottom, #e3f2fd, #bbdefb)",
+        pt: 3,
+        px: 2,
+        display: "flex",
+        justifyContent: "center",
+      }}
+    >
       <Paper sx={{ p: 4, borderRadius: 3, width: "100%", maxWidth: 900, bgcolor: "white" }} elevation={6}>
 
+        {/* Header */}
         <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
-          <Stack direction="row" spacing={1}>
-            <Tooltip title="Xuất Excel">
-              <IconButton onClick={handleExportExcel} color="primary">
-                <FileDownload />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title="Xóa lớp">
-              <IconButton onClick={handleDeleteClass} color="error" disabled={deleting}>
-                <Delete />
-              </IconButton>
-            </Tooltip>
-          </Stack>
+          {school === "TH Lâm Văn Bền" && (
+            <Stack direction="row" spacing={1}>
+              <Tooltip title="Xuất Excel">
+                <IconButton onClick={handleExportExcel} color="primary">
+                  <FileDownload />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Xóa lớp">
+                <IconButton onClick={handleDeleteClass} color="error" disabled={deleting}>
+                  <Delete />
+                </IconButton>
+              </Tooltip>
+            </Stack>
+          )}
 
-          <Typography variant="h5" fontWeight="bold" sx={{ color: "#1976d2", flexGrow: 1, textAlign: "center" }}>
+          <Typography
+            variant="h5"
+            fontWeight="bold"
+            sx={{ color: "#1976d2", flexGrow: 1, textAlign: "center" }}
+          >
             KẾT QUẢ KIỂM TRA
           </Typography>
         </Box>
 
+        {/* Dropdown chọn lớp & môn */}
         <Box sx={{ display: "flex", gap: 2, mb: 3, flexWrap: "wrap", justifyContent: "center" }}>
           <TextField
             select
@@ -185,7 +214,11 @@ const loadResults = async () => {
             size="small"
             sx={{ width: 80 }}
           >
-            {classesList.map(lop => <MenuItem key={lop} value={lop}>{lop}</MenuItem>)}
+            {classesList.map((lop) => (
+              <MenuItem key={lop} value={lop}>
+                {lop}
+              </MenuItem>
+            ))}
           </TextField>
 
           <TextField
@@ -196,12 +229,18 @@ const loadResults = async () => {
             size="small"
             sx={{ width: 130 }}
           >
-            {["Tin học", "Công nghệ"].map(mon => <MenuItem key={mon} value={mon}>{mon}</MenuItem>)}
+            {["Tin học", "Công nghệ"].map((mon) => (
+              <MenuItem key={mon} value={mon}>
+                {mon}
+              </MenuItem>
+            ))}
           </TextField>
         </Box>
 
         {loading ? (
-          <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}><CircularProgress /></Box>
+          <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}>
+            <CircularProgress />
+          </Box>
         ) : (
           <Box sx={{ width: "100%", overflowX: "auto" }}>
             <TableContainer component={Paper} sx={{ boxShadow: "none", minWidth: 750 }}>
@@ -225,8 +264,8 @@ const loadResults = async () => {
                     mon: "",
                     ngayKiemTra: "",
                     thoiGianLamBai: "",
-                    diem: ""
-                  }))).map(r => (
+                    diem: "",
+                  }))).map((r) => (
                     <TableRow key={r.stt}>
                       <TableCell sx={{ px: 1, textAlign: "center", border: "1px solid rgba(0,0,0,0.12)" }}>{r.stt}</TableCell>
                       <TableCell sx={{ px: 1, textAlign: "left", border: "1px solid rgba(0,0,0,0.12)" }}>{r.hoVaTen}</TableCell>
@@ -243,13 +282,24 @@ const loadResults = async () => {
           </Box>
         )}
 
-        <Snackbar open={snackbarOpen} autoHideDuration={3000} onClose={() => setSnackbarOpen(false)} anchorOrigin={{ vertical: "bottom", horizontal: "right" }}>
-          <Alert onClose={() => setSnackbarOpen(false)} severity="success" sx={{ width: "100%" }}>
-            {snackbarMessage}
-          </Alert>
-        </Snackbar>
 
-      </Paper>
-    </Box>
-  );
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={3000}
+        onClose={() => setSnackbarOpen(false)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+      >
+        <Alert
+          onClose={() => setSnackbarOpen(false)}
+          severity="success"
+          sx={{ width: "100%" }}
+        >
+          {snackbarMessage}
+        </Alert>
+      </Snackbar>
+
+    </Paper>
+  </Box>
+);
+
 }

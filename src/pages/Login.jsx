@@ -35,27 +35,23 @@ export default function Login() {
       return;
     }
 
-    if (username === "Admin") {
-      // admin vẫn dùng password cố định 1
-      if (password === "1") {
-        localStorage.setItem("loggedIn", "true");
-        localStorage.setItem("account", username);
-        localStorage.setItem("school", username);
-        window.dispatchEvent(new Event("storage"));
-        navigate("/tracnghiem-gv");
-      } else {
-        setSnackbar({ open: true, message: "❌ Mật khẩu sai!", severity: "error" });
-      }
-      return;
-    }
-
     try {
-      const folder = username === "TH Lâm Văn Bền" ? "LAMVANBEN" : "BINHKHANH";
-      const docRef = doc(db, folder, "password");
-      const snap = await getDoc(docRef);
+      // ⭐ Xác định document ID trong MATKHAU
+      let docId = "ADMIN";
+      if (username === "TH Lâm Văn Bền") docId = "LVB";
+      else if (username === "TH Bình Khánh") docId = "BK";
+
+      // ⭐ Lấy mật khẩu lưu trong Firestore
+      const snap = await getDoc(doc(db, "MATKHAU", docId));
       const savedPw = snap.exists() ? snap.data().pass : null;
 
-      if (savedPw === password) {
+      if (!savedPw) {
+        setSnackbar({ open: true, message: "❌ Không tìm thấy mật khẩu!", severity: "error" });
+        return;
+      }
+
+      // ⭐ So sánh mật khẩu
+      if (password === savedPw) {
         localStorage.setItem("loggedIn", "true");
         localStorage.setItem("account", username);
         localStorage.setItem("school", username);
@@ -64,11 +60,17 @@ export default function Login() {
       } else {
         setSnackbar({ open: true, message: "❌ Mật khẩu sai!", severity: "error" });
       }
+
     } catch (err) {
       console.error(err);
-      setSnackbar({ open: true, message: "❌ Lỗi kết nối Firestore!", severity: "error" });
+      setSnackbar({
+        open: true,
+        message: "❌ Lỗi kết nối Firestore!",
+        severity: "error",
+      });
     }
   };
+
 
   const handleClose = () => navigate("/hocsinh");
 

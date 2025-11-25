@@ -39,8 +39,7 @@ export default function QuanTri() {
   const [confirmPw, setConfirmPw] = useState("");
   const [pwError, setPwError] = useState("");
 
-  const currentPassword = localStorage.getItem("password") || "1"; // mặc định 1
-
+  const [firestorePassword, setFirestorePassword] = useState("");
 
   // ===== Lâm Văn Bền: state local =====
   const [configLocal, setConfigLocal] = useState({
@@ -53,6 +52,25 @@ export default function QuanTri() {
     truyCap_BinhKhanh: false,
     truyCap_LamVanBen: false,
   });
+
+  useEffect(() => {
+  const fetchPassword = async () => {
+    try {
+      let docId = "ADMIN";
+      if (account === "TH Lâm Văn Bền") docId = "LVB";
+      else if (account === "TH Bình Khánh") docId = "BK";
+
+      const snap = await getDoc(doc(db, "MATKHAU", docId));
+      if (snap.exists()) {
+        setFirestorePassword(snap.data().pass || "1");
+      }
+    } catch (err) {
+      console.error("Lỗi lấy mật khẩu Firestore:", err);
+    }
+  };
+
+  fetchPassword();
+}, [account]);
   const [classes, setClasses] = useState([]);
   const [selectedClass, setSelectedClass] = useState("");
   const [subject, setSubject] = useState("Tin học");
@@ -186,7 +204,7 @@ export default function QuanTri() {
   };
 
   const handleChangePassword = async () => {
-    if (oldPw !== currentPassword) {
+    if (oldPw !== firestorePassword) {
       setPwError("❌ Mật khẩu cũ không đúng!");
       return;
     }
@@ -200,21 +218,25 @@ export default function QuanTri() {
     }
 
     try {
-      const folder = account === "TH Lâm Văn Bền" ? "LAMVANBEN" : "BINHKHANH";
-      const ref = doc(db, folder, "password");
+      let docId = "ADMIN";
+      if (account === "TH Lâm Văn Bền") docId = "LVB";
+      else if (account === "TH Bình Khánh") docId = "BK";
+
+      const ref = doc(db, "MATKHAU", docId);
       await setDoc(ref, { pass: newPw }, { merge: true });
+
+      // ⭐ Cập nhật password trong state để lần sau kiểm tra đúng
+      setFirestorePassword(newPw);
 
       setPwError("");
       setOpenChangePw(false);
 
-      // Thay alert bằng Snackbar
       setSnackbar({
         open: true,
         message: "✅ Đổi mật khẩu thành công!",
         severity: "success",
       });
 
-      // Reset input
       setOldPw("");
       setNewPw("");
       setConfirmPw("");
@@ -230,7 +252,6 @@ export default function QuanTri() {
       });
     }
   };
-
 
   // ===== Đề thi =====
   const [examList, setExamList] = useState([]);       // tất cả đề
