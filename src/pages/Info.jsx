@@ -124,16 +124,6 @@ export default function Info() {
               </Select>
             </FormControl>
 
-            {/* Ô Họ và tên */}
-            <TextField
-              label="Họ và tên"
-              value={fullname}
-              onChange={(e) => setFullname(e.target.value)}
-              fullWidth
-              size="small"
-              onKeyDown={(e) => e.key === "Enter" && handleStart()}
-            />
-
             {/* Ô Lớp */}
             <FormControl fullWidth size="small">
               <InputLabel>Lớp</InputLabel>
@@ -143,6 +133,16 @@ export default function Info() {
                 ))}
               </Select>
             </FormControl>
+
+            {/* Ô Họ và tên */}
+            <TextField
+              label="Họ và tên"
+              value={fullname}
+              onChange={(e) => setFullname(e.target.value)}
+              fullWidth
+              size="small"
+              onKeyDown={(e) => e.key === "Enter" && handleStart()}
+            />
 
             {/* Nút Bắt đầu */}
             <Button
