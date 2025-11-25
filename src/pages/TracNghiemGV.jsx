@@ -818,7 +818,7 @@ useEffect(() => {
           fontWeight="bold"
           textAlign="center"
           gutterBottom
-          sx={{ textTransform: "uppercase", color: "#1976d2", mb: 1 }}
+          sx={{ textTransform: "uppercase", color: "#1976d2", mt: 3, mb: 1 }}
         >
           Tạo đề kiểm tra
         </Typography>
@@ -1209,8 +1209,8 @@ useEffect(() => {
                         <Box key={oi} sx={{ position: "relative" }}>
                           <Paper
                             sx={{
-                              width: { xs: "100%", sm: 120 },   // ⭐ mobile: full width
-                              height: 120,
+                              width: { xs: "80%", sm: 120 },   // ⭐ mobile: full width
+                              height: { xs: 80,sm: 120},
                               border: "2px dashed #90caf9",
                               display: "flex",
                               alignItems: "center",
@@ -1295,9 +1295,6 @@ useEffect(() => {
                     })}
                   </Stack>
                 )}
-
-
-
               </Stack>
 
               {/* Hàng cuối: Kiểu sắp xếp + Hợp lệ + Xóa câu hỏi */}
