@@ -834,93 +834,95 @@ useEffect(() => {
             : "🆕 Đang soạn đề mới"}
         </Typography>
 
-
-
-        {/* FORM LỚP / MÔN / HỌC KỲ / TUẦN */}
+        {/* FORM LỚP / MÔN / HỌC KỲ / NĂM HỌC / ĐỀ */}
         <Paper elevation={2} sx={{ p: 2, mb: 3 }}>
-            <Stack spacing={2}>
-                <Stack direction={{ xs: "row", sm: "row" }} spacing={2}>
-                <FormControl size="small" sx={{ flex: 1 }}>
-                  <InputLabel>Lớp</InputLabel>
-                  <Select
-                    value={selectedClass || ""}
-                    onChange={(e) => setSelectedClass(e.target.value)}
-                    label="Lớp"
-                  >
-                    {classes.map((lop) => (
-                      <MenuItem key={lop} value={lop}>
-                        {lop}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
+          <Stack
+            direction={{ xs: "column", md: "row" }} // xs: điện thoại = column, md+: desktop = row
+            spacing={2}
+            flexWrap="wrap"
+          >
+            {/* Lớp */}
+            <FormControl size="small" sx={{ flex: 1, minWidth: 120 }}>
+              <InputLabel>Lớp</InputLabel>
+              <Select
+                value={selectedClass || ""}
+                onChange={(e) => setSelectedClass(e.target.value)}
+                label="Lớp"
+              >
+                {classes.map((lop) => (
+                  <MenuItem key={lop} value={lop}>
+                    {lop}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
 
+            {/* Môn học */}
+            <FormControl size="small" sx={{ flex: 1, minWidth: 120 }}>
+              <InputLabel>Môn học</InputLabel>
+              <Select
+                value={selectedSubject || ""}
+                onChange={(e) => setSelectedSubject(e.target.value)}
+                label="Môn học"
+              >
+                {subjects?.map((mon) => (
+                  <MenuItem key={mon} value={mon}>
+                    {mon}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
 
-                <FormControl size="small" sx={{ flex: 1 }}>
-                    <InputLabel>Môn học</InputLabel>
-                    <Select
-                    value={selectedSubject || ""}
-                    onChange={(e) => setSelectedSubject(e.target.value)}
-                    label="Môn học"
-                    >
-                    {subjects?.map((mon) => (
-                        <MenuItem key={mon} value={mon}>
-                        {mon}
-                        </MenuItem>
-                    ))}
-                    </Select>
-                </FormControl>
+            {/* Học kỳ */}
+            <FormControl size="small" sx={{ flex: 1, minWidth: 120 }}>
+              <InputLabel>Học kỳ</InputLabel>
+              <Select
+                value={semester || ""}
+                onChange={(e) => setSemester(e.target.value)}
+                label="Học kỳ"
+              >
+                {semesters.map((hk) => (
+                  <MenuItem key={hk} value={hk}>
+                    {hk}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
 
-                <FormControl size="small" sx={{ flex: 1 }}>
-                  <InputLabel>Học kỳ</InputLabel>
-                  <Select
-                    value={semester || ""}
-                    onChange={(e) => setSemester(e.target.value)}
-                    label="Học kỳ"
-                  >
-                    {semesters.map((hk) => (
-                      <MenuItem key={hk} value={hk}>
-                        {hk}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
+            {/* Năm học */}
+            <FormControl size="small" sx={{ flex: 1, minWidth: 120 }}>
+              <InputLabel>Năm học</InputLabel>
+              <Select
+                value={schoolYear || ""}
+                onChange={(e) => setSchoolYear(e.target.value)}
+                label="Năm học"
+              >
+                {years.map((y) => (
+                  <MenuItem key={y} value={y}>
+                    {y}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
 
-                
-                {/* Năm học */}
-                <FormControl size="small" sx={{ flex: 1 }}>
-                  <InputLabel>Năm học</InputLabel>
-                  <Select
-                    value={schoolYear || ""}
-                    onChange={(e) => setSchoolYear(e.target.value)}
-                    label="Năm học"
-                  >
-                    {years.map((y) => (
-                      <MenuItem key={y} value={y}>
-                        {y}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
+            {/* Đề */}
+            <FormControl size="small" sx={{ flex: 1, minWidth: 120 }}>
+              <InputLabel>Đề</InputLabel>
+              <Select
+                value={examLetter || ""}
+                onChange={(e) => setExamLetter(e.target.value)}
+                label="Đề"
+              >
+                {["A", "B", "C", "D"].map((d) => (
+                  <MenuItem key={d} value={d}>
+                    {d}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Stack>
+        </Paper>
 
-
-                <FormControl size="small" sx={{ flex: 1 }}>
-                  <InputLabel>Đề</InputLabel>
-                  <Select
-                    value={examLetter || ""}         // state để lưu lựa chọn
-                    onChange={(e) => setExamLetter(e.target.value)}
-                    label="Đề"
-                  >
-                    {["A", "B", "C", "D"].map((d) => (
-                      <MenuItem key={d} value={d}>
-                        {d}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-                </Stack>
-            </Stack>
-            </Paper>
 
 
         {/* DANH SÁCH CÂU HỎI */}

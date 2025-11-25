@@ -177,6 +177,7 @@ export default function TongHopKQ() {
       }}
     >
       <Paper sx={{ p: 4, borderRadius: 3, width: "100%", maxWidth: 900, bgcolor: "white" }} elevation={6}>
+
         {/* Header */}
         <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
           {school === "TH Lâm Văn Bền" && (
@@ -193,6 +194,7 @@ export default function TongHopKQ() {
               </Tooltip>
             </Stack>
           )}
+
           <Typography
             variant="h5"
             fontWeight="bold"
@@ -240,61 +242,46 @@ export default function TongHopKQ() {
             <CircularProgress />
           </Box>
         ) : (
-          <TableContainer component={Paper} sx={{ boxShadow: "none" }}>
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell sx={{ bgcolor: "#1976d2", color: "#fff", textAlign: "center", width: 50 }}>STT</TableCell>
-                  <TableCell sx={{ bgcolor: "#1976d2", color: "#fff", textAlign: "center", width: 200 }}>Họ và tên</TableCell>
-                  <TableCell sx={{ bgcolor: "#1976d2", color: "#fff", textAlign: "center", width: 80 }}>Lớp</TableCell>
-                  <TableCell sx={{ bgcolor: "#1976d2", color: "#fff", textAlign: "center", width: 100 }}>Môn</TableCell>
-                  <TableCell sx={{ bgcolor: "#1976d2", color: "#fff", textAlign: "center", width: 120 }}>Ngày</TableCell>
-                  <TableCell sx={{ bgcolor: "#1976d2", color: "#fff", textAlign: "center", width: 120 }}>Thời gian</TableCell>
-                  <TableCell sx={{ bgcolor: "#1976d2", color: "#fff", textAlign: "center", width: 80 }}>Điểm</TableCell>
-                </TableRow>
-              </TableHead>
-
-              <TableBody>
-                {(results.length > 0
-                  ? results
-                  : Array.from({ length: 5 }, (_, i) => ({
-                      stt: i + 1,
-                      hoVaTen: "",
-                      lop: "",
-                      mon: "",
-                      ngayKiemTra: "",
-                      thoiGianLamBai: "",
-                      diem: "",
-                    }))
-                ).map((r) => (
-                  <TableRow key={r.stt}>
-                    <TableCell sx={{ px: 1, textAlign: "center", border: "1px solid rgba(0,0,0,0.12)" }}>
-                      {r.stt}
-                    </TableCell>
-                    <TableCell sx={{ px: 1, textAlign: "left", border: "1px solid rgba(0,0,0,0.12)" }}>
-                      {r.hoVaTen}
-                    </TableCell>
-                    <TableCell sx={{ px: 1, textAlign: "center", border: "1px solid rgba(0,0,0,0.12)" }}>
-                      {r.lop}
-                    </TableCell>
-                    <TableCell sx={{ px: 1, textAlign: "center", border: "1px solid rgba(0,0,0,0.12)" }}>
-                      {r.mon}
-                    </TableCell>
-                    <TableCell sx={{ px: 1, textAlign: "center", border: "1px solid rgba(0,0,0,0.12)" }}>
-                      {r.ngayKiemTra}
-                    </TableCell>
-                    <TableCell sx={{ px: 1, textAlign: "center", border: "1px solid rgba(0,0,0,0.12)" }}>
-                      {r.thoiGianLamBai}
-                    </TableCell>
-                    <TableCell sx={{ px: 1, textAlign: "center", border: "1px solid rgba(0,0,0,0.12)", fontWeight: "bold" }}>
-                      {r.diem}
-                    </TableCell>
+          <Box sx={{ width: "100%", overflowX: "auto" }}>
+            <TableContainer component={Paper} sx={{ boxShadow: "none", minWidth: 750 }}>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell sx={{ bgcolor: "#1976d2", color: "#fff", textAlign: "center", width: 50 }}>STT</TableCell>
+                    <TableCell sx={{ bgcolor: "#1976d2", color: "#fff", textAlign: "center", width: 200 }}>Họ và tên</TableCell>
+                    <TableCell sx={{ bgcolor: "#1976d2", color: "#fff", textAlign: "center", width: 80 }}>Lớp</TableCell>
+                    <TableCell sx={{ bgcolor: "#1976d2", color: "#fff", textAlign: "center", width: 100 }}>Môn</TableCell>
+                    <TableCell sx={{ bgcolor: "#1976d2", color: "#fff", textAlign: "center", width: 120 }}>Ngày</TableCell>
+                    <TableCell sx={{ bgcolor: "#1976d2", color: "#fff", textAlign: "center", width: 120 }}>Thời gian</TableCell>
+                    <TableCell sx={{ bgcolor: "#1976d2", color: "#fff", textAlign: "center", width: 80 }}>Điểm</TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                </TableHead>
+                <TableBody>
+                  {(results.length > 0 ? results : Array.from({ length: 5 }, (_, i) => ({
+                    stt: i + 1,
+                    hoVaTen: "",
+                    lop: "",
+                    mon: "",
+                    ngayKiemTra: "",
+                    thoiGianLamBai: "",
+                    diem: "",
+                  }))).map((r) => (
+                    <TableRow key={r.stt}>
+                      <TableCell sx={{ px: 1, textAlign: "center", border: "1px solid rgba(0,0,0,0.12)" }}>{r.stt}</TableCell>
+                      <TableCell sx={{ px: 1, textAlign: "left", border: "1px solid rgba(0,0,0,0.12)" }}>{r.hoVaTen}</TableCell>
+                      <TableCell sx={{ px: 1, textAlign: "center", border: "1px solid rgba(0,0,0,0.12)" }}>{r.lop}</TableCell>
+                      <TableCell sx={{ px: 1, textAlign: "center", border: "1px solid rgba(0,0,0,0.12)" }}>{r.mon}</TableCell>
+                      <TableCell sx={{ px: 1, textAlign: "center", border: "1px solid rgba(0,0,0,0.12)" }}>{r.ngayKiemTra}</TableCell>
+                      <TableCell sx={{ px: 1, textAlign: "center", border: "1px solid rgba(0,0,0,0.12)" }}>{r.thoiGianLamBai}</TableCell>
+                      <TableCell sx={{ px: 1, textAlign: "center", border: "1px solid rgba(0,0,0,0.12)", fontWeight: "bold" }}>{r.diem}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Box>
         )}
+
 
         <Snackbar
           open={snackbarOpen}
@@ -310,6 +297,7 @@ export default function TongHopKQ() {
             {snackbarMessage}
           </Alert>
         </Snackbar>
+
       </Paper>
     </Box>
   );

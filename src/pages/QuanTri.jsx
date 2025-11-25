@@ -421,7 +421,7 @@ export default function QuanTri() {
             sx={{ color: "orange" }}
             onClick={() => setOpenChangePw(true)}
           >
-            <VpnKeyIcon fontSize="small" />
+            <VpnKeyIcon fontSize="medium" />
           </IconButton>
         </Box>
 
