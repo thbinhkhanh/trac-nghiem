@@ -406,8 +406,10 @@ export default function QuanTri() {
             p: 3,
             borderRadius: 3,
             flex: 2,
-            height: 600,       // chiều cao cố định, áp dụng cho cả mobile
-            minHeight: 500,    // tối thiểu
+            //height: 600,       // chiều cao cố định, áp dụng cho cả mobile
+            //minHeight: 500,    // tối thiểu
+            height: { xs: 600, sm: 600 },
+            minHeight: { xs: 600, sm: 500 },
           }}
         >
           <Typography
