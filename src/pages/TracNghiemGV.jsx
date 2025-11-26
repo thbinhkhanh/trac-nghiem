@@ -266,17 +266,16 @@ useEffect(() => {
   // Xử lý câu hỏi
   // -----------------------
   const createEmptyQuestion = () => ({
-  id: `q_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
-    title: "",        // 🔹 ô hướng dẫn / tiêu đề, không liên kết với preview
-    question: "",     // 🔹 ô nội dung câu hỏi, dùng [...] cho preview
-    type: "fillblank",// mặc định fillblank, có thể đổi sang single/multiple/...
-    options: [],      // danh sách từ để điền
+    id: `q_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+    title: "",
+    question: "",
+    type: "single",                // 🟢 mặc định: 1 lựa chọn
+    options: ["", "", "", ""],     // 🟢 AUTO 4 lựa chọn
     score: 1,
-    correct: [],      // dùng cho các type có đáp án
+    correct: [],                   // 🟢 chưa chọn đáp án
     sortType: "fixed",
     pairs: [],
   });
-
 
   // Hàm dùng để reorder khi kéo thả (nếu dùng sau)
   function reorder(list, startIndex, endIndex) {
@@ -808,19 +807,25 @@ useEffect(() => {
         {/* Nút New, Mở đề và Lưu đề */}
         <Stack direction="row" spacing={1} sx={{ position: "absolute", top: 8, left: 8 }}>
           {/* Icon New: soạn đề mới */}
-          <IconButton onClick={handleCreateNewQuiz} sx={{ color: "#1976d2" }}>
-            <AddIcon />
-          </IconButton>
+          <Tooltip title="Soạn đề mới">
+            <IconButton onClick={handleCreateNewQuiz} sx={{ color: "#1976d2" }}>
+              <AddIcon />
+            </IconButton>
+          </Tooltip>
 
           {/* Icon mở đề */}
-          <IconButton onClick={fetchQuizList} sx={{ color: "#1976d2" }}>
-            <FolderOpenIcon />
-          </IconButton>
+          <Tooltip title="Mở đề">
+            <IconButton onClick={fetchQuizList} sx={{ color: "#1976d2" }}>
+              <FolderOpenIcon />
+            </IconButton>
+          </Tooltip>
 
           {/* Icon lưu đề */}
-          <IconButton onClick={handleSaveAll} sx={{ color: "#1976d2" }}>
-            <SaveIcon />
-          </IconButton>
+          <Tooltip title="Lưu đề">
+            <IconButton onClick={handleSaveAll} sx={{ color: "#1976d2" }}>
+              <SaveIcon />
+            </IconButton>
+          </Tooltip>
         </Stack>
 
         {/* Tiêu đề */}
