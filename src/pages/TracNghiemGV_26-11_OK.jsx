@@ -17,7 +17,6 @@ import {
   Tooltip,
   Radio, 
   Checkbox,
-  Grid,
 } from "@mui/material";
 import { collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc } from "firebase/firestore";
 
@@ -1385,61 +1384,39 @@ useEffect(() => {
                   />
 
                   {/* Danh sách từ cần điền */}
-                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mt: 1 }}>
-                    Từ cần điền
-                  </Typography>
-
-                  <Grid container spacing={1}>
+                  <Stack spacing={1}>
                     {q.options?.map((opt, oi) => (
-                      <Grid item xs={12} sm={6} key={oi}>
-                        <Stack direction="row" spacing={1} alignItems="center">
-                          <TextField
-                            value={opt}
-                            size="small"
-                            fullWidth
-                            onChange={(e) => {
-                              const newOptions = [...q.options];
-                              newOptions[oi] = e.target.value;
-                              updateQuestionAt(qi, { options: newOptions });
-                            }}
-                          />
-                          <IconButton
-                            onClick={() => {
-                              const newOptions = [...q.options];
-                              newOptions.splice(oi, 1);
-                              updateQuestionAt(qi, { options: newOptions });
-                            }}
-                          >
-                            <RemoveCircleOutlineIcon sx={{ color: "error.main" }} />
-                          </IconButton>
-                        </Stack>
-                      </Grid>
+                      <Stack key={oi} direction="row" spacing={1} alignItems="center">
+                        <TextField
+                          value={opt}
+                          size="small"
+                          fullWidth
+                          onChange={(e) => {
+                            const newOptions = [...q.options];
+                            newOptions[oi] = e.target.value;
+                            updateQuestionAt(qi, { options: newOptions });
+                          }}
+                        />
+                        <IconButton
+                          onClick={() => {
+                            const newOptions = [...q.options];
+                            newOptions.splice(oi, 1);
+                            updateQuestionAt(qi, { options: newOptions });
+                          }}
+                        >
+                          <RemoveCircleOutlineIcon sx={{ color: "error.main" }} />
+                        </IconButton>
+                      </Stack>
                     ))}
-
-                    {/* Nút thêm từ */}
-                    <Grid item xs={12}>
-                      <Button
-                        variant="contained"
-                        sx={{
-                          backgroundColor: "#1976d2",
-                          color: "#fff",
-                          "&:hover": {
-                            backgroundColor: "#115293"
-                          }
-                        }}
-                        onClick={() =>
-                          updateQuestionAt(qi, { options: [...(q.options || []), ""] })
-                        }
-                      >
-                        Thêm từ
-                      </Button>
-                    </Grid>
-                  </Grid>
-
-                  {/* 🏷️ Label Preview */}
-                  <Typography variant="subtitle2" sx={{ fontWeight: 600, color: "#1976d2" }}>
-                    Xem trước câu hỏi
-                  </Typography>
+                    <Button
+                      variant="outlined"
+                      onClick={() =>
+                        updateQuestionAt(qi, { options: [...(q.options || []), ""] })
+                      }
+                    >
+                      Thêm từ
+                    </Button>
+                  </Stack>
 
                   {/* Preview đồng bộ font với Option */}
                   <Box
