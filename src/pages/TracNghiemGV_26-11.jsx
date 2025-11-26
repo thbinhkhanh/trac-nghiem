@@ -90,7 +90,7 @@ export default function TracNghiem() {
 
   const [openResultDialog, setOpenResultDialog] = useState(false);
   const [studentResult, setStudentResult] = useState(null);
-  const [fillBlankStatus, setFillBlankStatus] = useState({});
+
 
   //const { fullname, lop, school, studentId, selectedWeek, mon } = location.state || {};
   const { fullname, lop, school } = location.state || {};
@@ -770,6 +770,10 @@ const handleDragEnd = (result) => {
   });
 };
 
+
+
+
+
 return (
   <Box
     id="quiz-container"  // <-- Thêm dòng này
@@ -952,7 +956,7 @@ return (
                       maxWidth: "100%",
                       height: "auto",
                       borderRadius: 8,
-                      marginTop: "-24px",
+                      marginTop: "-24px", // thay mt: -6, tự viết margin trên style
                     }}
                   />
                 </Box>
@@ -982,57 +986,57 @@ return (
                       ref={provided.innerRef}
                       spacing={2}
                     >
-                      {(answers[currentQuestion.id] ??
-                        currentQuestion.options.map((_, idx) => idx)
-                      ).map((optIdx, pos) => {
-                        const isCorrect =
-                          submitted && currentQuestion.correct[pos] === optIdx;
+                      {(answers[currentQuestion.id] ?? currentQuestion.initialSortOrder).map(
+                        (optIdx, pos) => {
+                          const isCorrect =
+                            submitted && currentQuestion.correct[pos] === optIdx;
 
-                        return (
-                          <Draggable
-                            key={optIdx}
-                            draggableId={String(optIdx)}
-                            index={pos}
-                            isDragDisabled={submitted || !started}
-                          >
-                            {(provided, snapshot) => (
-                              <Box
-                                ref={provided.innerRef}
-                                {...provided.draggableProps}
-                                {...provided.dragHandleProps}
-                                sx={{
-                                  borderRadius: 1,
-                                  bgcolor:
-                                    submitted && choXemDapAn
-                                      ? isCorrect
-                                        ? "#c8e6c9"
-                                        : "#ffcdd2"
-                                      : snapshot.isDragging
-                                      ? "#e3f2fd"
-                                      : "#fafafa",
-                                  border: "1px solid #90caf9",
-                                  cursor: submitted || !started ? "default" : "grab",
-                                  boxShadow: snapshot.isDragging ? 3 : 1,
-                                  transition: "box-shadow 0.2s ease",
-                                  minHeight: 35,
-                                  py: 0.75,
-                                  px: 1,
-                                  display: "flex",
-                                  alignItems: "center",
-                                }}
-                              >
-                                <Typography
-                                  variant="body1"
-                                  fontWeight="400"
-                                  sx={{ userSelect: "none" }}
+                          return (
+                            <Draggable
+                              key={optIdx}
+                              draggableId={String(optIdx)}
+                              index={pos}
+                              isDragDisabled={submitted || !started}
+                            >
+                              {(provided, snapshot) => (
+                                <Box
+                                  ref={provided.innerRef}
+                                  {...provided.draggableProps}
+                                  {...provided.dragHandleProps}
+                                  sx={{
+                                    borderRadius: 1,
+                                    bgcolor:
+                                      submitted && choXemDapAn
+                                        ? isCorrect
+                                          ? "#c8e6c9"
+                                          : "#ffcdd2"
+                                        : snapshot.isDragging
+                                        ? "#e3f2fd"
+                                        : "#fafafa",
+                                    border: "1px solid #90caf9",
+                                    cursor: submitted || !started ? "default" : "grab",
+                                    boxShadow: snapshot.isDragging ? 3 : 1,
+                                    transition: "box-shadow 0.2s ease",
+                                    minHeight: 35,
+                                    py: 0.75,
+                                    px: 1,
+                                    display: "flex",
+                                    alignItems: "center",
+                                  }}
                                 >
-                                  {currentQuestion.options[optIdx]}
-                                </Typography>
-                              </Box>
-                            )}
-                          </Draggable>
-                        );
-                      })}
+                                  <Typography
+                                    variant="body1"
+                                    fontWeight="400"
+                                    sx={{ userSelect: "none" }}
+                                  >
+                                    {currentQuestion.options[optIdx]}
+                                  </Typography>
+                                </Box>
+                              )}
+                            </Draggable>
+                          );
+                        }
+                      )}
                       {provided.placeholder}
                     </Stack>
                   )}
@@ -1040,7 +1044,6 @@ return (
               </DragDropContext>
             </Box>
           )}
-
 
           {/* MATCH */}
           {currentQuestion.type === "matching" && (
@@ -1547,7 +1550,7 @@ return (
                         display: "flex",
                         alignItems: "center",
                         flexWrap: "wrap",
-                        mb: 1,
+                        mb: 1, // khoảng cách dòng giữa các đoạn
                       }}
                     >
                       <Typography
@@ -1560,68 +1563,55 @@ return (
                       {/* Chỗ trống */}
                       {idx < currentQuestion.option.split("[...]").length - 1 && (
                         <Droppable droppableId={`blank-${idx}`} direction="horizontal">
-                          {(provided) => {
-                            const userWord = currentQuestion.filled?.[idx] ?? "";
-                            const correctWord = currentQuestion.options?.[idx] ?? "";
-                            const color =
-                              submitted && userWord
-                                ? userWord.trim() === correctWord.trim()
-                                  ? "green"
-                                  : "red"
-                                : "#000";
-
-                            return (
-                              <Box
-                                ref={provided.innerRef}
-                                {...provided.droppableProps}
-                                sx={{
-                                  display: "inline-flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  minWidth: 80,
-                                  maxWidth: 300,
-                                  minHeight: 40,
-                                  mb: 1,
-                                  border: "1px dashed #90caf9",
-                                  borderRadius: 1,
-                                  px: 1,
-                                  fontFamily: "Roboto, Arial, sans-serif",
-                                  fontSize: "1rem",
-                                  lineHeight: "normal",
-                                  color: color, // màu đúng/sai
-                                }}
-                              >
-                                {userWord && (
-                                  <Draggable draggableId={`filled-${idx}`} index={0}>
-                                    {(prov) => (
-                                      <Paper
-                                        ref={prov.innerRef}
-                                        {...prov.draggableProps}
-                                        {...prov.dragHandleProps}
-                                        sx={{
-                                          px: 2,
-                                          py: 0.5,
-                                          bgcolor: "#e3f2fd",
-                                          cursor: "grab",
-                                          fontFamily: "Roboto, Arial, sans-serif",
-                                          fontSize: "1rem",
-                                          display: "inline-flex",
-                                          alignItems: "center",
-                                          justifyContent: "center",
-                                          minHeight: 30,
-                                          maxWidth: "100%",
-                                          color: color, // màu đúng/sai cho thẻ
-                                        }}
-                                      >
-                                        {userWord}
-                                      </Paper>
-                                    )}
-                                  </Draggable>
-                                )}
-                                {provided.placeholder}
-                              </Box>
-                            );
-                          }}
+                          {(provided) => (
+                            <Box
+                              ref={provided.innerRef}
+                              {...provided.droppableProps}
+                              sx={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                minWidth: 80,
+                                maxWidth: 300,
+                                minHeight: 40,
+                                mb: 1,
+                                border: "1px dashed #90caf9",
+                                borderRadius: 1,
+                                px: 1,
+                                fontFamily: "Roboto, Arial, sans-serif",
+                                fontSize: "1rem",
+                                lineHeight: "normal",
+                              }}
+                            >
+                              {(currentQuestion.filled?.[idx] ?? false) && (
+                                <Draggable draggableId={`filled-${idx}`} index={0}>
+                                  {(prov) => (
+                                    <Paper
+                                      ref={prov.innerRef}
+                                      {...prov.draggableProps}
+                                      {...prov.dragHandleProps}
+                                      sx={{
+                                        px: 2,
+                                        py: 0.5,
+                                        bgcolor: "#e3f2fd",
+                                        cursor: "grab",
+                                        fontFamily: "Roboto, Arial, sans-serif",
+                                        fontSize: "1rem",
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        minHeight: 30,
+                                        maxWidth: "100%",
+                                      }}
+                                    >
+                                      {currentQuestion.filled[idx]}
+                                    </Paper>
+                                  )}
+                                </Draggable>
+                              )}
+                              {provided.placeholder}
+                            </Box>
+                          )}
                         </Droppable>
                       )}
                     </Box>
@@ -1684,6 +1674,7 @@ return (
               </Stack>
             </DragDropContext>
           )}
+
         </>
       )}
 

@@ -277,66 +277,131 @@ export default function TracNghiem() {
       saved = shuffleArray(saved);
 
       const loadedQuestions = saved.map((q, index) => {
-        const questionId = q.id ?? `q_${index}`;
-        const questionText = typeof q.question === "string" ? q.question.trim() : "";
-        const rawType = (q.type || "").toString().trim().toLowerCase();
-        const type = ["sort", "matching", "single", "multiple", "image", "truefalse"].includes(rawType)
-          ? rawType
-          : null;
-        if (!type) return null;
+  const questionId = q.id ?? `q_${index}`;
+  const questionText = typeof q.question === "string" ? q.question.trim() : "";
+  const rawType = (q.type || "").toString().trim().toLowerCase();
+  const type = ["sort", "matching", "single", "multiple", "image", "truefalse", "fillblank"].includes(rawType)
+    ? rawType
+    : null;
+  if (!type) return null;
 
-        if (type === "matching") {
-          const pairs = Array.isArray(q.pairs) ? q.pairs : [];
-          if (pairs.length === 0) return null;
-          const leftOptions = pairs.map(p => p.left);
-          const rightOptionsOriginal = pairs.map((p, idx) => ({ opt: p.right, idx }));
-          const processedRightOptions = shuffleArray(rightOptionsOriginal);
-          const originalRightIndexMap = {};
-          processedRightOptions.forEach((item, newIndex) => {
-            originalRightIndexMap[item.idx] = newIndex;
-          });
-          const newCorrect = leftOptions.map((_, i) => originalRightIndexMap[i]);
-          return { ...q, id: questionId, type, question: questionText, leftOptions, rightOptions: processedRightOptions.map(i => i.opt), correct: newCorrect, score: q.score ?? 1 };
-        }
+  if (type === "matching") {
+    const pairs = Array.isArray(q.pairs) ? q.pairs : [];
+    if (pairs.length === 0) return null;
+    const leftOptions = pairs.map(p => p.left);
+    const rightOptionsOriginal = pairs.map((p, idx) => ({ opt: p.right, idx }));
+    const processedRightOptions = shuffleArray(rightOptionsOriginal);
+    const originalRightIndexMap = {};
+    processedRightOptions.forEach((item, newIndex) => {
+      originalRightIndexMap[item.idx] = newIndex;
+    });
+    const newCorrect = leftOptions.map((_, i) => originalRightIndexMap[i]);
+    return { 
+      ...q, 
+      id: questionId, 
+      type, 
+      question: questionText, 
+      image: q.image ?? null,          // ✅ Thêm image
+      leftOptions, 
+      rightOptions: processedRightOptions.map(i => i.opt), 
+      correct: newCorrect, 
+      score: q.score ?? 1 
+    };
+  }
 
-        if (type === "sort") {
-          const options = Array.isArray(q.options) && q.options.length > 0 ? [...q.options] : ["", "", "", ""];
-          const indexed = options.map((opt, idx) => ({ opt, idx }));
-          const processed = q.sortType === "shuffle" ? shuffleArray(indexed) : indexed;
-          return { ...q, id: questionId, type, question: questionText, options, initialSortOrder: processed.map(i => i.idx), correct: options.map((_, i) => i), score: q.score ?? 1 };
-        }
+  if (type === "sort") {
+    const options = Array.isArray(q.options) && q.options.length > 0 ? [...q.options] : ["", "", "", ""];
+    const indexed = options.map((opt, idx) => ({ opt, idx }));
+    const processed = q.sortType === "shuffle" ? shuffleArray(indexed) : indexed;
+    return { 
+      ...q, 
+      id: questionId, 
+      type, 
+      question: questionText, 
+      image: q.image ?? null,          // ✅ Thêm image
+      options, 
+      initialSortOrder: processed.map(i => i.idx), 
+      correct: options.map((_, i) => i), 
+      score: q.score ?? 1 
+    };
+  }
 
-        if (type === "single" || type === "multiple") {
-          const options = Array.isArray(q.options) && q.options.length > 0 ? q.options : ["", "", "", ""];
-          const indexed = options.map((opt, idx) => ({ opt, idx }));
-          const shouldShuffle = q.sortType === "shuffle" || q.shuffleOptions === true;
-          const shuffled = shouldShuffle ? shuffleArray(indexed) : indexed;
-          return { ...q, id: questionId, type, question: questionText, options, displayOrder: shuffled.map(i => i.idx), correct: Array.isArray(q.correct) ? q.correct.map(Number) : typeof q.correct === "number" ? [q.correct] : [], score: q.score ?? 1 };
-        }
+  if (type === "single" || type === "multiple") {
+    const options = Array.isArray(q.options) && q.options.length > 0 ? q.options : ["", "", "", ""];
+    const indexed = options.map((opt, idx) => ({ opt, idx }));
+    const shouldShuffle = q.sortType === "shuffle" || q.shuffleOptions === true;
+    const shuffled = shouldShuffle ? shuffleArray(indexed) : indexed;
+    return { 
+      ...q, 
+      id: questionId, 
+      type, 
+      question: questionText, 
+      image: q.image ?? null,          // ✅ Thêm image
+      options, 
+      displayOrder: shuffled.map(i => i.idx), 
+      correct: Array.isArray(q.correct) ? q.correct.map(Number) : typeof q.correct === "number" ? [q.correct] : [], 
+      score: q.score ?? 1 
+    };
+  }
 
-        if (type === "image") {
-          const options = Array.isArray(q.options) && q.options.length > 0 ? q.options : ["", "", "", ""];
-          const correct = Array.isArray(q.correct) ? q.correct : [];
-          return { ...q, id: questionId, type, question: questionText, options, displayOrder: shuffleArray(options.map((_, idx) => idx)), correct, score: q.score ?? 1 };
-        }
+  if (type === "image") {
+    const options = Array.isArray(q.options) && q.options.length > 0 ? q.options : ["", "", "", ""];
+    const correct = Array.isArray(q.correct) ? q.correct : [];
+    return { 
+      ...q, 
+      id: questionId, 
+      type, 
+      question: questionText, 
+      image: q.image ?? null,          // ✅ Thêm image
+      options, 
+      displayOrder: shuffleArray(options.map((_, idx) => idx)), 
+      correct, 
+      score: q.score ?? 1 
+    };
+  }
 
-        if (type === "truefalse") {
-          const options = Array.isArray(q.options) && q.options.length >= 2 ? q.options : ["Đúng", "Sai"];
-          const correct = Array.isArray(q.correct) && q.correct.length === options.length ? q.correct : options.map(() => "");
-          return { ...q, id: questionId, type, question: questionText, options, correct, score: q.score ?? 1 };
-        }
+  if (type === "truefalse") {
+    const options = Array.isArray(q.options) && q.options.length >= 2 ? q.options : ["Đúng", "Sai"];
+    const correct = Array.isArray(q.correct) && q.correct.length === options.length ? q.correct : options.map(() => "");
+    return { 
+      ...q, 
+      id: questionId, 
+      type, 
+      question: questionText, 
+      image: q.image ?? null,          // ✅ Thêm image
+      options, 
+      correct, 
+      score: q.score ?? 1 
+    };
+  }
 
-        return null;
-      }).filter(Boolean);
+  if (type === "fillblank") {
+    const options = Array.isArray(q.options) && q.options.length > 0 ? q.options : [];
+    return { 
+      ...q, 
+      id: questionId, 
+      type, 
+      question: questionText, 
+      image: q.image ?? null,          // ✅ Thêm image
+      options, 
+      score: q.score ?? 1 
+    };
+  }
 
-      // --- Lọc câu hợp lệ ---
+  return null;
+}).filter(Boolean);
+
+
+      // --- Lọc câu hợp lệ bao gồm fillblank ---
       const validQuestions = loadedQuestions.filter(q => {
         if (q.type === "matching") return q.question.trim() !== "" && q.leftOptions.length > 0 && q.rightOptions.length > 0;
         if (q.type === "sort") return q.question.trim() !== "" && q.options.length > 0;
         if (["single", "multiple", "image"].includes(q.type)) return q.question.trim() !== "" && q.options.length > 0 && Array.isArray(q.correct);
         if (q.type === "truefalse") return q.question.trim() !== "" && q.options.length >= 2 && Array.isArray(q.correct);
+        if (q.type === "fillblank") return q.question.trim() !== "" && q.options.length > 0;
         return false;
       });
+
 
       setQuestions(validQuestions);
       setProgress(100);
@@ -648,6 +713,38 @@ const handleMultipleSelect = (questionId, optionIndex, checked) => {
   });
 };
 
+const handleDragEnd = (result) => {
+  const { source, destination, draggableId } = result;
+  if (!destination) return;
+
+  setQuestions((prev) => {
+    const updated = [...prev];
+    const q = updated[currentIndex];
+
+    let filled = q.filled ? [...q.filled] : [];
+
+    // Kéo từ words vào blank
+    if (destination.droppableId.startsWith("blank-") && source.droppableId === "words") {
+      const blankIndex = Number(destination.droppableId.split("-")[1]);
+      const word = draggableId.replace("word-", "");
+      while (filled.length <= blankIndex) filled.push("");
+      filled[blankIndex] = word;
+    }
+
+    // Kéo từ blank ra words
+    if (destination.droppableId === "words" && source.droppableId.startsWith("blank-")) {
+      const blankIndex = Number(source.droppableId.split("-")[1]);
+      filled[blankIndex] = ""; // ô blank trở về rỗng
+    }
+
+    updated[currentIndex] = { ...q, filled };
+    return updated;
+  });
+};
+
+
+
+
 return (
   <Box
     id="quiz-container"  // <-- Thêm dòng này
@@ -802,92 +899,121 @@ return (
             Câu {currentIndex + 1}: {currentQuestion.question}
           </Typography>
 
+          {currentQuestion.image && (
+            <Box sx={{ width: "100%", textAlign: "center", mb: 2 }}>
+              <img
+                src={currentQuestion.image}
+                alt="question"
+                style={{ 
+                  maxWidth: "100%", 
+                  maxHeight: 300, 
+                  objectFit: "contain",
+                  borderRadius: 8 
+                }}
+              />
+            </Box>
+          )}
+
           {/* SORT */}
           {currentQuestion.type === "sort" && (
-            <DragDropContext
-              onDragEnd={(result) => {
-                if (!result.destination || submitted || !started) return;
+            <Box sx={{ mt: 0 }}>
+              {/* Hiển thị hình minh họa nếu có, căn giữa */}
+              {currentQuestion.questionImage && (
+                <Box sx={{ display: "flex", justifyContent: "center", mb: 2 }}>
+                  <img
+                    src={currentQuestion.questionImage}
+                    alt="Hình minh họa"
+                    style={{
+                      maxWidth: "100%",
+                      height: "auto",
+                      borderRadius: 8,
+                      marginTop: "-24px", // thay mt: -6, tự viết margin trên style
+                    }}
+                  />
+                </Box>
+              )}
 
-                const currentOrder =
-                  answers[currentQuestion.id] ??
-                  currentQuestion.options.map((_, idx) => idx);
+              <DragDropContext
+                onDragEnd={(result) => {
+                  if (!result.destination || submitted || !started) return;
 
-                const newOrder = reorder(
-                  currentOrder,
-                  result.source.index,
-                  result.destination.index
-                );
+                  const currentOrder =
+                    answers[currentQuestion.id] ??
+                    currentQuestion.options.map((_, idx) => idx);
 
-                setAnswers((prev) => ({ ...prev, [currentQuestion.id]: newOrder }));
-              }}
-            >
-              <Droppable droppableId="sort-options">
-                {(provided) => (
-                  <Stack
-                    {...provided.droppableProps}
-                    ref={provided.innerRef}
-                    spacing={2}
-                  >
-                    {(answers[currentQuestion.id] ?? currentQuestion.initialSortOrder).map(
-                      (optIdx, pos) => {
-                        const isCorrect =
-                          submitted && currentQuestion.correct[pos] === optIdx;
+                  const newOrder = reorder(
+                    currentOrder,
+                    result.source.index,
+                    result.destination.index
+                  );
 
-                        return (
-                          <Draggable
-                            key={optIdx}
-                            draggableId={String(optIdx)}
-                            index={pos}
-                            isDragDisabled={submitted || !started}
-                          >
-                            {(provided, snapshot) => (
-                              <Box
-                                ref={provided.innerRef}
-                                {...provided.draggableProps}
-                                {...provided.dragHandleProps}
-                                sx={{
-                                  borderRadius: 1,
+                  setAnswers((prev) => ({ ...prev, [currentQuestion.id]: newOrder }));
+                }}
+              >
+                <Droppable droppableId="sort-options">
+                  {(provided) => (
+                    <Stack
+                      {...provided.droppableProps}
+                      ref={provided.innerRef}
+                      spacing={2}
+                    >
+                      {(answers[currentQuestion.id] ?? currentQuestion.initialSortOrder).map(
+                        (optIdx, pos) => {
+                          const isCorrect =
+                            submitted && currentQuestion.correct[pos] === optIdx;
 
-                                  // ⭐ MÀU SẮC KHI NỘP BÀI + KHI ĐANG DRAG
-                                  bgcolor:
-                                    submitted && choXemDapAn
-                                      ? isCorrect
-                                        ? "#c8e6c9"
-                                        : "#ffcdd2"
-                                      : snapshot.isDragging
-                                      ? "#e3f2fd"
-                                      : "#fafafa",
-
-                                  border: "1px solid #90caf9",
-                                  cursor:
-                                    submitted || !started ? "default" : "grab",
-
-                                  // ⭐ ĐỔ BÓNG
-                                  boxShadow: snapshot.isDragging ? 3 : 1,
-                                  transition: "box-shadow 0.2s ease",
-
-                                  // ⭐ CHIỀU CAO GIỐNG SINGLE / MULTIPLE
-                                  minHeight: 35,
-                                  py: 0.75,
-                                  px: 1,
-                                  display: "flex",
-                                  alignItems: "center",
-                                }}
-                              >
-                                <Typography variant="body1" fontWeight="400" sx={{ userSelect: "none" }}>
-                                  {currentQuestion.options[optIdx]}
-                                </Typography>
-                              </Box>
-                            )}
-                          </Draggable>
-                        );
-                      }
-                    )}
-                    {provided.placeholder}
-                  </Stack>
-                )}
-              </Droppable>
-            </DragDropContext>
+                          return (
+                            <Draggable
+                              key={optIdx}
+                              draggableId={String(optIdx)}
+                              index={pos}
+                              isDragDisabled={submitted || !started}
+                            >
+                              {(provided, snapshot) => (
+                                <Box
+                                  ref={provided.innerRef}
+                                  {...provided.draggableProps}
+                                  {...provided.dragHandleProps}
+                                  sx={{
+                                    borderRadius: 1,
+                                    bgcolor:
+                                      submitted && choXemDapAn
+                                        ? isCorrect
+                                          ? "#c8e6c9"
+                                          : "#ffcdd2"
+                                        : snapshot.isDragging
+                                        ? "#e3f2fd"
+                                        : "#fafafa",
+                                    border: "1px solid #90caf9",
+                                    cursor: submitted || !started ? "default" : "grab",
+                                    boxShadow: snapshot.isDragging ? 3 : 1,
+                                    transition: "box-shadow 0.2s ease",
+                                    minHeight: 35,
+                                    py: 0.75,
+                                    px: 1,
+                                    display: "flex",
+                                    alignItems: "center",
+                                  }}
+                                >
+                                  <Typography
+                                    variant="body1"
+                                    fontWeight="400"
+                                    sx={{ userSelect: "none" }}
+                                  >
+                                    {currentQuestion.options[optIdx]}
+                                  </Typography>
+                                </Box>
+                              )}
+                            </Draggable>
+                          );
+                        }
+                      )}
+                      {provided.placeholder}
+                    </Stack>
+                  )}
+                </Droppable>
+              </DragDropContext>
+            </Box>
           )}
 
           {/* MATCH */}
@@ -1052,6 +1178,22 @@ return (
           {/* 1. Single */}
           {currentQuestion.type === "single" && (
             <Stack spacing={2}>
+              {/* Hiển thị hình minh họa nếu có, căn giữa */}
+              {currentQuestion.questionImage && (
+                <Box sx={{ display: "flex", justifyContent: "center", mb: 2 }}>
+                  <img
+                    src={currentQuestion.questionImage}
+                    alt="Hình minh họa"
+                    style={{
+                      maxWidth: "100%",
+                      height: "auto",
+                      borderRadius: 8,
+                      marginTop: "-24px", // thay mt: -6, tự viết margin trên style
+                    }}
+                  />
+                </Box>
+              )}
+
               {currentQuestion.displayOrder.map((optIdx) => {
                 const selected = answers[currentQuestion.id] === optIdx;
 
@@ -1113,6 +1255,22 @@ return (
           {/* 2. Multiple */}
           {currentQuestion.type === "multiple" && (
             <Stack spacing={2}>
+              {/* Hiển thị hình minh họa nếu có, căn giữa */}
+              {currentQuestion.questionImage && (
+                <Box sx={{ display: "flex", justifyContent: "center", mb: 2 }}>
+                  <img
+                    src={currentQuestion.questionImage}
+                    alt="Hình minh họa"
+                    style={{
+                      maxWidth: "100%",
+                      height: "auto",
+                      borderRadius: 8,
+                      marginTop: "-24px", // thay mt: -6, tự viết margin trên style
+                    }}
+                  />
+                </Box>
+              )}
+
               {currentQuestion.displayOrder.map((optIdx) => {
                 const userAns = answers[currentQuestion.id] || [];
                 const checked = userAns.includes(optIdx);
@@ -1172,6 +1330,22 @@ return (
           {/* TRUE / FALSE */}
           {currentQuestion.type === "truefalse" && (
             <Stack spacing={2}>
+              {/* Hiển thị hình minh họa nếu có, căn giữa */}
+              {currentQuestion.questionImage && (
+                <Box sx={{ display: "flex", justifyContent: "center", mb: 2 }}>
+                  <img
+                    src={currentQuestion.questionImage}
+                    alt="Hình minh họa"
+                    style={{
+                      maxWidth: "100%",
+                      height: "auto",
+                      borderRadius: 8,
+                      marginTop: "-24px", // thay mt: -6, tự viết margin trên style
+                    }}
+                  />
+                </Box>
+              )}
+              
               {currentQuestion.options.map((opt, i) => {
                 const userAns = answers[currentQuestion.id] || [];
                 const selected = userAns[i] ?? "";
@@ -1334,6 +1508,142 @@ return (
             </Stack>
           )}
 
+          {/* FILLBLANK */}
+          {currentQuestion.type === "fillblank" && (
+            <DragDropContext onDragEnd={handleDragEnd}>
+              <Stack spacing={15}>
+                {/* Câu hỏi trên */}
+                <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+                  {currentQuestion.question.split("[...]").map((part, idx) => (
+                    <React.Fragment key={idx}>
+                      {/* Text */}
+                      <Typography variant="body1">{part}</Typography>
+
+                      {/* Chỗ trống */}
+                      {idx < currentQuestion.question.split("[...]").length - 1 && (
+                        <Droppable droppableId={`blank-${idx}`} direction="horizontal">
+                          {(provided) => (
+                            <Box
+                              ref={provided.innerRef}
+                              {...provided.droppableProps}
+                              sx={{
+                                display: "inline-flex",
+                                alignItems: "center",       // căn giữa dọc
+                                justifyContent: "center",
+                                minWidth: 80,
+                                maxWidth: 300,              // giới hạn chiều rộng tối đa (tùy chọn)
+                                minHeight: 30,              // giảm chiều cao
+                                border: "1px dashed #90caf9",
+                                borderRadius: 1,
+                                px: 1,
+                                fontFamily: "Roboto, Arial, sans-serif",
+                                fontSize: "1rem",
+                                lineHeight: "30px",         // căn chữ giữa nếu không có Draggable
+                              }}
+                            >
+                              {(currentQuestion.filled?.[idx] ?? false) && (
+                                <Draggable draggableId={`filled-${idx}`} index={0}>
+                                  {(prov) => (
+                                    <Paper
+                                      ref={prov.innerRef}
+                                      {...prov.draggableProps}
+                                      {...prov.dragHandleProps}
+                                      sx={{
+                                        px: 2,
+                                        py: 0.5,                // giảm padding dọc để giảm chiều cao
+                                        bgcolor: "#e3f2fd",
+                                        cursor: "grab",
+                                        fontFamily: "Roboto, Arial, sans-serif",
+                                        fontSize: "1rem",
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        minHeight: 30,          // cố định chiều cao thẻ
+                                        maxWidth: "100%",       // thẻ không vượt quá ô
+                                      }}
+                                    >
+                                      {currentQuestion.filled[idx]}
+                                    </Paper>
+                                  )}
+                                </Draggable>
+                              )}
+                              {provided.placeholder}
+                            </Box>
+                          )}
+                        </Droppable>
+                      )}
+                    </React.Fragment>
+                  ))}
+                </Stack>
+
+
+                {/* Khu vực thẻ từ */}
+                <Box sx={{ mt: 2, textAlign: "left" }}>
+                  <Box
+                    sx={{
+                      mb: 1,
+                      fontFamily: "Roboto, Arial, sans-serif",
+                      fontSize: "1rem",
+                      fontWeight: "bold", // ✅ in đậm
+                    }}
+                  >
+                    Các từ cần điền:
+                  </Box>
+
+                  <Droppable droppableId="words" direction="horizontal">
+                    {(provided) => (
+                      <Box
+                        ref={provided.innerRef}
+                        {...provided.droppableProps}
+                        sx={{
+                          display: "flex",
+                          flexWrap: "wrap",
+                          alignItems: "center", // căn thẻ theo chiều dọc
+                          gap: 8,                // khoảng cách giữa các thẻ
+                          minHeight: 50,
+                          maxHeight: 80,
+                          p: 1,
+                          border: "1px solid #90caf9",
+                          borderRadius: 2,
+                          bgcolor: "white",      // ✅ nền trắng
+                          overflowY: "auto",
+                        }}
+                      >
+                        {currentQuestion.options
+                          .filter((o) => !(currentQuestion.filled ?? []).includes(o))
+                          .map((word, idx) => (
+                            <Draggable key={word} draggableId={`word-${word}`} index={idx}>
+                              {(prov) => (
+                                <Paper
+                                  ref={prov.innerRef}
+                                  {...prov.draggableProps}
+                                  {...prov.dragHandleProps}
+                                  sx={{
+                                    px: 2,
+                                    py: 1,
+                                    bgcolor: "#e3f2fd",
+                                    cursor: "grab",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    minHeight: 30,
+                                    fontFamily: "Roboto, Arial, sans-serif",
+                                    fontSize: "1rem",
+                                  }}
+                                >
+                                  {word}
+                                </Paper>
+                              )}
+                            </Draggable>
+                          ))}
+                        {provided.placeholder}
+                      </Box>
+                    )}
+                  </Droppable>
+                </Box>
+              </Stack>
+            </DragDropContext>
+          )}
         </>
       )}
 

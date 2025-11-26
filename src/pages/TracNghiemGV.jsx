@@ -330,48 +330,49 @@ useEffect(() => {
   };
 
   const isQuestionValid = (q) => {
-  if (!q.question?.trim()) return false;
-  if (q.score <= 0) return false;
+    if (!q.question?.trim()) return false;  // câu trả lời hoặc nội dung
+    if (q.score <= 0) return false;
 
-  if (q.type === "sort") {
-    const nonEmptyOpts = (q.options || []).filter((o) => o?.trim());
-    return nonEmptyOpts.length >= 2;
-  }
+    if (q.type === "sort") {
+      const nonEmptyOpts = (q.options || []).filter((o) => o?.trim());
+      return nonEmptyOpts.length >= 2;
+    }
 
-  if (q.type === "matching") {
-    const pairs = q.pairs || [];
-    return pairs.length > 0 && pairs.every(p => p.left?.trim() && p.right?.trim());
-  }
+    if (q.type === "matching") {
+      const pairs = q.pairs || [];
+      return pairs.length > 0 && pairs.every(p => p.left?.trim() && p.right?.trim());
+    }
 
-  if (q.type === "single") {
-    return q.options.some((o) => o.trim()) && q.correct?.length === 1;
-  }
+    if (q.type === "single") {
+      return q.options?.some((o) => o.trim()) && q.correct?.length === 1;
+    }
 
-  if (q.type === "multiple") {
-    return q.options.some((o) => o.trim()) && q.correct?.length > 0;
-  }
+    if (q.type === "multiple") {
+      return q.options?.some((o) => o.trim()) && q.correct?.length > 0;
+    }
 
-  if (q.type === "truefalse") {
-    const opts = q.options || [];
-    const correct = q.correct || [];
-    return opts.length > 0 && opts.some(o => o?.trim()) && correct.length === opts.length;
-  }
+    if (q.type === "truefalse") {
+      const opts = q.options || [];
+      const correct = q.correct || [];
+      return opts.length > 0 && opts.some(o => o?.trim()) && correct.length === opts.length;
+    }
 
-  if (q.type === "image") {
-    const hasImage = q.options?.some(o => o); 
-    const hasAnswer = q.correct?.length > 0;
-    return hasImage && hasAnswer;
-  }
+    if (q.type === "image") {
+      const hasImage = q.options?.some(o => o); 
+      const hasAnswer = q.correct?.length > 0;
+      return hasImage && hasAnswer;
+    }
 
-  if (q.type === "fillblank") {
-    // ít nhất 1 từ để điền và câu hỏi có ít nhất 1 chỗ trống [...]
-    const hasOptions = q.options?.some(o => o?.trim());
-    const hasBlanks = q.question?.includes("[...]");
-    return hasOptions && hasBlanks;
-  }
+    if (q.type === "fillblank") {
+      // ít nhất 1 từ để điền (options) và câu hỏi có ít nhất 1 chỗ trống [...]
+      const hasOptions = q.options?.some(o => o?.trim());
+      const hasBlanks = q.option?.includes("[...]"); // lưu ý dùng q.option thay vì q.question
+      return hasOptions && hasBlanks;
+    }
 
-  return false; // fallback cho các type chưa xử lý
-};
+    return false; // fallback cho các type chưa xử lý
+  };
+
 
 
   function extractMatchingCorrect(pairs) {
@@ -1367,14 +1368,14 @@ useEffect(() => {
 
               {q.type === "fillblank" && (
                 <Stack spacing={2}>
-                  {/* Ô nhập nội dung câu hỏi */}
+                  {/* Ô nhập câu hỏi với [...] */}
                   <TextField
                     fullWidth
                     multiline
                     minRows={2}
-                    label="Nội dung câu hỏi (dùng [...] cho chỗ trống)"
-                    value={q.question || ""}
-                    onChange={(e) => updateQuestionAt(qi, { question: e.target.value })}
+                    label="Nhập câu hỏi với [...] cho chỗ trống"
+                    value={q.option || ""}
+                    onChange={(e) => updateQuestionAt(qi, { option: e.target.value })}
                   />
 
                   {/* Danh sách từ cần điền */}
@@ -1388,14 +1389,14 @@ useEffect(() => {
                           onChange={(e) => {
                             const newOptions = [...q.options];
                             newOptions[oi] = e.target.value;
-                            updateQuestionAt(qi, { options: newOptions }); // ⚠ chỉ update options
+                            updateQuestionAt(qi, { options: newOptions });
                           }}
                         />
                         <IconButton
                           onClick={() => {
                             const newOptions = [...q.options];
                             newOptions.splice(oi, 1);
-                            updateQuestionAt(qi, { options: newOptions }); // ⚠ chỉ update options
+                            updateQuestionAt(qi, { options: newOptions });
                           }}
                         >
                           <RemoveCircleOutlineIcon sx={{ color: "error.main" }} />
@@ -1405,32 +1406,47 @@ useEffect(() => {
                     <Button
                       variant="outlined"
                       onClick={() =>
-                        updateQuestionAt(qi, { options: [...(q.options || []), ""] }) // ⚠ chỉ update options
+                        updateQuestionAt(qi, { options: [...(q.options || []), ""] })
                       }
                     >
                       Thêm từ
                     </Button>
                   </Stack>
 
-                  {/* Preview */}
-                  <Box sx={{ p:1, border: "1px dashed #90caf9", borderRadius: 1, minHeight:50 }}>
-                    {q.question
-                      ? q.question.split("[...]").map((part, i, arr) => (
+                  {/* Preview đồng bộ font với Option */}
+                  <Box
+                    sx={{
+                      p: 1,
+                      border: "1px dashed #90caf9",
+                      borderRadius: 1,
+                      minHeight: 50,
+                      fontFamily: "Roboto, Arial, sans-serif", // giống font MUI TextField
+                      fontSize: "0.875rem", // size giống TextField size="small"
+                      lineHeight: 1.5
+                    }}
+                  >
+                    {q.option
+                      ? q.option.split("[...]").map((part, i, arr) => (
                           <React.Fragment key={i}>
                             <span>{part}</span>
-                            {i < arr.length-1 && (
-                              <Box component="span"
-                                  sx={{ display:"inline-block", minWidth:60, borderBottom:"2px solid #000", mx:0.5 }}>
-                              </Box>
+                            {i < arr.length - 1 && (
+                              <Box
+                                component="span"
+                                sx={{
+                                  display: "inline-block",
+                                  minWidth: 60,
+                                  borderBottom: "2px solid #000",
+                                  mx: 0.5
+                                }}
+                              />
                             )}
                           </React.Fragment>
                         ))
-                      : "Câu hỏi chưa có nội dung"
-                    }
+                      : "Câu hỏi chưa có nội dung"}
                   </Box>
                 </Stack>
               )}
-              
+
               {/* Hàng cuối: Kiểu sắp xếp + Hợp lệ + Xóa câu hỏi */}
               <Stack direction={{ xs: "row", sm: "row" }} spacing={2} alignItems="center" justifyContent="space-between">
                 <FormControl size="small" sx={{ width: 150 }}>

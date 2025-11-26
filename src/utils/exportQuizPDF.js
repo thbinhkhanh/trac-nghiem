@@ -292,6 +292,57 @@ export const exportQuizPDF = async (studentInfo, quizClass, questions, answers, 
         y += imgSize + 20;
         break;
 
+      case "fillblank":
+        const parts = (q.option || "").split("[...]");
+        const userAnswers = Array.isArray(answers[q.id]) ? answers[q.id] : [];
+        const correctAnswers = Array.isArray(q.options) ? q.options : [];
+
+        const maxWidth = pageWidth - 2 * margin;
+        let xPos = margin;
+        let yLine = y;
+
+        for (let i = 0; i < parts.length; i++) {
+          const textBefore = parts[i];
+
+          // Vẽ đoạn văn trước chỗ trống, tự xuống dòng nếu dài
+          const splitBefore = pdf.splitTextToSize(textBefore, maxWidth - (xPos - margin));
+          splitBefore.forEach((line, idx) => {
+            if (idx > 0) {
+              yLine += lineHeight;
+              xPos = margin;
+            }
+            pdf.setTextColor(0, 0, 0);
+            pdf.text(line, xPos, yLine);
+            xPos += pdf.getTextWidth(line);
+          });
+
+          // Vẽ từ điền nếu có
+          if (i < parts.length - 1) {
+            const answerWord = userAnswers[i] ? userAnswers[i] : "______";
+            const isCorrect =
+              userAnswers[i] &&
+              correctAnswers[i] &&
+              userAnswers[i].trim() === correctAnswers[i].trim();
+
+            pdf.setTextColor(isCorrect ? 0 : 255, isCorrect ? 128 : 0, 0); // xanh hoặc đỏ
+            const wordToDraw = `[${answerWord}]`;
+
+            // Nếu từ điền dài quá lề, xuống dòng
+            if (xPos + pdf.getTextWidth(wordToDraw) > pageWidth - margin) {
+              yLine += lineHeight;
+              xPos = margin;
+            }
+
+            pdf.text(wordToDraw, xPos, yLine);
+            xPos += pdf.getTextWidth(wordToDraw);
+
+            pdf.setTextColor(0, 0, 0); // reset màu
+          }
+        }
+
+        y = yLine + lineHeight; // cập nhật y cho câu tiếp theo
+        break;
+
       default:
         const defaultLine = pdf.splitTextToSize("Loại câu hỏi không hỗ trợ", pageWidth - 2 * margin - 10);
         if (y + defaultLine.length * lineHeight > pageBottom) { pdf.addPage(); y = margin; }
