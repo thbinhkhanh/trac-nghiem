@@ -90,50 +90,25 @@ const loadResults = async () => {
   setLoading(true);
 
   try {
+    const folder = username === "TH Lâm Văn Bền" ? "LAMVANBEN" : "BINHKHANH"; // hoặc từ login/props
+    const colName = `${selectedLop.replace(/\s/g, "")}_${selectedMon.replace(/\s/g, "")}`;
     const colRef = collection(db, `${folder}/${hocKi}/${selectedLop}`);
     const snapshot = await getDocs(colRef);
 
-    if (snapshot.empty) {
-      setResults([]);
-      setSnackbarMessage(`❌ Không tìm thấy kết quả cho lớp ${selectedLop}`);
-      setSnackbarOpen(true);
-      setLoading(false);
-      return;
-    }
+    const data = snapshot.docs.map((docSnap, idx) => ({
+      stt: idx + 1,
+      docId: docSnap.id,
+      ...docSnap.data(),
+    }));
 
-    const data = snapshot.docs.map(docSnap => ({ docId: docSnap.id, ...docSnap.data() }));
-
-    // Hàm sắp xếp tên chuẩn Việt Nam: từ TÊN → TÊN ĐỆM → HỌ
-    const compareVietnameseName = (a, b) => {
-      const namePartsA = a.hoVaTen.trim().split(" ").reverse();
-      const namePartsB = b.hoVaTen.trim().split(" ").reverse();
-      const len = Math.max(namePartsA.length, namePartsB.length);
-
-      for (let i = 0; i < len; i++) {
-        const partA = (namePartsA[i] || "").toLowerCase();
-        const partB = (namePartsB[i] || "").toLowerCase();
-        const cmp = partA.localeCompare(partB);
-        if (cmp !== 0) return cmp;
-      }
-      return 0;
-    };
-
-    data.sort(compareVietnameseName);
-
-    // Thêm STT
-    const numberedData = data.map((item, idx) => ({ stt: idx + 1, ...item }));
-    setResults(numberedData);
-
+    setResults(data);
   } catch (err) {
     console.error("❌ Lỗi khi load kết quả:", err);
     setResults([]);
-    setSnackbarMessage("❌ Lỗi khi load kết quả!");
-    setSnackbarOpen(true);
   }
 
   setLoading(false);
 };
-
 
 
 
