@@ -130,6 +130,7 @@ export const exportQuizPDF = async (studentInfo, quizClass, questions, answers, 
           const optionLines = pdf.splitTextToSize(`${selected} ${opt}`, pageWidth - 2 * margin - 10);
           const optionHeight = optionLines.length * lineHeight;
           if (y + optionHeight > pageBottom) { pdf.addPage(); y = margin; }
+
           pdf.text(optionLines, margin + 5, y);
 
           if (answers[q.id] === i) {
@@ -140,11 +141,6 @@ export const exportQuizPDF = async (studentInfo, quizClass, questions, answers, 
               pdf.setTextColor(255, 0, 0);
               pdf.text("✗", margin + 150, y);
             }
-            pdf.setTextColor(0, 0, 0);
-          } else if (correctArray.includes(i)) {
-            // thiếu
-            pdf.setTextColor(255, 0, 0);
-            pdf.text("✓", margin + 150, y);
             pdf.setTextColor(0, 0, 0);
           }
 
@@ -161,6 +157,7 @@ export const exportQuizPDF = async (studentInfo, quizClass, questions, answers, 
           const optionLines = pdf.splitTextToSize(`${selected} ${opt}`, pageWidth - 2 * margin - 10);
           const optionHeight = optionLines.length * lineHeight;
           if (y + optionHeight > pageBottom) { pdf.addPage(); y = margin; }
+
           pdf.text(optionLines, margin + 5, y);
 
           if ((answers[q.id] || []).includes(i)) {
@@ -172,11 +169,6 @@ export const exportQuizPDF = async (studentInfo, quizClass, questions, answers, 
               pdf.text("✗", margin + 150, y);
             }
             pdf.setTextColor(0, 0, 0);
-          } else if (correctArray.includes(i)) {
-            // thiếu
-            pdf.setTextColor(255, 0, 0);
-            pdf.text("✓", margin + 150, y);
-            pdf.setTextColor(0, 0, 0);
           }
 
           y += optionHeight;
@@ -185,34 +177,45 @@ export const exportQuizPDF = async (studentInfo, quizClass, questions, answers, 
 
       case "truefalse": {
         const userArray = answers[q.id] || [];
+
         q.options.forEach((opt, i) => {
           const selected = userArray[i] || "";
-          const originalIdx = Array.isArray(q.initialOrder) ? q.initialOrder[i] : i;
+
+          // Lấy index gốc của option đang hiển thị tại vị trí i
+          const originalIdx = Array.isArray(q.initialOrder)
+            ? q.initialOrder[i]
+            : i;
+
           const correctArray = Array.isArray(q.correct) ? q.correct : [];
           const correctVal = correctArray[originalIdx] ?? "";
 
           const isCorrect = selected === correctVal;
           const isWrong   = selected !== "" && selected !== correctVal;
 
-          const optionLines = pdf.splitTextToSize(`[${selected}] ${opt}`, pageWidth - 2 * margin - 10);
+          const optionLines = pdf.splitTextToSize(
+            `[${selected}] ${opt}`,
+            pageWidth - 2 * margin - 10
+          );
           const optionHeight = optionLines.length * lineHeight;
-          if (y + optionHeight > pageBottom) { pdf.addPage(); y = margin; }
+
+          if (y + optionHeight > pageBottom) {
+            pdf.addPage();
+            y = margin;
+          }
+
+          // Nội dung option
           pdf.text(optionLines, margin + 5, y);
 
+          // Đánh dấu đúng/sai
           if (selected) {
             if (isCorrect) {
-              pdf.setTextColor(0, 128, 0);
+              pdf.setTextColor(0, 128, 0); // xanh lá
               pdf.text("✓", margin + 150, y);
             } else if (isWrong) {
-              pdf.setTextColor(255, 0, 0);
+              pdf.setTextColor(255, 0, 0); // đỏ
               pdf.text("✗", margin + 150, y);
             }
-            pdf.setTextColor(0, 0, 0);
-          } else if (correctVal !== "") {
-            // thiếu
-            pdf.setTextColor(255, 0, 0);
-            pdf.text("✓", margin + 150, y);
-            pdf.setTextColor(0, 0, 0);
+            pdf.setTextColor(0, 0, 0); // reset về đen
           }
 
           y += optionHeight;
@@ -230,6 +233,7 @@ export const exportQuizPDF = async (studentInfo, quizClass, questions, answers, 
           const line = pdf.splitTextToSize(`${left} → ${right}`, pageWidth - 2 * margin - 10);
           const optionHeight = line.length * lineHeight;
           if (y + optionHeight > pageBottom) { pdf.addPage(); y = margin; }
+
           pdf.text(line, margin + 5, y);
 
           if (rightIdx !== undefined) {
@@ -241,20 +245,16 @@ export const exportQuizPDF = async (studentInfo, quizClass, questions, answers, 
               pdf.text("✗", margin + 150, y);
             }
             pdf.setTextColor(0, 0, 0);
-          } else if (q.correct[i] !== undefined) {
-            // thiếu
-            pdf.setTextColor(255, 0, 0);
-            pdf.text("✓", margin + 150, y);
-            pdf.setTextColor(0, 0, 0);
           }
 
           y += optionHeight;
         });
         break;
 
-      case "sort":
-        // giữ nguyên như bạn yêu cầu
+      case "sort": {
         const userOrder = answers[q.id] || [];
+
+        // Quy đổi index -> text theo thứ tự người dùng sắp
         const userTexts = userOrder.map((idx) => q.options[idx]);
         const correctTexts = q.correctTexts || [];
 
@@ -263,26 +263,36 @@ export const exportQuizPDF = async (studentInfo, quizClass, questions, answers, 
             correctTexts.length === userTexts.length &&
             text === correctTexts[i];
 
-          const line = pdf.splitTextToSize(`${i + 1}. ${text}`, pageWidth - 2 * margin - 10);
+          const line = pdf.splitTextToSize(
+            `${i + 1}. ${text}`,
+            pageWidth - 2 * margin - 10
+          );
           const optionHeight = line.length * lineHeight;
-          if (y + optionHeight > pageBottom) { pdf.addPage(); y = margin; }
+
+          if (y + optionHeight > pageBottom) {
+            pdf.addPage();
+            y = margin;
+          }
+
+          // Nội dung option
           pdf.text(line, margin + 5, y);
 
+          // Đánh dấu đúng/sai
           if (userOrder.length > 0) {
             if (isCorrect) {
-              pdf.setTextColor(0, 128, 0);
+              pdf.setTextColor(0, 128, 0); // xanh lá
               pdf.text("✓", margin + 150, y);
             } else {
-              pdf.setTextColor(255, 0, 0);
+              pdf.setTextColor(255, 0, 0); // đỏ
               pdf.text("✗", margin + 150, y);
             }
-            pdf.setTextColor(0, 0, 0);
+            pdf.setTextColor(0, 0, 0); // reset về đen
           }
 
           y += optionHeight;
         });
         break;
-
+      }
 
       case "image":
         let x = margin + 5;
@@ -296,6 +306,7 @@ export const exportQuizPDF = async (studentInfo, quizClass, questions, answers, 
           const line = pdf.splitTextToSize(`${selected} Hình ${i + 1}`, pageWidth - 2 * margin - 10);
           const optionHeight = line.length * lineHeight + imgSize;
           if (y + optionHeight > pageBottom) { pdf.addPage(); y = margin; }
+
           pdf.text(line, x, y);
 
           if ((answers[q.id] || []).includes(i)) {
@@ -306,11 +317,6 @@ export const exportQuizPDF = async (studentInfo, quizClass, questions, answers, 
               pdf.setTextColor(255, 0, 0);
               pdf.text("✗", x + imgSize, y);
             }
-            pdf.setTextColor(0, 0, 0);
-          } else if (correctArray.includes(i)) {
-            // thiếu
-            pdf.setTextColor(255, 0, 0);
-            pdf.text("✓", x + imgSize, y);
             pdf.setTextColor(0, 0, 0);
           }
 
@@ -337,14 +343,20 @@ export const exportQuizPDF = async (studentInfo, quizClass, questions, answers, 
 
         for (let i = 0; i < parts.length; i++) {
           const textBefore = parts[i];
+
+          // Vẽ đoạn văn trước chỗ trống, tự xuống dòng nếu dài
           const splitBefore = pdf.splitTextToSize(textBefore, maxWidth - (xPos - margin));
           splitBefore.forEach((line, idx) => {
-            if (idx > 0) { yLine += lineHeight; xPos = margin; }
+            if (idx > 0) {
+              yLine += lineHeight;
+              xPos = margin;
+            }
             pdf.setTextColor(0, 0, 0);
             pdf.text(line, xPos, yLine);
             xPos += pdf.getTextWidth(line);
           });
 
+          // Vẽ từ điền nếu có
           if (i < parts.length - 1) {
             const answerWord = userAnswers[i] ? userAnswers[i] : "______";
             const isCorrect =
@@ -352,9 +364,10 @@ export const exportQuizPDF = async (studentInfo, quizClass, questions, answers, 
               correctAnswers[i] &&
               userAnswers[i].trim() === correctAnswers[i].trim();
 
-            pdf.setTextColor(isCorrect ? 0 : 255, isCorrect ? 128 : 0, 0);
+            pdf.setTextColor(isCorrect ? 0 : 255, isCorrect ? 128 : 0, 0); // xanh hoặc đỏ
             const wordToDraw = `[${answerWord}]`;
 
+            // Nếu từ điền dài quá lề, xuống dòng
             if (xPos + pdf.getTextWidth(wordToDraw) > pageWidth - margin) {
               yLine += lineHeight;
               xPos = margin;
@@ -362,10 +375,12 @@ export const exportQuizPDF = async (studentInfo, quizClass, questions, answers, 
 
             pdf.text(wordToDraw, xPos, yLine);
             xPos += pdf.getTextWidth(wordToDraw);
-            pdf.setTextColor(0, 0, 0);
+
+            pdf.setTextColor(0, 0, 0); // reset màu
           }
         }
-        y = yLine + lineHeight;
+
+        y = yLine + lineHeight; // cập nhật y cho câu tiếp theo
         break;
 
       default:
@@ -374,7 +389,7 @@ export const exportQuizPDF = async (studentInfo, quizClass, questions, answers, 
         pdf.text(defaultLine, margin + 5, y);
         y += defaultLine.length * lineHeight;
     }
-    
+
     y += 2;
   }
 
