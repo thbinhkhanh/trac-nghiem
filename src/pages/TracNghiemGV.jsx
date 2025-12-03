@@ -384,7 +384,7 @@ useEffect(() => {
   }
 
   const handleSaveAll = async () => {
-    const invalid = questions
+    /*const invalid = questions
       .map((q, i) => (!isQuestionValid(q) ? `Câu ${i + 1}` : null))
       .filter(Boolean);
 
@@ -395,7 +395,7 @@ useEffect(() => {
         severity: "error",
       });
       return;
-    }
+    }*/
 
     try {
       const uploadImage = async (file) => {
@@ -1488,9 +1488,9 @@ useEffect(() => {
                     <MenuItem value="shuffle">Đảo câu</MenuItem>
                   </Select>
                 </FormControl>
-                <Typography sx={{ color: isQuestionValid(q) ? "green" : "red" }}>
+                {/*<Typography sx={{ color: isQuestionValid(q) ? "green" : "red" }}>
                   {isQuestionValid(q) ? "Hợp lệ" : "Chưa hợp lệ"}
-                </Typography>
+                </Typography>*/}
 
                 {/* Icon xóa câu hỏi với Tooltip */}
                 <Tooltip title={`Xóa câu ${qi + 1}`}>
