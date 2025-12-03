@@ -1071,9 +1071,14 @@ useEffect(() => {
                   type="number"
                   size="small"
                   value={q.score}
-                  onChange={(e) => updateQuestionAt(qi, { score: parseFloat(e.target.value) || 1 })}
+                  inputProps={{ step: 0.5 }}   // tăng/giảm nút mũi tên theo 0.5
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    updateQuestionAt(qi, { score: v === "" ? "" : parseFloat(v) });
+                  }}
                   sx={{ width: 80 }}
                 />
+
               </Stack>
 
               {/* Danh sách đáp án */}
