@@ -1277,19 +1277,20 @@ useEffect(() => {
 
                 {q.type === "image" && (
                   <Stack
-                    direction={{ xs: "column", sm: "row" }}
+                    direction={{ xs: "column", sm: "row" }}   // ⭐ đổi direction theo màn hình
                     spacing={2}
                     alignItems="center"
                   >
-                    {(q.options || []).map((img, oi) => {
+                    {Array.from({ length: 4 }).map((_, oi) => {
+                      const img = q.options?.[oi] || "";
                       const isChecked = q.correct?.includes(oi) || false;
 
                       return (
                         <Box key={oi} sx={{ position: "relative" }}>
                           <Paper
                             sx={{
-                              width: { xs: "80%", sm: 120 },
-                              height: { xs: 80, sm: 120 },
+                              width: { xs: "80%", sm: 120 },   // ⭐ mobile: full width
+                              height: { xs: 80,sm: 120},
                               border: "2px dashed #90caf9",
                               display: "flex",
                               alignItems: "center",
@@ -1298,15 +1299,31 @@ useEffect(() => {
                             }}
                           >
                             {img ? (
-                              <img
-                                src={img}
-                                alt={`option-${oi}`}
-                                style={{
-                                  maxWidth: "100%",
-                                  maxHeight: "100%",
-                                  objectFit: "contain",
-                                }}
-                              />
+                              <>
+                                <img
+                                  src={img}
+                                  alt={`option-${oi}`}
+                                  style={{
+                                    maxWidth: "100%",
+                                    maxHeight: "100%",
+                                    objectFit: "contain",
+                                  }}
+                                />
+                                <IconButton
+                                  size="small"
+                                  sx={{ position: "absolute", top: 2, right: 2 }}
+                                  onClick={() => {
+                                    const newOptions = [...q.options];
+                                    newOptions[oi] = "";
+                                    updateQuestionAt(qi, { options: newOptions });
+
+                                    const newCorrect = (q.correct || []).filter(c => c !== oi);
+                                    updateQuestionAt(qi, { correct: newCorrect });
+                                  }}
+                                >
+                                  ✕
+                                </IconButton>
+                              </>
                             ) : (
                               <label
                                 style={{
@@ -1321,7 +1338,6 @@ useEffect(() => {
                                 <Typography variant="body2" sx={{ textAlign: "center" }}>
                                   Tải hình lên
                                 </Typography>
-
                                 <input
                                   type="file"
                                   accept="image/*"
@@ -1333,25 +1349,8 @@ useEffect(() => {
                                 />
                               </label>
                             )}
-
-                            {/* ⭐ Nút X — luôn xuất hiện, dù có hình hay không */}
-                            <IconButton
-                              size="small"
-                              sx={{ position: "absolute", top: 2, right: 2 }}
-                              onClick={() => {
-                                const newOptions = [...q.options];
-                                newOptions.splice(oi, 1); // xoá ô hình
-                                updateQuestionAt(qi, { options: newOptions });
-
-                                const newCorrect = (q.correct || []).filter((c) => c !== oi);
-                                updateQuestionAt(qi, { correct: newCorrect });
-                              }}
-                            >
-                              ✕
-                            </IconButton>
                           </Paper>
 
-                          {/* Checkbox đáp án chỉ hiện khi có hình */}
                           {img && (
                             <Checkbox
                               checked={isChecked}
@@ -1374,26 +1373,8 @@ useEffect(() => {
                         </Box>
                       );
                     })}
-
-                    {/* Nút thêm ô hình */}
-                    <Button
-                      variant="outlined"
-                      onClick={() => {
-                        const newOptions = [...(q.options || []), ""];
-                        updateQuestionAt(qi, { options: newOptions });
-                      }}
-                      sx={{
-                        height: 120,
-                        width: 120,
-                        borderRadius: 2,
-                        borderStyle: "dashed",
-                      }}
-                    >
-                      + Thêm hình
-                    </Button>
                   </Stack>
                 )}
-
               </Stack>
 
               {q.type === "fillblank" && (
