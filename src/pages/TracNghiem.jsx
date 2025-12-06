@@ -1995,7 +1995,8 @@ return (
         </Typography>
 
         <Typography sx={{ fontSize: 17, color: "#1565c0", mb: 1 }}>
-          <strong>Lớp:</strong>&nbsp; {studentResult?.lop}
+          <strong>Lớp: </strong>
+          <span style={{ fontWeight: "bold" }}>{studentResult?.lop}</span>
         </Typography>
 
         {/* Nếu cho xem điểm */}
@@ -2004,7 +2005,7 @@ return (
             sx={{
               fontSize: 17,
               fontWeight: 700,
-              mt: 2,
+              mt: 1,
             }}
           >
             <span style={{ color: "#1565c0" }}>Điểm:</span>&nbsp;
