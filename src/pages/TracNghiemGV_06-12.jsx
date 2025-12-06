@@ -1443,24 +1443,20 @@ useEffect(() => {
                     {/* Nút thêm từ */}
                     <Grid item xs={12}>
                       <Button
-                        variant="outlined"
+                        variant="contained"
+                        sx={{
+                          backgroundColor: "#1976d2",
+                          color: "#fff",
+                          "&:hover": {
+                            backgroundColor: "#115293"
+                          }
+                        }}
                         onClick={() =>
                           updateQuestionAt(qi, { options: [...(q.options || []), ""] })
                         }
-                        sx={{
-                          height: 40,
-                          borderRadius: 2,
-                          borderStyle: "dashed",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          px: 2,
-                          minWidth: 120
-                        }}
                       >
-                        + Thêm từ
+                        Thêm từ
                       </Button>
-
                     </Grid>
                   </Grid>
 
@@ -1520,20 +1516,12 @@ useEffect(() => {
                   {isQuestionValid(q) ? "Hợp lệ" : "Chưa hợp lệ"}
                 </Typography>*/}
 
-                <Stack direction="row" spacing={1} sx={{ ml: "auto" }}>
-  <Tooltip title="Lưu đề">
-    <IconButton onClick={handleSaveAll}>
-      <SaveIcon sx={{ color: "#1976d2" }} />
-    </IconButton>
-  </Tooltip>
-
-  <Tooltip title={`Xóa câu ${qi + 1}`}>
-    <IconButton onClick={() => handleDeleteQuestion(qi)}>
-      <DeleteIcon color="error" />
-    </IconButton>
-  </Tooltip>
-</Stack>
-
+                {/* Icon xóa câu hỏi với Tooltip */}
+                <Tooltip title={`Xóa câu ${qi + 1}`}>
+                  <IconButton onClick={() => handleDeleteQuestion(qi)}>
+                    <DeleteIcon color="error" />
+                  </IconButton>
+                </Tooltip>
 
               </Stack>
 
@@ -1544,9 +1532,9 @@ useEffect(() => {
         {/* Nút thêm câu hỏi + nút lưu đề */}
         <Stack direction="row" spacing={2} sx={{ mt: 3 }}>
           <Button variant="contained" onClick={addQuestion}>Thêm câu hỏi</Button>
-          {/*<Button variant="outlined" color="secondary" onClick={handleSaveAll} disabled={questions.length === 0}>
+          <Button variant="outlined" color="secondary" onClick={handleSaveAll} disabled={questions.length === 0}>
             Lưu đề
-          </Button>*/}
+          </Button>
         </Stack>
 
         {/* DIALOG MỞ ĐỀ */}
