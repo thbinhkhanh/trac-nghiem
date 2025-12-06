@@ -87,6 +87,7 @@ export default function TracNghiem() {
   const [monHoc, setMonHoc] = useState("");
   const [choXemDiem, setChoXemDiem] = useState(false);
   const [choXemDapAn, setChoXemDapAn] = useState(false);
+  const xuatFileBaiLam = config?.xuatFileBaiLam ?? true;
 
   const [openResultDialog, setOpenResultDialog] = useState(false);
   const [studentResult, setStudentResult] = useState(null);
@@ -574,7 +575,11 @@ export default function TracNghiem() {
       const quizTitle = `KTĐK${hocKi ? ` ${hocKi.toUpperCase()}` : ""}${monHoc ? ` - ${monHoc.toUpperCase()}` : ""}`;
 
       // Gọi export PDF
-      exportQuizPDF(studentInfo, quizClass, questions, answers, total, durationStr, quizTitle);
+      //exportQuizPDF(studentInfo, quizClass, questions, answers, total, durationStr, quizTitle);
+      // ⬅️ Chỉ xuất file nếu được bật
+      if (xuatFileBaiLam === true) {
+        exportQuizPDF(studentInfo, quizClass, questions, answers, total, durationStr, quizTitle);
+      }
 
       // Ngày theo định dạng Việt Nam
       const ngayKiemTra = new Date().toLocaleDateString("vi-VN");
@@ -712,7 +717,12 @@ export default function TracNghiem() {
       const quizTitle = `KTĐK${hocKi ? ` ${hocKi.toUpperCase()}` : ""}${monHoc ? ` - ${monHoc.toUpperCase()}` : ""}`;
 
       // Gọi export PDF
-      exportQuizPDF(studentInfo, quizClass, questions, answers, total, durationStr, quizTitle);
+      //exportQuizPDF(studentInfo, quizClass, questions, answers, total, durationStr, quizTitle);
+      // ⬅️ Chỉ xuất file nếu được bật
+      if (xuatFileBaiLam === true) {
+        exportQuizPDF(studentInfo, quizClass, questions, answers, total, durationStr, quizTitle);
+      }
+
 
       // Ngày theo định dạng Việt Nam
       const ngayKiemTra = new Date().toLocaleDateString("vi-VN");
@@ -1943,85 +1953,99 @@ return (
       fullWidth
       PaperProps={{
         sx: {
-          borderRadius: 2,
-          overflow: "hidden",
+          borderRadius: 3,
+          p: 3,
           bgcolor: "#e3f2fd",
-          boxShadow: 6,
+          boxShadow: "0 4px 12px rgba(33, 150, 243, 0.15)",
         },
       }}
     >
 
-      {/* Thanh tiêu đề */}
-      <Box
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          bgcolor: "#1976d2",
-          color: "#fff",
-          px: 2,
-          py: 1.2,
-        }}
-      >
-        <Typography
-          variant="subtitle1"
-          sx={{ fontWeight: "bold", fontSize: "1.1rem", letterSpacing: 0.5 }}
+      {/* Header giữ nguyên nhưng bỏ nút X */}
+      <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+        <Box
+          sx={{
+            bgcolor: "#42a5f5",
+            color: "#fff",
+            borderRadius: "50%",
+            width: 36,
+            height: 36,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            mr: 1.5,
+            fontWeight: "bold",
+            fontSize: 18,
+          }}
         >
-          KẾT QUẢ
-        </Typography>
+          🎉
+        </Box>
 
-        <IconButton
-          onClick={() => setOpenResultDialog(false)}
-          sx={{ color: "#fff", p: 0.6 }}
-        >
-          <CloseIcon fontSize="small" />
-        </IconButton>
+        <DialogTitle sx={{ p: 0, fontWeight: "bold", color: "#1565c0" }}>
+          Kết quả
+        </DialogTitle>
       </Box>
 
       {/* Nội dung */}
-      <DialogContent sx={{ mt: 1 }}>
-        <Stack spacing={2} sx={{ pl: 2.5 }}>
-          
-          {/* Họ và tên */}
-          <Typography sx={{ fontSize: "1.15rem" }}>
-            Họ và tên:&nbsp;
-            <span style={{ fontWeight: 600 }}>
-              {studentResult?.hoVaTen?.toUpperCase()}
-            </span>
-          </Typography>
+      <DialogContent sx={{ textAlign: "center" }}>
+        <Typography
+          sx={{ fontSize: 18, fontWeight: "bold", color: "#0d47a1", mb: 1 }}
+        >
+          {studentResult?.hoVaTen?.toUpperCase()}
+        </Typography>
 
-          {/* Lớp */}
-          <Typography sx={{ fontSize: "1.15rem" }}>
-            Lớp:&nbsp;
-            <span style={{ fontWeight: 600 }}>
-              {studentResult?.lop}
-            </span>
-          </Typography>
+        <Typography sx={{ fontSize: 17, color: "#1565c0", mb: 1 }}>
+          <strong>Lớp:</strong>&nbsp; {studentResult?.lop}
+        </Typography>
 
-          {/* Nếu được xem điểm */}
-          {choXemDiem ? (
-            <Typography sx={{ fontSize: "1.15rem", mb: 1 }}>
-              Điểm:&nbsp;
-              <span style={{ fontWeight: 700, color: "red" }}>
-                {studentResult?.diem}
-              </span>
-            </Typography>
-          ) : (
-            <Typography
-                sx={{
-                  fontSize: "1.15rem",
-                  mb: 2,
-                  textAlign: "center",     // căn giữa
-                  fontWeight: 700,
-                  color: "red"
-                }}
-              >
-                ĐÃ HOÀN THÀNH BÀI KIỂM TRA
-              </Typography>
-          )}
-        </Stack>
+        {/* Nếu cho xem điểm */}
+        {choXemDiem ? (
+          <Typography
+            sx={{
+              fontSize: 17,
+              fontWeight: 700,
+              mt: 2,
+            }}
+          >
+            <span style={{ color: "#1565c0" }}>Điểm:</span>&nbsp;
+            <span style={{ color: "red" }}>{studentResult?.diem}</span>
+          </Typography>
+        ) : (
+          <Typography
+            sx={{
+              fontSize: 18,
+              fontWeight: 700,
+              color: "red",
+              mt: 2,
+              textAlign: "center",
+            }}
+          >
+            ĐÃ HOÀN THÀNH BÀI KIỂM TRA
+          </Typography>
+        )}
       </DialogContent>
+
+      {/* Thêm nút OK */}
+      <DialogActions sx={{ justifyContent: "center", mt: 1 }}>
+        <Button
+          variant="contained"
+          onClick={() => setOpenResultDialog(false)}
+          sx={{
+            px: 4,
+            borderRadius: 2,
+            bgcolor: "#42a5f5",
+            color: "#fff",
+            "&:hover": { bgcolor: "#1e88e5" },
+            fontWeight: "bold",
+          }}
+        >
+          OK
+        </Button>
+      </DialogActions>
+
     </Dialog>
+
+
 
     {/* Snackbar */}
     <Snackbar

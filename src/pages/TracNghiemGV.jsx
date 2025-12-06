@@ -1521,18 +1521,18 @@ useEffect(() => {
                 </Typography>*/}
 
                 <Stack direction="row" spacing={1} sx={{ ml: "auto" }}>
-  <Tooltip title="Lưu đề">
-    <IconButton onClick={handleSaveAll}>
-      <SaveIcon sx={{ color: "#1976d2" }} />
-    </IconButton>
-  </Tooltip>
+                  <Tooltip title="Lưu đề">
+                    <IconButton onClick={handleSaveAll}>
+                      <SaveIcon sx={{ color: "#1976d2" }} />
+                    </IconButton>
+                  </Tooltip>
 
-  <Tooltip title={`Xóa câu ${qi + 1}`}>
-    <IconButton onClick={() => handleDeleteQuestion(qi)}>
-      <DeleteIcon color="error" />
-    </IconButton>
-  </Tooltip>
-</Stack>
+                  <Tooltip title={`Xóa câu ${qi + 1}`}>
+                    <IconButton onClick={() => handleDeleteQuestion(qi)}>
+                      <DeleteIcon color="error" />
+                    </IconButton>
+                  </Tooltip>
+                </Stack>
 
 
               </Stack>

@@ -397,7 +397,7 @@ export default function QuanTri() {
     <Stack
       direction={{ xs: "column", sm: "row" }} // responsive: cột trên điện thoại
       spacing={2}
-      sx={{ width: { xs: "95%", sm: "100%" }, maxWidth: 350, mx: "auto" }}
+      sx={{ width: { xs: "95%", sm: "75%" }, maxWidth: 1200, mx: "auto" }}
     >
       {/* ========================== CỘT TRÁI: CẤU HÌNH ========================== */}
       <Card
@@ -612,7 +612,6 @@ export default function QuanTri() {
       </Card>
 
       {/* ========================== CỘT PHẢI: 2 BẢNG ĐỀ THI ========================== */}
-      {false && (
       <Card
         elevation={6}
         sx={{
@@ -785,7 +784,6 @@ export default function QuanTri() {
           </Box>
         </Stack>
       </Card>
-      )}
     </Stack>
 
     {/* Snackbar */}

@@ -18,7 +18,6 @@ import QuanTri from "./pages/QuanTri";
 import TracNghiem from "./pages/TracNghiem";
 import TracNghiemGV from "./pages/TracNghiemGV";
 import TongHopKQ from "./pages/TongHopKQ";
-import ExamManager from "./pages/ExamManager";
 
 // 🔹 Import context
 import { StudentProvider } from "./context/StudentContext";
@@ -76,8 +75,7 @@ function AppContent() {
       ? [
           //{ path: "/tracnghiem", label: "Trắc nghiệm", icon: <SchoolIcon fontSize="small" /> },
           { path: "/tonghopkq", label: "Kết quả", icon: <MenuBookIcon fontSize="small" /> },
-          { path: "/tracnghiem-gv", label: "Soạn đề", icon: <MenuBookIcon fontSize="small" /> },    
-          { path: "/de-thi", label: "Đề thi", icon: <MenuBookIcon fontSize="small" /> },     
+          { path: "/tracnghiem-gv", label: "Soạn đề", icon: <MenuBookIcon fontSize="small" /> },           
           { path: "/quan-tri", label: "Hệ thống", icon: <SettingsIcon fontSize="small" /> },
           { label: "Đăng xuất", onClick: handleLogout, icon: <LogoutIcon fontSize="small" /> },
         ]
@@ -143,10 +141,9 @@ function AppContent() {
         <Routes>
           <Route path="/" element={<Navigate to="/hocsinh" replace />} />
           <Route path="/hocsinh" element={<HocSinh />} />
-          <Route path="/tonghopkq" element={<TongHopKQ/>} />
           <Route path="/tracnghiem" element={<TracNghiem />} />
           <Route path="/tracnghiem-gv" element={<TracNghiemGV />} />
-          <Route path="/de-thi" element={<ExamManager />} />
+          <Route path="/tonghopkq" element={<TongHopKQ/>} />
           <Route path="/quan-tri" element={<QuanTri />} />
           <Route path="/login" element={<Login />} />
         </Routes>
