@@ -1831,15 +1831,26 @@ return (
       PaperProps={{
         sx: {
           borderRadius: 3,
-          p: 3,
+          p: 0,
           bgcolor: "#e3f2fd",
+          boxShadow: "0 4px 12px rgba(33, 150, 243, 0.15)",
         },
       }}
     >
-      <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+      {/* Header với nền màu full width */}
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          p: 0.75, // chiều cao header
+          bgcolor: "#90caf9", // nền màu xanh nhạt
+          borderRadius: "12px 12px 0 0", // bo 2 góc trên
+          mb: 2,
+        }}
+      >
         <Box
           sx={{
-            bgcolor: "#ffc107",
+            bgcolor: "#42a5f5", // xanh đậm cho icon
             color: "#fff",
             borderRadius: "50%",
             width: 36,
@@ -1854,24 +1865,41 @@ return (
         >
           ⚠️
         </Box>
-        <DialogTitle sx={{ p: 0, fontWeight: "bold", color: "#ff6f00" }}>
+
+        <DialogTitle
+          sx={{
+            p: 0,
+            fontWeight: "bold",
+            color: "#0d47a1", // màu xanh tiêu đề
+            fontSize: 20,
+          }}
+        >
           Chưa hoàn thành
         </DialogTitle>
       </Box>
 
-      <DialogContent>
-        <Typography sx={{ fontSize: 16, color: "#6b4c00" }}>
+      {/* Nội dung */}
+      <DialogContent sx={{ px: 3, pb: 3 }}>
+        <Typography sx={{ fontSize: 16, color: "#0d47a1" }}>
           Bạn chưa chọn đáp án cho câu: {unansweredQuestions.join(", ")}.<br />
           Vui lòng trả lời tất cả câu hỏi trước khi nộp.
         </Typography>
       </DialogContent>
 
-      <DialogActions sx={{ justifyContent: "center", pt: 2 }}>
+      {/* Nút OK */}
+      <DialogActions sx={{ justifyContent: "center", pb: 2 }}>
         <Button
           variant="contained"
-          color="warning"
           onClick={() => setOpenAlertDialog(false)}
-          sx={{ borderRadius: 2, px: 4 }}
+          sx={{
+            px: 4,
+            borderRadius: 2,
+            bgcolor: "#42a5f5", // xanh đậm giống mẫu
+            color: "#fff",
+            "&:hover": { bgcolor: "#1e88e5" },
+            fontWeight: "bold",
+            mb:2,
+          }}
         >
           OK
         </Button>
@@ -1887,19 +1915,29 @@ return (
       PaperProps={{
         sx: {
           borderRadius: 3,
-          p: 3,
+          p: 0,
           bgcolor: "#e3f2fd",
           boxShadow: "0 4px 12px rgba(33, 150, 243, 0.15)",
         },
       }}
     >
-      <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+      {/* Header với nền màu full width giống ResultDialog */}
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          p: 0.75, // chiều cao header
+          bgcolor: "#90caf9", // nền màu xanh nhạt
+          borderRadius: "12px 12px 0 0", // bo 2 góc trên
+          mb: 2,
+        }}
+      >
         <Box
           sx={{
-            bgcolor: "#42a5f5",
+            bgcolor: "#42a5f5", // xanh đậm cho icon
             color: "#fff",
             borderRadius: "50%",
-            width: 36,
+            width: 36, // kích thước icon giống ResultDialog
             height: 36,
             display: "flex",
             alignItems: "center",
@@ -1911,23 +1949,39 @@ return (
         >
           ℹ️
         </Box>
-        <DialogTitle sx={{ p: 0, fontWeight: "bold", color: "#1565c0" }}>
+
+        <DialogTitle
+          sx={{
+            p: 0,
+            fontWeight: "bold",
+            color: "#0d47a1",
+            fontSize: 20, // font size giống ResultDialog
+          }}
+        >
           Xác nhận thoát
         </DialogTitle>
       </Box>
 
-      <DialogContent>
+      {/* Nội dung */}
+      <DialogContent
+        sx={{
+          px: 3,
+          py: 3,
+          minHeight: 50, // giữ chiều cao nội dung
+        }}
+      >
         <Typography sx={{ fontSize: 16, color: "#0d47a1" }}>
           Bạn có chắc chắn muốn thoát khỏi bài trắc nghiệm?<br />
           Mọi tiến trình chưa nộp sẽ bị mất.
         </Typography>
       </DialogContent>
 
-      <DialogActions sx={{ justifyContent: "center", pt: 2 }}>
+      {/* Footer */}
+      <DialogActions sx={{ justifyContent: "center", pb: 2 }}>
         <Button
           variant="outlined"
           onClick={() => setOpenExitConfirm(false)}
-          sx={{ borderRadius: 2, px: 3 }}
+          sx={{ borderRadius: 2, px: 3, mb: 2 }}
         >
           Hủy
         </Button>
@@ -1935,12 +1989,14 @@ return (
           variant="contained"
           color="error"
           onClick={() => navigate(-1)}
-          sx={{ borderRadius: 2, px: 3 }}
+          sx={{ borderRadius: 2, px: 3, mb: 2 }}
         >
           Thoát
         </Button>
       </DialogActions>
     </Dialog>
+
+
 
     <Dialog
       open={openResultDialog}
@@ -1954,15 +2010,24 @@ return (
       PaperProps={{
         sx: {
           borderRadius: 3,
-          p: 3,
+          p: 0,
           bgcolor: "#e3f2fd",
           boxShadow: "0 4px 12px rgba(33, 150, 243, 0.15)",
         },
       }}
     >
 
-      {/* Header giữ nguyên nhưng bỏ nút X */}
-      <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+      {/* Header với nền màu full width */}
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          p: 0.75,
+          bgcolor: "#90caf9",
+          borderRadius: "12px 12px 0 0", // bo 2 góc trên
+          mb: 2,
+        }}
+      >
         <Box
           sx={{
             bgcolor: "#42a5f5",
@@ -1981,13 +2046,20 @@ return (
           🎉
         </Box>
 
-        <DialogTitle sx={{ p: 0, fontWeight: "bold", color: "#1565c0" }}>
+        <DialogTitle
+          sx={{
+            p: 0,
+            fontWeight: "bold",
+            color: "#0d47a1",
+            fontSize: 20,
+          }}
+        >
           Kết quả
         </DialogTitle>
       </Box>
 
       {/* Nội dung */}
-      <DialogContent sx={{ textAlign: "center" }}>
+      <DialogContent sx={{ textAlign: "center", px: 3, pb: 3 }}>
         <Typography
           sx={{ fontSize: 18, fontWeight: "bold", color: "#0d47a1", mb: 1 }}
         >
@@ -2026,8 +2098,8 @@ return (
         )}
       </DialogContent>
 
-      {/* Thêm nút OK */}
-      <DialogActions sx={{ justifyContent: "center", mt: 1 }}>
+      {/* Nút OK */}
+      <DialogActions sx={{ justifyContent: "center", pb: 2 }}>
         <Button
           variant="contained"
           onClick={() => setOpenResultDialog(false)}
@@ -2045,6 +2117,7 @@ return (
       </DialogActions>
 
     </Dialog>
+
 
 
 
