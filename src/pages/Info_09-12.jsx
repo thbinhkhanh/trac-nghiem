@@ -15,9 +15,6 @@ export default function Info() {
   const [lop, setLop] = useState("");
   const [classes, setClasses] = useState([]);
   const [errorMsg, setErrorMsg] = useState("");
-  const [khoi, setKhoi] = useState("Khối 3");   // 👉 mặc định Khối 3
-  const [filteredClasses, setFilteredClasses] = useState([]);
-
   const [allowedSchool, setAllowedSchool] = useState({
     "TH Lâm Văn Bền": true,
     "TH Bình Khánh": true,
@@ -25,22 +22,6 @@ export default function Info() {
 
   const navigate = useNavigate();
   const { setConfig } = useContext(ConfigContext);
-
-  useEffect(() => {
-    if (!khoi) {
-      setFilteredClasses([]);
-      return;
-    }
-
-    const soKhoi = khoi.replace("Khối ", ""); // "Khối 1" → "1"
-
-    const filtered = classes.filter(cl => cl.startsWith(soKhoi));
-    setFilteredClasses(filtered);
-
-    // Reset lớp khi đổi khối
-    setLop("");
-  }, [khoi, classes]);
-
 
   // 🔹 Fetch quyền truy cập từ Firestore
   useEffect(() => {
@@ -143,36 +124,15 @@ export default function Info() {
               </Select>
             </FormControl>
 
-            {/* Ô Khối + Lớp (cùng hàng) */}
-            <Box sx={{ display: "flex", gap: 2, width: "100%" }}>
-              {/* Ô Khối */}
-              <FormControl fullWidth size="small">
-                <InputLabel>Khối</InputLabel>
-                <Select
-                  value={khoi}
-                  label="Khối"
-                  onChange={(e) => setKhoi(e.target.value)}
-                >
-                  {["Khối 1", "Khối 2", "Khối 3", "Khối 4", "Khối 5"].map(k => (
-                    <MenuItem key={k} value={k}>{k}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-
-              {/* Ô Lớp */}
-              <FormControl fullWidth size="small">
-                <InputLabel>Lớp</InputLabel>
-                <Select
-                  value={lop}
-                  label="Lớp"
-                  onChange={(e) => setLop(e.target.value)}
-                >
-                  {filteredClasses.map(cl => (
-                    <MenuItem key={cl} value={cl}>{cl}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Box>
+            {/* Ô Lớp */}
+            <FormControl fullWidth size="small">
+              <InputLabel>Lớp</InputLabel>
+              <Select value={lop} label="Lớp" onChange={(e) => setLop(e.target.value)}>
+                {classes.map(cl => (
+                  <MenuItem key={cl} value={cl}>{cl}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
 
             {/* Ô Họ và tên */}
             <TextField
