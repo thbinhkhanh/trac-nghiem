@@ -123,7 +123,7 @@ export const exportQuizPDF = async (studentInfo, quizClass, questions, answers, 
     switch(q.type) {
       case "single":
         q.options.forEach((opt, i) => {
-          const selected = answers[q.id] === i ? "(●)" : "( )";
+          const selected = answers[q.id] === i ? "(•)" : "( )";
           const correctArray = Array.isArray(q.correct) ? q.correct : [q.correct];
           const isCorrect = answers[q.id] === i && correctArray.includes(i);
 
@@ -286,7 +286,7 @@ export const exportQuizPDF = async (studentInfo, quizClass, questions, answers, 
 
       case "image":
         let x = margin + 5;
-        const imgSize = 25;
+        const imgSize = 20;
         for (let i = 0; i < q.options.length; i++) {
           const imgUrl = q.options[i];
           const selected = (answers[q.id] || []).includes(i) ? "[x]" : "[ ]";
