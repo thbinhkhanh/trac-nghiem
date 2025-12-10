@@ -1108,7 +1108,7 @@ return (
                                     fontWeight="400"
                                     sx={{
                                       userSelect: "none",
-                                      fontSize: "1.2rem",                // 👈 thêm cỡ chữ 1.2rem
+                                      fontSize: "1.1rem",                // 👈 thêm cỡ chữ 1.1rem
                                       fontFamily: "Roboto, Arial, sans-serif", // 👈 đồng bộ phông chữ
                                     }}
                                   >
@@ -1191,7 +1191,7 @@ return (
                         bgcolor: "#fafafa",
                         border: "1px solid #90caf9",
 
-                        fontSize: "0.95rem",
+                        fontSize: "1.1rem",
                         fontWeight: 400,
                         fontFamily: "Arial, Helvetica, sans-serif",
 
@@ -1249,7 +1249,7 @@ return (
 
                                   textAlign: "center",
 
-                                  fontSize: "1.2rem",
+                                  fontSize: "1.1rem",
                                   fontWeight: 400,
                                   fontFamily: "Arial, Helvetica, sans-serif",
 
@@ -1360,7 +1360,7 @@ return (
                       variant="body1"
                       sx={{
                         userSelect: "none",
-                        fontSize: "1.2rem",                // 👈 thêm dòng này
+                        fontSize: "1.1rem",                // 👈 thêm dòng này
                         fontFamily: "Roboto, Arial, sans-serif", // 👈 nếu muốn đồng bộ phông chữ
                       }}
                     >
@@ -1443,7 +1443,7 @@ return (
                       fontWeight="400"
                       sx={{
                         userSelect: "none",
-                        fontSize: "1.2rem",                // 👈 thêm cỡ chữ 1.2rem
+                        fontSize: "1.1rem",                // 👈 thêm cỡ chữ 1.1rem
                         fontFamily: "Roboto, Arial, sans-serif", // 👈 đồng bộ phông chữ
                       }}
                     >
@@ -1515,7 +1515,7 @@ return (
                       fontWeight="400"
                       sx={{
                         userSelect: "none",
-                        fontSize: "1.2rem",                // 👈 thêm cỡ chữ 1.2rem
+                        fontSize: "1.1rem",                // 👈 thêm cỡ chữ 1.1rem
                         fontFamily: "Roboto, Arial, sans-serif", // 👈 đồng bộ phông chữ
                       }}
                     >
@@ -1634,154 +1634,171 @@ return (
           
           {/* FILLBLANK */}
           {currentQuestion.type === "fillblank" && (
-            <DragDropContext onDragEnd={handleDragEnd}>
-              <Stack spacing={2}>
-                {/* Câu hỏi với chỗ trống */}
-                <Stack direction="row" spacing={1} flexWrap="wrap">
-                  {currentQuestion.option.split("[...]").map((part, idx) => (
-                    <Box
-                      key={idx}
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        flexWrap: "wrap",
-                        mb: 1,
-                      }}
-                    >
-                      <Typography
-                        variant="body1"
-                        sx={{ mr: 0.5, lineHeight: 1.5 }}
-                      >
-                        {part}
-                      </Typography>
+  <DragDropContext onDragEnd={handleDragEnd}>
+    <Stack spacing={2}>
 
-                      {/* Chỗ trống */}
-                      {idx < currentQuestion.option.split("[...]").length - 1 && (
-                        <Droppable droppableId={`blank-${idx}`} direction="horizontal">
-                          {(provided) => {
-                            const userWord = currentQuestion.filled?.[idx] ?? "";
-                            const correctWord = currentQuestion.options?.[idx] ?? "";
-                            const color =
-                              submitted && userWord
-                                ? userWord.trim() === correctWord.trim()
-                                  ? "green"
-                                  : "red"
-                                : "#000";
+      {/* ======================= CÂU HỎI + CHỖ TRỐNG ======================= */}
+      <Box
+        sx={{
+          width: "100%",
+          lineHeight: "1.5rem",
+          fontSize: "1.1rem",
+          whiteSpace: "normal",
+          fontFamily: "Roboto, Arial, sans-serif",
+        }}
+      >
+        {currentQuestion.option.split("[...]").map((part, idx) => (
+          <span key={idx} style={{ display: "inline", fontFamily: "Roboto, Arial, sans-serif" }}>
+            
+            {/* Phần văn bản */}
+            <Typography
+              component="span"
+              sx={{ mr: 0.5, fontSize: "1.1rem", lineHeight: "1.5rem", verticalAlign: "middle" }}
+            >
+              {part}
+            </Typography>
 
-                            return (
-                              <Box
-                                ref={provided.innerRef}
-                                {...provided.droppableProps}
-                                sx={{
-                                  display: "inline-flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  minWidth: 80,
-                                  maxWidth: 300,
-                                  minHeight: 40,
-                                  mb: 1,
-                                  border: "1px dashed #90caf9",
-                                  borderRadius: 1,
-                                  px: 1,
-                                  fontFamily: "Roboto, Arial, sans-serif",                                 
-                                  fontSize: "1.2rem",
-                                  lineHeight: "normal",
-                                  color: color, // màu đúng/sai
-                                }}
-                              >
-                                {userWord && (
-                                  <Draggable draggableId={`filled-${idx}`} index={0}>
-                                    {(prov) => (
-                                      <Paper
-                                        ref={prov.innerRef}
-                                        {...prov.draggableProps}
-                                        {...prov.dragHandleProps}
-                                        sx={{
-                                          px: 2,
-                                          py: 0.5,
-                                          bgcolor: "#e3f2fd",
-                                          cursor: "grab",
-                                          fontFamily: "Roboto, Arial, sans-serif",
-                                          fontSize: "1.2rem", 
-                                          display: "inline-flex",
-                                          alignItems: "center",
-                                          justifyContent: "center",
-                                          minHeight: 30,
-                                          maxWidth: "100%",
-                                          color: color, // màu đúng/sai cho thẻ
-                                        }}
-                                      >
-                                        {userWord}
-                                      </Paper>
-                                    )}
-                                  </Draggable>
-                                )}
-                                {provided.placeholder}
-                              </Box>
-                            );
-                          }}
-                        </Droppable>
-                      )}
-                    </Box>
-                  ))}
-                </Stack>
+            {/* Chỗ trống */}
+            {idx < currentQuestion.option.split("[...]").length - 1 && (
+  <Droppable droppableId={`blank-${idx}`} direction="horizontal">
+    {(provided) => {
+      const userWord = currentQuestion.filled?.[idx] ?? "";
+      const correctWord = currentQuestion.options?.[idx] ?? "";
+      const color =
+        submitted && userWord
+          ? userWord.trim() === correctWord.trim()
+            ? "green"
+            : "red"
+          : "#000";
 
-                {/* Khu vực thẻ từ */}
-                <Box sx={{ mt: 2, textAlign: "left" }}>
-                  <Typography sx={{ mb: 1, fontWeight: "bold" }}>Các từ cần điền:</Typography>
-                  <Droppable droppableId="words" direction="horizontal">
-                    {(provided) => (
-                      <Box
-                        ref={provided.innerRef}
-                        {...provided.droppableProps}
+      return (
+        <Box
+          component="span"
+          ref={provided.innerRef}
+          {...provided.droppableProps}
+          sx={{
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            minWidth: 80,
+            maxWidth: 300,
+            minHeight: 50,
+            px: 1,
+            border: "1px dashed #90caf9",   // khung chữ như mã gốc
+            borderRadius: 1,
+            fontFamily: "Roboto, Arial, sans-serif",
+            fontSize: "1.1rem",
+            lineHeight: "normal",
+            color: color,
+            verticalAlign: "middle",
+          }}
+        >
+          {userWord ? (
+            <Draggable draggableId={`filled-${idx}`} index={0}>
+              {(prov) => (
+                <Paper
+                  ref={prov.innerRef}
+                  {...prov.draggableProps}
+                  {...prov.dragHandleProps}
+                  sx={{
+                    px: 2,
+                    py: 0.5,
+                    bgcolor: "#e3f2fd",
+                    cursor: "grab",
+                    fontFamily: "Roboto, Arial, sans-serif",
+                    fontSize: "1.1rem",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    minHeight: 30,
+                    maxWidth: "100%",
+                    color: color,
+                  }}
+                >
+                  {userWord}
+                </Paper>
+              )}
+            </Draggable>
+          ) : (
+            <Typography
+              component="span"
+              sx={{
+                fontSize: "1.1rem",
+                color: "#aaa",
+                verticalAlign: "middle",
+              }}
+            >
+              ............
+            </Typography>
+          )}
+          {provided.placeholder}
+        </Box>
+      );
+    }}
+  </Droppable>
+)}
+          </span>
+        ))}
+      </Box>
+
+      {/* ======================= KHU VỰC THẺ TỪ ======================= */}
+      <Box sx={{ mt: 2, textAlign: "left" }}>
+        <Typography sx={{ mb: 1, fontWeight: "bold", fontSize: "1.1rem", fontFamily: "Roboto, Arial, sans-serif" }}>
+          Các từ cần điền:
+        </Typography>
+
+        <Droppable droppableId="words" direction="horizontal">
+          {(provided) => (
+            <Box
+              ref={provided.innerRef}
+              {...provided.droppableProps}
+              sx={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: 1,
+                minHeight: 50,
+                maxHeight: 80,
+                p: 1,
+                border: "1px solid #90caf9",
+                borderRadius: 2,
+                bgcolor: "white",
+                overflowY: "auto",
+              }}
+            >
+              {(currentQuestion.shuffledOptions || currentQuestion.options)
+                .filter((o) => !(currentQuestion.filled ?? []).includes(o))
+                .map((word, idx) => (
+                  <Draggable key={word} draggableId={`word-${word}`} index={idx}>
+                    {(prov) => (
+                      <Paper
+                        ref={prov.innerRef}
+                        {...prov.draggableProps}
+                        {...prov.dragHandleProps}
                         sx={{
+                          px: 2,
+                          py: 1,
+                          bgcolor: "#e3f2fd",
+                          cursor: "grab",
                           display: "flex",
-                          flexWrap: "wrap",
-                          gap: 1,
-                          minHeight: 50,
-                          maxHeight: 80,
-                          p: 1,
-                          border: "1px solid #90caf9",
-                          borderRadius: 2,
-                          bgcolor: "white",
-                          overflowY: "auto",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontFamily: "Roboto, Arial, sans-serif",
+                          fontSize: "1.1rem",
                         }}
                       >
-                        {(currentQuestion.shuffledOptions || currentQuestion.options)
-                          .filter((o) => !(currentQuestion.filled ?? []).includes(o))
-                          .map((word, idx) => (
-                            <Draggable key={word} draggableId={`word-${word}`} index={idx}>
-                              {(prov) => (
-                                <Paper
-                                  ref={prov.innerRef}
-                                  {...prov.draggableProps}
-                                  {...prov.dragHandleProps}
-                                  sx={{
-                                    px: 2,
-                                    py: 1,
-                                    bgcolor: "#e3f2fd",
-                                    cursor: "grab",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    minHeight: 30,
-                                    fontFamily: "Roboto, Arial, sans-serif",
-                                    fontSize: "1.2rem", 
-                                  }}
-                                >
-                                  {word}
-                                </Paper>
-                              )}
-                            </Draggable>
-                          ))}
-                        {provided.placeholder}
-                      </Box>
+                        {word}
+                      </Paper>
                     )}
-                  </Droppable>
-                </Box>
-              </Stack>
-            </DragDropContext>
+                  </Draggable>
+                ))}
+              {provided.placeholder}
+            </Box>
           )}
+        </Droppable>
+      </Box>
+    </Stack>
+  </DragDropContext>
+)}
         </>
       )}
 
