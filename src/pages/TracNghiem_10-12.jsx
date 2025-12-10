@@ -1106,11 +1106,7 @@ return (
                                   <Typography
                                     variant="body1"
                                     fontWeight="400"
-                                    sx={{
-                                      userSelect: "none",
-                                      fontSize: "1.1rem",                // 👈 thêm cỡ chữ 1.1rem
-                                      fontFamily: "Roboto, Arial, sans-serif", // 👈 đồng bộ phông chữ
-                                    }}
+                                    sx={{ userSelect: "none" }}
                                   >
                                     {currentQuestion.options[optIdx]}
                                   </Typography>
@@ -1249,7 +1245,7 @@ return (
 
                                   textAlign: "center",
 
-                                  fontSize: "1.1rem",
+                                  fontSize: "0.95rem",
                                   fontWeight: 400,
                                   fontFamily: "Arial, Helvetica, sans-serif",
 
@@ -1356,14 +1352,7 @@ return (
                       sx={{ mr: 1 }}
                     />
 
-                    <Typography
-                      variant="body1"
-                      sx={{
-                        userSelect: "none",
-                        fontSize: "1.1rem",                // 👈 thêm dòng này
-                        fontFamily: "Roboto, Arial, sans-serif", // 👈 nếu muốn đồng bộ phông chữ
-                      }}
-                    >
+                    <Typography variant="body1" sx={{ userSelect: "none" }}>
                       {currentQuestion.options[optIdx]}
                     </Typography>
                   </Paper>
@@ -1438,15 +1427,7 @@ return (
                       sx={{ mr: 1 }}
                     />
 
-                    <Typography
-                      variant="body1"
-                      fontWeight="400"
-                      sx={{
-                        userSelect: "none",
-                        fontSize: "1.1rem",                // 👈 thêm cỡ chữ 1.1rem
-                        fontFamily: "Roboto, Arial, sans-serif", // 👈 đồng bộ phông chữ
-                      }}
-                    >
+                    <Typography variant="body1" sx={{ userSelect: "none" }}>
                       {currentQuestion.options[optIdx]}
                     </Typography>
                   </Paper>
@@ -1510,15 +1491,7 @@ return (
                       border: "1px solid #90caf9",
                     }}
                   >
-                    <Typography
-                      variant="body1"
-                      fontWeight="400"
-                      sx={{
-                        userSelect: "none",
-                        fontSize: "1.1rem",                // 👈 thêm cỡ chữ 1.1rem
-                        fontFamily: "Roboto, Arial, sans-serif", // 👈 đồng bộ phông chữ
-                      }}
-                    >
+                    <Typography variant="body1" sx={{ userSelect: "none" }}>
                       {opt}
                     </Typography>
 
@@ -1683,8 +1656,8 @@ return (
                                   border: "1px dashed #90caf9",
                                   borderRadius: 1,
                                   px: 1,
-                                  fontFamily: "Roboto, Arial, sans-serif",                                 
-                                  fontSize: "1.1rem",
+                                  fontFamily: "Roboto, Arial, sans-serif",
+                                  fontSize: "1rem",
                                   lineHeight: "normal",
                                   color: color, // màu đúng/sai
                                 }}
@@ -1702,7 +1675,7 @@ return (
                                           bgcolor: "#e3f2fd",
                                           cursor: "grab",
                                           fontFamily: "Roboto, Arial, sans-serif",
-                                          fontSize: "1.1rem", 
+                                          fontSize: "1rem",
                                           display: "inline-flex",
                                           alignItems: "center",
                                           justifyContent: "center",
@@ -1766,7 +1739,7 @@ return (
                                     justifyContent: "center",
                                     minHeight: 30,
                                     fontFamily: "Roboto, Arial, sans-serif",
-                                    fontSize: "1.1rem", 
+                                    fontSize: "1rem",
                                   }}
                                 >
                                   {word}
