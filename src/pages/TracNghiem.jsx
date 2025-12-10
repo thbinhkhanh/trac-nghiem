@@ -1109,7 +1109,7 @@ return (
                                     sx={{
                                       userSelect: "none",
                                       fontSize: "1.1rem",                // 👈 thêm cỡ chữ 1.1rem
-                                      fontFamily: "Roboto, Arial, sans-serif", // 👈 đồng bộ phông chữ
+                                      fontFamily: "Arial, Helvetica, sans-serif", // 👈 đồng bộ phông chữ
                                     }}
                                   >
                                     {currentQuestion.options[optIdx]}
@@ -1361,7 +1361,7 @@ return (
                       sx={{
                         userSelect: "none",
                         fontSize: "1.1rem",                // 👈 thêm dòng này
-                        fontFamily: "Roboto, Arial, sans-serif", // 👈 nếu muốn đồng bộ phông chữ
+                        fontFamily: "Arial, Helvetica, sans-serif", // 👈 nếu muốn đồng bộ phông chữ
                       }}
                     >
                       {currentQuestion.options[optIdx]}
@@ -1444,7 +1444,7 @@ return (
                       sx={{
                         userSelect: "none",
                         fontSize: "1.1rem",                // 👈 thêm cỡ chữ 1.1rem
-                        fontFamily: "Roboto, Arial, sans-serif", // 👈 đồng bộ phông chữ
+                        fontFamily: "Arial, Helvetica, sans-serif", // 👈 đồng bộ phông chữ
                       }}
                     >
                       {currentQuestion.options[optIdx]}
@@ -1516,7 +1516,7 @@ return (
                       sx={{
                         userSelect: "none",
                         fontSize: "1.1rem",                // 👈 thêm cỡ chữ 1.1rem
-                        fontFamily: "Roboto, Arial, sans-serif", // 👈 đồng bộ phông chữ
+                        fontFamily: "Arial, Helvetica, sans-serif", // 👈 đồng bộ phông chữ
                       }}
                     >
                       {opt}
@@ -1644,7 +1644,7 @@ return (
           lineHeight: "1.5rem",
           fontSize: "1.1rem",
           whiteSpace: "normal",
-          fontFamily: "Roboto, Arial, sans-serif",
+          fontFamily: "Arial, Helvetica, sans-serif",
         }}
       >
         {currentQuestion.option.split("[...]").map((part, idx) => (
@@ -1686,7 +1686,7 @@ return (
                         px: 1,
                         border: "1px dashed #90caf9",
                         borderRadius: 1,
-                        fontFamily: "Roboto, Arial, sans-serif",
+                        fontFamily: "Arial, Helvetica, sans-serif",
                         fontSize: "1.1rem",
                         lineHeight: "normal",
                         color: color,
@@ -1705,7 +1705,7 @@ return (
                                 py: 0.5,
                                 bgcolor: "#e3f2fd",
                                 cursor: "grab",
-                                fontFamily: "Roboto, Arial, sans-serif",
+                                fontFamily: "Arial, Helvetica, sans-serif",
                                 fontSize: "1.1rem",
                                 display: "inline-flex",
                                 alignItems: "center",
@@ -1771,7 +1771,7 @@ return (
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
-                          fontFamily: "Roboto, Arial, sans-serif",
+                          fontFamily: "Arial, Helvetica, sans-serif",
                           fontSize: "1.1rem",
                         }}
                       >
