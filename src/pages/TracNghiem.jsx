@@ -1108,7 +1108,7 @@ return (
                                     fontWeight="400"
                                     sx={{
                                       userSelect: "none",
-                                      fontSize: "1.1rem",                // 👈 thêm cỡ chữ 1.1rem
+                                      fontSize: "1.2rem",                // 👈 thêm cỡ chữ 1.2rem
                                       fontFamily: "Roboto, Arial, sans-serif", // 👈 đồng bộ phông chữ
                                     }}
                                   >
@@ -1249,7 +1249,7 @@ return (
 
                                   textAlign: "center",
 
-                                  fontSize: "1.1rem",
+                                  fontSize: "1.2rem",
                                   fontWeight: 400,
                                   fontFamily: "Arial, Helvetica, sans-serif",
 
@@ -1360,7 +1360,7 @@ return (
                       variant="body1"
                       sx={{
                         userSelect: "none",
-                        fontSize: "1.1rem",                // 👈 thêm dòng này
+                        fontSize: "1.2rem",                // 👈 thêm dòng này
                         fontFamily: "Roboto, Arial, sans-serif", // 👈 nếu muốn đồng bộ phông chữ
                       }}
                     >
@@ -1443,7 +1443,7 @@ return (
                       fontWeight="400"
                       sx={{
                         userSelect: "none",
-                        fontSize: "1.1rem",                // 👈 thêm cỡ chữ 1.1rem
+                        fontSize: "1.2rem",                // 👈 thêm cỡ chữ 1.2rem
                         fontFamily: "Roboto, Arial, sans-serif", // 👈 đồng bộ phông chữ
                       }}
                     >
@@ -1515,7 +1515,7 @@ return (
                       fontWeight="400"
                       sx={{
                         userSelect: "none",
-                        fontSize: "1.1rem",                // 👈 thêm cỡ chữ 1.1rem
+                        fontSize: "1.2rem",                // 👈 thêm cỡ chữ 1.2rem
                         fontFamily: "Roboto, Arial, sans-serif", // 👈 đồng bộ phông chữ
                       }}
                     >
@@ -1684,7 +1684,7 @@ return (
                                   borderRadius: 1,
                                   px: 1,
                                   fontFamily: "Roboto, Arial, sans-serif",                                 
-                                  fontSize: "1.1rem",
+                                  fontSize: "1.2rem",
                                   lineHeight: "normal",
                                   color: color, // màu đúng/sai
                                 }}
@@ -1702,7 +1702,7 @@ return (
                                           bgcolor: "#e3f2fd",
                                           cursor: "grab",
                                           fontFamily: "Roboto, Arial, sans-serif",
-                                          fontSize: "1.1rem", 
+                                          fontSize: "1.2rem", 
                                           display: "inline-flex",
                                           alignItems: "center",
                                           justifyContent: "center",
@@ -1766,7 +1766,7 @@ return (
                                     justifyContent: "center",
                                     minHeight: 30,
                                     fontFamily: "Roboto, Arial, sans-serif",
-                                    fontSize: "1.1rem", 
+                                    fontSize: "1.2rem", 
                                   }}
                                 >
                                   {word}
