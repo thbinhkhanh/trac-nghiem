@@ -1631,7 +1631,7 @@ return (
               })}
             </Stack>
           )}
-
+          
           {/* FILLBLANK */}
           {currentQuestion.type === "fillblank" && (
             <DragDropContext onDragEnd={handleDragEnd}>
