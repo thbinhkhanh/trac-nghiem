@@ -1660,83 +1660,72 @@ return (
 
             {/* Chỗ trống */}
             {idx < currentQuestion.option.split("[...]").length - 1 && (
-  <Droppable droppableId={`blank-${idx}`} direction="horizontal">
-    {(provided) => {
-      const userWord = currentQuestion.filled?.[idx] ?? "";
-      const correctWord = currentQuestion.options?.[idx] ?? "";
-      const color =
-        submitted && userWord
-          ? userWord.trim() === correctWord.trim()
-            ? "green"
-            : "red"
-          : "#000";
+              <Droppable droppableId={`blank-${idx}`} direction="horizontal">
+                {(provided) => {
+                  const userWord = currentQuestion.filled?.[idx] ?? "";
+                  const correctWord = currentQuestion.options?.[idx] ?? "";
+                  const color =
+                    submitted && userWord
+                      ? userWord.trim() === correctWord.trim()
+                        ? "green"
+                        : "red"
+                      : "#000";
 
-      return (
-        <Box
-          component="span"
-          ref={provided.innerRef}
-          {...provided.droppableProps}
-          sx={{
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            minWidth: 80,
-            maxWidth: 300,
-            minHeight: 50,
-            px: 1,
-            border: "1px dashed #90caf9",   // khung chữ như mã gốc
-            borderRadius: 1,
-            fontFamily: "Roboto, Arial, sans-serif",
-            fontSize: "1.1rem",
-            lineHeight: "normal",
-            color: color,
-            verticalAlign: "middle",
-          }}
-        >
-          {userWord ? (
-            <Draggable draggableId={`filled-${idx}`} index={0}>
-              {(prov) => (
-                <Paper
-                  ref={prov.innerRef}
-                  {...prov.draggableProps}
-                  {...prov.dragHandleProps}
-                  sx={{
-                    px: 2,
-                    py: 0.5,
-                    bgcolor: "#e3f2fd",
-                    cursor: "grab",
-                    fontFamily: "Roboto, Arial, sans-serif",
-                    fontSize: "1.1rem",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    minHeight: 30,
-                    maxWidth: "100%",
-                    color: color,
-                  }}
-                >
-                  {userWord}
-                </Paper>
-              )}
-            </Draggable>
-          ) : (
-            <Typography
-              component="span"
-              sx={{
-                fontSize: "1.1rem",
-                color: "#aaa",
-                verticalAlign: "middle",
-              }}
-            >
-              ............
-            </Typography>
-          )}
-          {provided.placeholder}
-        </Box>
-      );
-    }}
-  </Droppable>
-)}
+                  return (
+                    <Box
+                      component="span"          // span để inline
+                      ref={provided.innerRef}
+                      {...provided.droppableProps}
+                      sx={{
+                        display: "inline-flex", // giữ cùng dòng
+                        alignItems: "baseline", // căn với baseline của text
+                        justifyContent: "center",
+                        minWidth: 80,
+                        maxWidth: 300,
+                        // bỏ minHeight lớn và margin-bottom gây vỡ dòng
+                        px: 1,
+                        border: "1px dashed #90caf9",
+                        borderRadius: 1,
+                        fontFamily: "Roboto, Arial, sans-serif",
+                        fontSize: "1.1rem",
+                        lineHeight: "normal",
+                        color: color,
+                        verticalAlign: "baseline",
+                      }}
+                    >
+                      {userWord && (
+                        <Draggable draggableId={`filled-${idx}`} index={0}>
+                          {(prov) => (
+                            <Paper
+                              ref={prov.innerRef}
+                              {...prov.draggableProps}
+                              {...prov.dragHandleProps}
+                              sx={{
+                                px: 2,
+                                py: 0.5,
+                                bgcolor: "#e3f2fd",
+                                cursor: "grab",
+                                fontFamily: "Roboto, Arial, sans-serif",
+                                fontSize: "1.1rem",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                minHeight: 30,
+                                maxWidth: "100%",
+                                color: color,
+                              }}
+                            >
+                              {userWord}
+                            </Paper>
+                          )}
+                        </Draggable>
+                      )}
+                      {provided.placeholder}
+                    </Box>
+                  );
+                }}
+              </Droppable>
+            )}
           </span>
         ))}
       </Box>
