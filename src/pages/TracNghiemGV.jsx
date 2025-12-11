@@ -272,7 +272,7 @@ useEffect(() => {
     question: "",
     type: "single",                // 🟢 mặc định: 1 lựa chọn
     options: ["", "", "", ""],     // 🟢 AUTO 4 lựa chọn
-    score: 1,
+    score: 0.5,
     correct: [],                   // 🟢 chưa chọn đáp án
     sortType: "fixed",
     pairs: [],
