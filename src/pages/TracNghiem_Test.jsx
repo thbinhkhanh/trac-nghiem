@@ -174,28 +174,26 @@ export default function TracNghiem_Test() {
   }, [school]); // chạy lại khi school thay đổi
 
   // ⭐ RESET TOÀN BỘ SAU KHI CHỌN ĐỀ MỚI
-    useEffect(() => {
-        if (!selectedExam) return;
+  useEffect(() => {
+    if (!selectedExam) return;
 
-        // Reset các state liên quan
-        setAnswers({});
-        setCurrentIndex(0);
-        setComplete(false);
-        setSubmitted(false);       // reset trạng thái đã nộp
-        setStarted(false);
-        setScore(0);
-        setTimeLeft(0);
-        setStartTime(null);        // reset thời gian bắt đầu
-        setQuestions([]);
-        setProgress(0);
-        setLoading(true);
-        setOpenResultDialog(false);
-        setStudentResult(null);
-        setFillBlankStatus({});
+    // Reset các state liên quan
+    setAnswers({});
+    setCurrentIndex(0);
+    setComplete(false);
+    setSubmitted(false);       // reset trạng thái đã nộp
+    setStarted(false);
+    setScore(0);
+    setTimeLeft(0);
+    setStartTime(null);        // reset thời gian bắt đầu
+    setQuestions([]);
+    setProgress(0);
+    setLoading(true);
+    setOpenResultDialog(false);
+    setStudentResult(null);
+    setFillBlankStatus({});
 
-    }, [selectedExam]);
-
-
+  }, [selectedExam]);
 
   useEffect(() => {
     const fetchQuestions = async () => {
