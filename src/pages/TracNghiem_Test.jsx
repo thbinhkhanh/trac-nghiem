@@ -177,17 +177,24 @@ export default function TracNghiem_Test() {
     useEffect(() => {
         if (!selectedExam) return;
 
-        setAnswers({});        // Xóa đáp án
-        setCurrentIndex(0);    // Quay câu đầu
-        setComplete(false);    // Cho phép nộp bài lại
-        setStarted(false);     // Chưa bắt đầu
-        setScore(0);           // Reset điểm
-        setTimeLeft(0);        // Reset thời gian
-        setQuestions([]);      // Xóa câu cũ
-        setProgress(0);        // <-- reset progress về 0
-        setLoading(true);      // Cho load đề mới
+        // Reset các state liên quan
+        setAnswers({});
+        setCurrentIndex(0);
+        setComplete(false);
+        setSubmitted(false);       // reset trạng thái đã nộp
+        setStarted(false);
+        setScore(0);
+        setTimeLeft(0);
+        setStartTime(null);        // reset thời gian bắt đầu
+        setQuestions([]);
+        setProgress(0);
+        setLoading(true);
+        setOpenResultDialog(false);
+        setStudentResult(null);
+        setFillBlankStatus({});
 
     }, [selectedExam]);
+
 
 
   useEffect(() => {
@@ -623,7 +630,7 @@ export default function TracNghiem_Test() {
       setOpenResultDialog(true);
 
             // --- LƯU FIRESTORE ---
-      const lop = studentClass;
+      /*const lop = studentClass;
       const docId = normalizeName(studentName);
 
       const collectionRoot = school === "TH Lâm Văn Bền" ? "LAMVANBEN" : "BINHKHANH";
@@ -638,7 +645,7 @@ export default function TracNghiem_Test() {
         thoiGianLamBai: durationStr,
       }, { merge: true });
 
-      console.log(`✔ LƯU VÀO ${collectionRoot}:`, hocKi, lop, docId);
+      console.log(`✔ LƯU VÀO ${collectionRoot}:`, hocKi, lop, docId);*/
 
     } catch (err) {
       console.error("❌ Lỗi khi lưu điểm:", err);
@@ -766,7 +773,7 @@ export default function TracNghiem_Test() {
       setOpenResultDialog(true);
 
             // --- LƯU FIRESTORE ---
-      const lop = studentClass;
+      /*const lop = studentClass;
       const docId = normalizeName(studentName);
 
       const collectionRoot = school === "TH Lâm Văn Bền" ? "LAMVANBEN" : "BINHKHANH";
@@ -781,7 +788,7 @@ export default function TracNghiem_Test() {
         thoiGianLamBai: durationStr,
       }, { merge: true });
 
-      console.log(`✔ LƯU VÀO ${collectionRoot}:`, hocKi, lop, docId);
+      console.log(`✔ LƯU VÀO ${collectionRoot}:`, hocKi, lop, docId);*/
 
     } catch (err) {
       console.error("❌ Lỗi khi lưu điểm:", err);
