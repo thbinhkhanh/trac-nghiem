@@ -623,7 +623,7 @@ export default function TracNghiem_Test() {
       setOpenResultDialog(true);
 
             // --- LƯU FIRESTORE ---
-      /*const lop = studentClass;
+      const lop = studentClass;
       const docId = normalizeName(studentName);
 
       const collectionRoot = school === "TH Lâm Văn Bền" ? "LAMVANBEN" : "BINHKHANH";
@@ -638,7 +638,7 @@ export default function TracNghiem_Test() {
         thoiGianLamBai: durationStr,
       }, { merge: true });
 
-      console.log(`✔ LƯU VÀO ${collectionRoot}:`, hocKi, lop, docId);*/
+      console.log(`✔ LƯU VÀO ${collectionRoot}:`, hocKi, lop, docId);
 
     } catch (err) {
       console.error("❌ Lỗi khi lưu điểm:", err);
@@ -766,7 +766,7 @@ export default function TracNghiem_Test() {
       setOpenResultDialog(true);
 
             // --- LƯU FIRESTORE ---
-      /*const lop = studentClass;
+      const lop = studentClass;
       const docId = normalizeName(studentName);
 
       const collectionRoot = school === "TH Lâm Văn Bền" ? "LAMVANBEN" : "BINHKHANH";
@@ -781,7 +781,7 @@ export default function TracNghiem_Test() {
         thoiGianLamBai: durationStr,
       }, { merge: true });
 
-      console.log(`✔ LƯU VÀO ${collectionRoot}:`, hocKi, lop, docId);*/
+      console.log(`✔ LƯU VÀO ${collectionRoot}:`, hocKi, lop, docId);
 
     } catch (err) {
       console.error("❌ Lỗi khi lưu điểm:", err);
