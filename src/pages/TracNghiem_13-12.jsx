@@ -867,7 +867,7 @@ return (
         width: "100%",
         maxWidth: 1000,
         minWidth: { xs: "auto", sm: 600 },
-        minHeight: 650,                // <-- chỉ thay đổi chiều cao tối thiểu
+        minHeight: { xs: "auto", sm: 500 },
         display: "flex",
         flexDirection: "column",
         gap: 2,
@@ -1634,220 +1634,225 @@ return (
           
           {/* FILLBLANK */}
           {currentQuestion.type === "fillblank" && (
-            <DragDropContext onDragEnd={handleDragEnd}>
-              <Stack spacing={2}>
+  <DragDropContext onDragEnd={handleDragEnd}>
+    <Stack spacing={2}>
 
-                {/* ======================= CÂU HỎI + CHỖ TRỐNG ======================= */}
-                <Box
-                  sx={{
-                    width: "100%",
-                    lineHeight: "1.5rem",
-                    fontSize: "1.1rem",
-                    whiteSpace: "normal",
-                    fontFamily: "Arial, Helvetica, sans-serif",
-                  }}
-                >
-                  {currentQuestion.option.split("[...]").map((part, idx) => (
-                    <span key={idx} style={{ display: "inline", fontFamily: "Roboto, Arial, sans-serif" }}>
-                      
-                      {/* Phần văn bản */}
-                      <Typography
-                        component="span"
-                        sx={{ mr: 0.5, fontSize: "1.1rem", lineHeight: "1.5rem", verticalAlign: "middle" }}
-                      >
-                        {part}
-                      </Typography>
+      {/* ======================= CÂU HỎI + CHỖ TRỐNG ======================= */}
+      <Box
+        sx={{
+          width: "100%",
+          lineHeight: "1.5rem",
+          fontSize: "1.1rem",
+          whiteSpace: "normal",
+          fontFamily: "Arial, Helvetica, sans-serif",
+        }}
+      >
+        {currentQuestion.option.split("[...]").map((part, idx) => (
+          <span key={idx} style={{ display: "inline", fontFamily: "Roboto, Arial, sans-serif" }}>
+            
+            {/* Phần văn bản */}
+            <Typography
+              component="span"
+              sx={{ mr: 0.5, fontSize: "1.1rem", lineHeight: "1.5rem", verticalAlign: "middle" }}
+            >
+              {part}
+            </Typography>
 
-                      {/* Chỗ trống */}
-                      {idx < currentQuestion.option.split("[...]").length - 1 && (
-                        <Droppable droppableId={`blank-${idx}`} direction="horizontal">
-                          {(provided) => {
-                            const userWord = currentQuestion.filled?.[idx] ?? "";
-                            const correctWord = currentQuestion.options?.[idx] ?? "";
-                            const color =
-                              submitted && userWord
-                                ? userWord.trim() === correctWord.trim()
-                                  ? "green"
-                                  : "red"
-                                : "#000";
+            {/* Chỗ trống */}
+            {idx < currentQuestion.option.split("[...]").length - 1 && (
+              <Droppable droppableId={`blank-${idx}`} direction="horizontal">
+                {(provided) => {
+                  const userWord = currentQuestion.filled?.[idx] ?? "";
+                  const correctWord = currentQuestion.options?.[idx] ?? "";
+                  const color =
+                    submitted && userWord
+                      ? userWord.trim() === correctWord.trim()
+                        ? "green"
+                        : "red"
+                      : "#000";
 
-                            return (
-                              <Box
-                                component="span"          // span để inline
-                                ref={provided.innerRef}
-                                {...provided.droppableProps}
-                                sx={{
-                                  display: "inline-flex", // giữ cùng dòng
-                                  alignItems: "baseline", // căn với baseline của text
-                                  justifyContent: "center",
-                                  minWidth: 80,
-                                  maxWidth: 300,
-                                  // bỏ minHeight lớn và margin-bottom gây vỡ dòng
-                                  px: 1,
-                                  border: "1px dashed #90caf9",
-                                  borderRadius: 1,
-                                  fontFamily: "Arial, Helvetica, sans-serif",
-                                  fontSize: "1.1rem",
-                                  lineHeight: "normal",
-                                  color: color,
-                                  verticalAlign: "baseline",
-                                }}
-                              >
-                                {userWord && (
-                                  <Draggable draggableId={`filled-${idx}`} index={0}>
-                                    {(prov) => (
-                                      <Paper
-                                        ref={prov.innerRef}
-                                        {...prov.draggableProps}
-                                        {...prov.dragHandleProps}
-                                        sx={{
-                                          px: 2,
-                                          py: 0.5,
-                                          bgcolor: "#e3f2fd",
-                                          cursor: "grab",
-                                          fontFamily: "Arial, Helvetica, sans-serif",
-                                          fontSize: "1.1rem",
-                                          display: "inline-flex",
-                                          alignItems: "center",
-                                          justifyContent: "center",
-                                          minHeight: 30,
-                                          maxWidth: "100%",
-                                          color: color,
-                                        }}
-                                      >
-                                        {userWord}
-                                      </Paper>
-                                    )}
-                                  </Draggable>
-                                )}
-                                {provided.placeholder}
-                              </Box>
-                            );
-                          }}
-                        </Droppable>
+                  return (
+                    <Box
+                      component="span"          // span để inline
+                      ref={provided.innerRef}
+                      {...provided.droppableProps}
+                      sx={{
+                        display: "inline-flex", // giữ cùng dòng
+                        alignItems: "baseline", // căn với baseline của text
+                        justifyContent: "center",
+                        minWidth: 80,
+                        maxWidth: 300,
+                        // bỏ minHeight lớn và margin-bottom gây vỡ dòng
+                        px: 1,
+                        border: "1px dashed #90caf9",
+                        borderRadius: 1,
+                        fontFamily: "Arial, Helvetica, sans-serif",
+                        fontSize: "1.1rem",
+                        lineHeight: "normal",
+                        color: color,
+                        verticalAlign: "baseline",
+                      }}
+                    >
+                      {userWord && (
+                        <Draggable draggableId={`filled-${idx}`} index={0}>
+                          {(prov) => (
+                            <Paper
+                              ref={prov.innerRef}
+                              {...prov.draggableProps}
+                              {...prov.dragHandleProps}
+                              sx={{
+                                px: 2,
+                                py: 0.5,
+                                bgcolor: "#e3f2fd",
+                                cursor: "grab",
+                                fontFamily: "Arial, Helvetica, sans-serif",
+                                fontSize: "1.1rem",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                minHeight: 30,
+                                maxWidth: "100%",
+                                color: color,
+                              }}
+                            >
+                              {userWord}
+                            </Paper>
+                          )}
+                        </Draggable>
                       )}
-                    </span>
-                  ))}
-                </Box>
+                      {provided.placeholder}
+                    </Box>
+                  );
+                }}
+              </Droppable>
+            )}
+          </span>
+        ))}
+      </Box>
 
-                {/* ======================= KHU VỰC THẺ TỪ ======================= */}
-                <Box sx={{ mt: 2, textAlign: "left" }}>
-                  <Typography sx={{ mb: 1, fontWeight: "bold", fontSize: "1.1rem", fontFamily: "Roboto, Arial, sans-serif" }}>
-                    Các từ cần điền:
-                  </Typography>
+      {/* ======================= KHU VỰC THẺ TỪ ======================= */}
+      <Box sx={{ mt: 2, textAlign: "left" }}>
+        <Typography sx={{ mb: 1, fontWeight: "bold", fontSize: "1.1rem", fontFamily: "Roboto, Arial, sans-serif" }}>
+          Các từ cần điền:
+        </Typography>
 
-                  <Droppable droppableId="words" direction="horizontal">
-                    {(provided) => (
-                      <Box
-                        ref={provided.innerRef}
-                        {...provided.droppableProps}
+        <Droppable droppableId="words" direction="horizontal">
+          {(provided) => (
+            <Box
+              ref={provided.innerRef}
+              {...provided.droppableProps}
+              sx={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: 1,
+                minHeight: 50,
+                maxHeight: 80,
+                p: 1,
+                border: "1px solid #90caf9",
+                borderRadius: 2,
+                bgcolor: "white",
+                overflowY: "auto",
+              }}
+            >
+              {(currentQuestion.shuffledOptions || currentQuestion.options)
+                .filter((o) => !(currentQuestion.filled ?? []).includes(o))
+                .map((word, idx) => (
+                  <Draggable key={word} draggableId={`word-${word}`} index={idx}>
+                    {(prov) => (
+                      <Paper
+                        ref={prov.innerRef}
+                        {...prov.draggableProps}
+                        {...prov.dragHandleProps}
                         sx={{
+                          px: 2,
+                          py: 1,
+                          bgcolor: "#e3f2fd",
+                          cursor: "grab",
                           display: "flex",
-                          flexWrap: "wrap",
-                          gap: 1,
-                          minHeight: 50,
-                          maxHeight: 80,
-                          p: 1,
-                          border: "1px solid #90caf9",
-                          borderRadius: 2,
-                          bgcolor: "white",
-                          overflowY: "auto",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontFamily: "Arial, Helvetica, sans-serif",
+                          fontSize: "1.1rem",
                         }}
                       >
-                        {(currentQuestion.shuffledOptions || currentQuestion.options)
-                          .filter((o) => !(currentQuestion.filled ?? []).includes(o))
-                          .map((word, idx) => (
-                            <Draggable key={word} draggableId={`word-${word}`} index={idx}>
-                              {(prov) => (
-                                <Paper
-                                  ref={prov.innerRef}
-                                  {...prov.draggableProps}
-                                  {...prov.dragHandleProps}
-                                  sx={{
-                                    px: 2,
-                                    py: 1,
-                                    bgcolor: "#e3f2fd",
-                                    cursor: "grab",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    fontFamily: "Arial, Helvetica, sans-serif",
-                                    fontSize: "1.1rem",
-                                  }}
-                                >
-                                  {word}
-                                </Paper>
-                              )}
-                            </Draggable>
-                          ))}
-                        {provided.placeholder}
-                      </Box>
+                        {word}
+                      </Paper>
                     )}
-                  </Droppable>
-                </Box>
-              </Stack>
-            </DragDropContext>
+                  </Draggable>
+                ))}
+              {provided.placeholder}
+            </Box>
           )}
+        </Droppable>
+      </Box>
+    </Stack>
+  </DragDropContext>
+)}
         </>
       )}
 
       {/* Nút điều hướng và bắt đầu/nộp bài */}
-      {started && !loading && (
-        <Stack
-          direction="row"
-          justifyContent="space-between"
-          alignItems="center"
-          sx={{
-            position: "absolute",   // ghim tuyệt đối trong Paper
-            bottom: 30,             // cách cạnh dưới 30px
-            left: 30,
-            right: 30,
-          }}
-        >
-          <Button
-            variant="outlined"
-            startIcon={<ArrowBackIcon />}
-            onClick={handlePrev}
-            disabled={currentIndex === 0}
-            sx={{
-              width: { xs: "150px", sm: "150px" },
-              bgcolor: currentIndex === 0 ? "#e0e0e0" : "#bbdefb",
-              borderRadius: 1,
-              color: "#0d47a1",
-              "&:hover": { bgcolor: currentIndex === 0 ? "#e0e0e0" : "#90caf9" },
-            }}
-          >
-            Câu trước
-          </Button>
-
-          {currentIndex < questions.length - 1 ? (
-            <Button
-              variant="outlined"
-              endIcon={<ArrowForwardIcon />}
-              onClick={handleNext}
-              sx={{
-                width: { xs: "150px", sm: "150px" },
-                bgcolor: "#bbdefb",
-                borderRadius: 1,
-                color: "#0d47a1",
-                "&:hover": { bgcolor: "#90caf9" },
-              }}
-            >
-              Câu sau
-            </Button>
-          ) : (
+      <Stack direction="column" sx={{ width: "100%", mt: 3 }} spacing={0}>
+        {/*{!started && !loading ? (
+          <Box sx={{ width: "100%", display: "flex", justifyContent: "center" }}>
             <Button
               variant="contained"
               color="primary"
-              onClick={handleSubmit}
-              disabled={submitted || isEmptyQuestion}
-              sx={{ width: { xs: "120px", sm: "150px" }, borderRadius: 1 }}
+              onClick={() => setStarted(true)}
+              sx={{ width: { xs: "150px", sm: "150px" } }}
             >
-              Nộp bài
+              Bắt đầu
             </Button>
-          )}
-        </Stack>
-      )}
+          </Box>
+        ) : null}*/}
+
+        {started && !loading && (
+          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ width: "100%" }}>
+            <Button
+              variant="outlined"
+              startIcon={<ArrowBackIcon />}
+              onClick={handlePrev}
+              disabled={currentIndex === 0}
+              sx={{
+                width: { xs: "150px", sm: "150px" },
+                bgcolor: currentIndex === 0 ? "#e0e0e0" : "#bbdefb",
+                borderRadius: 1,
+                color: "#0d47a1",
+                "&:hover": { bgcolor: currentIndex === 0 ? "#e0e0e0" : "#90caf9" },
+              }}
+            >
+              Câu trước
+            </Button>
+
+            {currentIndex < questions.length - 1 ? (
+              <Button
+                variant="outlined"
+                endIcon={<ArrowForwardIcon />}
+                onClick={handleNext}
+                sx={{
+                  width: { xs: "150px", sm: "150px" },
+                  bgcolor: "#bbdefb",
+                  borderRadius: 1,
+                  color: "#0d47a1",
+                  "&:hover": { bgcolor: "#90caf9" },
+                }}
+              >
+                Câu sau
+              </Button>
+            ) : (
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={handleSubmit}
+                disabled={submitted || isEmptyQuestion}
+                sx={{ width: { xs: "120px", sm: "150px" }, borderRadius: 1 }}
+              >
+                Nộp bài
+              </Button>
+            )}
+          </Stack>
+        )}
+      </Stack>
     </Paper>
 
     {/* Dialog cảnh báo chưa làm hết */}
