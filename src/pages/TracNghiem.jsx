@@ -867,7 +867,7 @@ return (
         width: "100%",
         maxWidth: 1000,
         minWidth: { xs: "auto", sm: 600 },
-        minHeight: 650,                // <-- chỉ thay đổi chiều cao tối thiểu
+        minHeight: { xs: "auto", sm: 650 },                // <-- chỉ thay đổi chiều cao tối thiểu
         display: "flex",
         flexDirection: "column",
         gap: 2,
@@ -1798,10 +1798,12 @@ return (
           justifyContent="space-between"
           alignItems="center"
           sx={{
-            position: "absolute",   // ghim tuyệt đối trong Paper
-            bottom: 30,             // cách cạnh dưới 30px
-            left: 30,
-            right: 30,
+            position: { xs: "static", sm: "absolute" }, // mobile: theo luồng, desktop: ghim tuyệt đối
+            bottom: { sm: 30 },                         // chỉ áp dụng khi absolute
+            left: { sm: 30 },
+            right: { sm: 30 },
+            mt: { xs: 2, sm: 0 },                       // mobile: cách option 1 khoảng
+            mb: { xs: 2, sm: 0 },
           }}
         >
           <Button
