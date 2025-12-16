@@ -108,7 +108,6 @@ export default function QuanTri() {
           const snap = await getDoc(docRef);
           if (snap.exists()) {
             const data = snap.data();
-
             setConfigLocal({
               mon: data.mon ?? "Tin học",
               lop: data.lop ?? "",
@@ -119,26 +118,25 @@ export default function QuanTri() {
               truyCap_BinhKhanh: data.truyCap_BinhKhanh ?? false,
               truyCap_LamVanBen: data.truyCap_LamVanBen ?? false,
             });
-
-            setSelectedSemester(data.hocKy ?? "Giữa kỳ I");
-            setSubject(data.mon ?? "Tin học");
             setSelectedClass(data.lop ?? "");
+            setSubject(data.mon ?? "Tin học");
+            setSelectedSemester(data.hocKy ?? "Giữa kỳ I");
             setTimeInput(data.timeLimit ?? 1);
           }
 
-          const lopSnap = await getDoc(doc(db, "LAMVANBEN", "lop"));
-          const classList = sortClasses(lopSnap.data()?.list ?? []);
+          const lopRef = doc(db, "LAMVANBEN", "lop");
+          const lopSnap = await getDoc(lopRef);
+          let classList = lopSnap.exists() ? lopSnap.data().list ?? [] : [];
+          classList = sortClasses(classList);
           setClasses(classList);
           setSelectedClass((prev) => prev || classList[0] || "");
         } else {
-          // người dùng khác
           let classList = classData?.length ? classData : [];
           if (!classList.length) {
             const snapshot = await getDocs(collection(db, "DANHSACH"));
             classList = snapshot.docs.map((doc) => doc.id);
             setClassData(classList);
           }
-
           classList = sortClasses(classList);
           setClasses(classList);
           setSelectedClass(configOther.lop || classList[0] || "");
@@ -150,10 +148,8 @@ export default function QuanTri() {
         console.error(err);
       }
     };
-
     fetchData();
-  }, [account]); // ✅ CHỈ account
-
+  }, [account, classData, setClassData, configOther]);
 
   // ===== Update field =====
   const updateConfigField = async (field, value) => {

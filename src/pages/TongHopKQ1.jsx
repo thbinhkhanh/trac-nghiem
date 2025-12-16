@@ -19,8 +19,8 @@ import {
   Alert
 } from "@mui/material";
 import { db } from "../firebase";
-import { collection, getDocs, doc, getDoc, writeBatch } from "firebase/firestore";
-import { Delete, FileDownload } from "@mui/icons-material";
+import { collection, getDocs, doc, getDoc, writeBatch, deleteDoc } from "firebase/firestore";
+import { Delete, DeleteForever, FileDownload } from "@mui/icons-material";
 import { exportKetQuaExcel } from "../utils/exportKetQuaExcel";
 
 export default function TongHopKQ() {
@@ -135,15 +135,13 @@ const loadResults = async () => {
 };
 
 
-
-
   useEffect(() => {
     loadResults();
   }, [selectedLop, selectedMon, hocKi]);
 
   // Xóa toàn bộ lớp
   const handleDeleteClass = async () => {
-    const confirmDelete = window.confirm(`Bạn có chắc muốn xóa toàn bộ kết quả của lớp ${selectedLop}?`);
+    const confirmDelete = window.confirm(`Bạn có chắc muốn xóa kết quả ${hocKi} của lớp ${selectedLop}?`);
     if (!confirmDelete) return;
 
     setResults(Array.from({ length: 5 }, (_, i) => ({
@@ -173,6 +171,28 @@ const loadResults = async () => {
     }
   };
 
+  const handleDeleteSchoolBySemester = async () => {
+    const confirmDelete = window.confirm(
+      `Bạn có chắc muốn xóa kết quả ${hocKi} của TOÀN TRƯỜNG?`
+    );
+    if (!confirmDelete) return;
+
+    try {
+      // Xóa document học kỳ ở cấp trường
+      await deleteDoc(doc(db, folder, hocKi));
+
+      setResults([]); // reset hiển thị
+      setSnackbarMessage(`✅ Đã xóa kết quả ${hocKi} của TOÀN TRƯỜNG`);
+      setSnackbarOpen(true);
+
+      console.log(`🔥 Firestore: Xóa toàn trường theo học kỳ ${hocKi} thành công`);
+    } catch (err) {
+      console.error("❌ Firestore: Xóa toàn trường thất bại:", err);
+      setSnackbarMessage("❌ Lỗi khi xóa toàn trường!");
+      setSnackbarOpen(true);
+    }
+  };
+
   // Xuất Excel
   const handleExportExcel = () => {
     exportKetQuaExcel(results, selectedLop, selectedMon, hocKi);
@@ -194,6 +214,13 @@ const loadResults = async () => {
                 <Delete />
               </IconButton>
             </Tooltip>
+            {/* Nút xóa toàn trường theo học kỳ */}
+            <Tooltip title="Xóa toàn trường theo học kỳ">
+              <IconButton onClick={handleDeleteSchoolBySemester} color="error" disabled={deleting}>
+                <DeleteForever />
+              </IconButton>
+            </Tooltip>
+
           </Stack>
 
           <Typography variant="h5" fontWeight="bold" sx={{ color: "#1976d2", flexGrow: 1, textAlign: "center" }}>
@@ -222,6 +249,20 @@ const loadResults = async () => {
             sx={{ width: 130 }}
           >
             {["Tin học", "Công nghệ"].map(mon => <MenuItem key={mon} value={mon}>{mon}</MenuItem>)}
+          </TextField>
+
+          <TextField
+            select
+            label="Học kỳ"
+            value={hocKi}                 // ✅ giá trị mặc định lấy từ config
+            onChange={(e) => setHocKi(e.target.value)} // ✅ chỉ đổi state cục bộ
+            size="small"
+            sx={{ width: 130 }}
+          >
+            <MenuItem value="Giữa kỳ I">Giữa kỳ I</MenuItem>
+            <MenuItem value="Cuối kỳ I">Cuối kỳ I</MenuItem>
+            <MenuItem value="Giữa kỳ II">Giữa kỳ II</MenuItem>
+            <MenuItem value="Cả năm">Cả năm</MenuItem>
           </TextField>
         </Box>
 
