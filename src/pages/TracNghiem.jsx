@@ -995,7 +995,7 @@ return (
 
       {/* KHU VỰC HIỂN THỊ CÂU HỎI */}
       {!loading && currentQuestion && (
-        <>
+        <Box key={currentQuestion.id || currentIndex}>
           <Divider sx={{ my: 2 }} />
           <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>
             Câu {currentIndex + 1}: {currentQuestion.question}
@@ -1788,7 +1788,7 @@ return (
               </Stack>
             </DragDropContext>
           )}
-        </>
+        </Box>
       )}
 
       {/* Nút điều hướng và bắt đầu/nộp bài */}
