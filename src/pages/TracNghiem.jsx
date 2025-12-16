@@ -1792,20 +1792,21 @@ return (
       )}
 
       {/* Nút điều hướng và bắt đầu/nộp bài */}
+      <Box sx={{ flexGrow: 1 }} />
       {started && !loading && (
         <Stack
           direction="row"
           justifyContent="space-between"
           alignItems="center"
           sx={{
-            position: { xs: "static", sm: "absolute" }, // mobile: theo luồng, desktop: ghim tuyệt đối
-            bottom: { sm: 30 },                         // chỉ áp dụng khi absolute
-            left: { sm: 30 },
-            right: { sm: 30 },
-            mt: { xs: 2, sm: 0 },                       // mobile: cách option 1 khoảng
-            mb: { xs: 2, sm: 0 },
+            position: "static",
+            mt: 2,                     // cách option phía trên
+            pt: 2,                     // ⬅⬅⬅ KHOẢNG CÁCH GIỮA GẠCH & NÚT
+            mb: { xs: "20px", sm: "5px" },
+            borderTop: "1px solid #e0e0e0",
           }}
         >
+
           <Button
             variant="outlined"
             startIcon={<ArrowBackIcon />}
