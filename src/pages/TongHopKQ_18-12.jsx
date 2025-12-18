@@ -16,19 +16,12 @@ import {
   Stack,
   Tooltip,
   Snackbar, 
-  Alert,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
+  Alert
 } from "@mui/material";
 import { db } from "../firebase";
 import { collection, getDocs, doc, getDoc, writeBatch, deleteDoc } from "firebase/firestore";
 import { Delete, DeleteForever, FileDownload } from "@mui/icons-material";
 import { exportKetQuaExcel } from "../utils/exportKetQuaExcel";
-import CloseIcon from "@mui/icons-material/Close";
-
 
 export default function TongHopKQ() {
   const [classesList, setClassesList] = useState([]);
@@ -41,12 +34,6 @@ export default function TongHopKQ() {
 
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
-
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [dialogTitle, setDialogTitle] = useState("");
-  const [dialogContent, setDialogContent] = useState("");
-  const [dialogAction, setDialogAction] = useState(null);
-
 
   // Lấy học kỳ và danh sách lớp từ Firestore
   const username = localStorage.getItem("account") || "";
@@ -153,86 +140,62 @@ const loadResults = async () => {
   }, [selectedLop, selectedMon, hocKi]);
 
   // Xóa toàn bộ lớp
-  const handleDeleteClass = () => {
-    openConfirmDialog(
-      "Xóa kết quả lớp",
-      `⚠️ Bạn có chắc muốn xóa kết quả ${hocKi} của lớp ${selectedLop}?\nHành động này không thể hoàn tác!`,
-      async () => {
-        try {
-          //setSnackbarMessage("⏳ Đang xóa dữ liệu...");
-          setSnackbarOpen(true);
+  const handleDeleteClass = async () => {
+    const confirmDelete = window.confirm(`Bạn có chắc muốn xóa kết quả ${hocKi} của lớp ${selectedLop}?`);
+    if (!confirmDelete) return;
 
-          const colRef = collection(db, `${folder}/${hocKi}/${selectedLop}`);
-          const snapshot = await getDocs(colRef);
+    setResults(Array.from({ length: 5 }, (_, i) => ({
+      stt: i + 1,
+      hoVaTen: "",
+      lop: "",
+      mon: "",
+      ngayKiemTra: "",
+      thoiGianLamBai: "",
+      diem: "",
+    })));
 
-          if (!snapshot.empty) {
-            const batch = writeBatch(db);
-            snapshot.docs.forEach((d) => batch.delete(d.ref));
-            await batch.commit();
-          }
+    setSnackbarMessage("Đã xóa toàn bộ lớp thành công!");
+    setSnackbarOpen(true);
 
-          setResults([]);
-          setSnackbarMessage("✅ Đã xóa kết quả của lớp thành công!");
-        } catch (err) {
-          console.error(err);
-          setSnackbarMessage("❌ Xóa lớp thất bại!");
-        }
+    try {
+      const colRef = collection(db, `LAMVANBEN/${hocKi}/${selectedLop}`);
+      const snapshot = await getDocs(colRef);
+      if (!snapshot.empty) {
+        const batch = writeBatch(db);
+        snapshot.docs.forEach(docSnap => batch.delete(docSnap.ref));
+        await batch.commit();
+        console.log(`🔥 Firestore: Xóa lớp ${selectedLop} thành công`);
       }
-    );
+    } catch (err) {
+      console.error("❌ Firestore: Xóa lớp thất bại:", err);
+    }
   };
 
-  const handleDeleteSchoolBySemester = () => {
-    openConfirmDialog(
-      "XÓA TOÀN TRƯỜNG",
-      `⚠️ Bạn có chắc muốn xóa kết quả ${hocKi} của TOÀN TRƯỜNG?\nHành động này không thể hoàn tác!`,
-      async () => {
-        try {
-          // Xóa document học kỳ ở cấp trường
-          await deleteDoc(doc(db, folder, hocKi));
-
-          setResults([]); // reset hiển thị
-          setSnackbarMessage(`✅ Đã xóa kết quả ${hocKi} của TOÀN TRƯỜNG`);
-          setSnackbarOpen(true);
-
-          console.log(
-            `🔥 Firestore: Xóa toàn trường theo học kỳ ${hocKi} thành công`
-          );
-        } catch (err) {
-          console.error("❌ Firestore: Xóa toàn trường thất bại:", err);
-          setSnackbarMessage("❌ Lỗi khi xóa toàn trường!");
-          setSnackbarOpen(true);
-        }
-
-        setDialogOpen(false); // đóng dialog sau khi xử lý
-      }
+  const handleDeleteSchoolBySemester = async () => {
+    const confirmDelete = window.confirm(
+      `Bạn có chắc muốn xóa kết quả ${hocKi} của TOÀN TRƯỜNG?`
     );
+    if (!confirmDelete) return;
+
+    try {
+      // Xóa document học kỳ ở cấp trường
+      await deleteDoc(doc(db, folder, hocKi));
+
+      setResults([]); // reset hiển thị
+      setSnackbarMessage(`✅ Đã xóa kết quả ${hocKi} của TOÀN TRƯỜNG`);
+      setSnackbarOpen(true);
+
+      console.log(`🔥 Firestore: Xóa toàn trường theo học kỳ ${hocKi} thành công`);
+    } catch (err) {
+      console.error("❌ Firestore: Xóa toàn trường thất bại:", err);
+      setSnackbarMessage("❌ Lỗi khi xóa toàn trường!");
+      setSnackbarOpen(true);
+    }
   };
 
   // Xuất Excel
   const handleExportExcel = () => {
-    openConfirmDialog(
-      "Xuất Excel",
-      `Bạn có muốn xuất kết quả lớp ${selectedLop} (${hocKi}) ra file Excel không?`,
-      () => {
-        exportKetQuaExcel(results, selectedLop, selectedMon, hocKi);
-        setDialogOpen(false);
-      }
-    );
-  };
-
-  const openConfirmDialog = (title, content, onConfirm) => {
-    setDialogTitle(title);
-    setDialogContent(content);
-
-    // ❗ đóng dialog NGAY rồi mới chạy xử lý
-    setDialogAction(() => () => {
-      setDialogOpen(false);
-      setTimeout(() => {
-        onConfirm();
-      }, 0);
-    });
-
-    setDialogOpen(true);
+    exportKetQuaExcel(results, selectedLop, selectedMon, hocKi);
   };
 
   return (
@@ -351,102 +314,8 @@ const loadResults = async () => {
             {snackbarMessage}
           </Alert>
         </Snackbar>
+
       </Paper>
-      
-      <Dialog
-        open={dialogOpen}
-        onClose={(_, reason) => {
-          if (reason === "backdropClick" || reason === "escapeKeyDown") return;
-          setDialogOpen(false);
-        }}
-        maxWidth="xs"
-        fullWidth
-        PaperProps={{
-          sx: {
-            borderRadius: 3,
-            p: 3,
-            bgcolor: "#fff",
-            boxShadow: "0 4px 12px rgba(33,150,243,0.15)",
-          },
-        }}
-      >
-        {/* Header */}
-        <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
-          <Box
-            sx={{
-              bgcolor: "#42a5f5",
-              color: "#fff",
-              borderRadius: "50%",
-              width: 36,
-              height: 36,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              mr: 1.5,
-              fontWeight: "bold",
-              fontSize: 18,
-            }}
-          >
-            ❓
-          </Box>
-
-          <DialogTitle
-            sx={{
-              p: 0,
-              fontWeight: "bold",
-              color: "#1565c0",
-              flex: 1,
-            }}
-          >
-            {dialogTitle}
-          </DialogTitle>
-
-          {/* Nút X */}
-          <IconButton
-            onClick={() => setDialogOpen(false)}
-            sx={{
-              ml: "auto",
-              color: "#f44336",
-              "&:hover": { bgcolor: "rgba(244,67,54,0.1)" },
-            }}
-          >
-            <CloseIcon />
-          </IconButton>
-        </Box>
-
-        {/* Nội dung */}
-        <DialogContent dividers>
-          <Typography
-            sx={{
-              fontSize: 16,
-              color: "#333",
-              whiteSpace: "pre-line",
-            }}
-          >
-            {dialogContent}
-          </Typography>
-        </DialogContent>
-
-        {/* Actions */}
-        <DialogActions>
-          <Button onClick={() => setDialogOpen(false)}>
-            Hủy
-          </Button>
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={dialogAction}
-            sx={{ fontWeight: "bold" }}
-          >
-            Xác nhận
-          </Button>
-
-        </DialogActions>
-      </Dialog>
-
-
     </Box>
-
-    
   );
 }
