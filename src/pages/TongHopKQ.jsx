@@ -154,12 +154,13 @@ const loadResults = async () => {
   useEffect(() => {
     loadResults();
   }, [selectedLop, selectedMon, hocKi]);
-
+  
   // Xóa toàn bộ lớp
   const handleDeleteClass = () => {
     openConfirmDialog(
       "Xóa kết quả lớp",
-      `⚠️ Bạn có chắc muốn xóa kết quả ${hocKi} của lớp ${selectedLop}?\nHành động này không thể hoàn tác!`,
+      //`⚠️ Bạn có chắc muốn xóa kết quả ${hocKi} của lớp ${selectedLop}?\nHành động này không thể hoàn tác!`,
+      `⚠️ Bạn có chắc muốn xóa kết quả của lớp ${selectedLop}?\nHành động này không thể hoàn tác!`,
       async () => {
         try {
           const colRef = collection(db, `${folder}/${hocKi}/${selectedLop}`);
@@ -195,7 +196,8 @@ const loadResults = async () => {
   const handleDeleteSchoolBySemester = () => {
     openConfirmDialog(
       "Xóa toàn trường",
-      `⚠️ Bạn có chắc muốn xóa kết quả ${hocKi} của TOÀN TRƯỜNG?\nHành động này không thể hoàn tác!`,
+      //`⚠️ Bạn có chắc muốn xóa kết quả ${hocKi} của TOÀN TRƯỜNG?\nHành động này không thể hoàn tác!`,
+      `⚠️ Bạn có chắc muốn xóa kết quả của toàn trường?\nHành động này không thể hoàn tác!`,
       async () => {
         try {
           const hocKyRef = doc(db, folder, hocKi);
@@ -235,7 +237,8 @@ const loadResults = async () => {
   const handleExportExcel = () => {
     openConfirmDialog(
       "Xuất Excel",
-      `Bạn có muốn xuất kết quả lớp ${selectedLop} (${hocKi}) ra file Excel không?`,
+      //`Bạn có muốn xuất kết quả lớp ${selectedLop} (${hocKi}) ra file Excel không?`,
+      `Bạn có muốn xuất kết quả lớp ${selectedLop} ra file Excel không?`,
       () => {
         try {
           if (!results || results.length === 0) {
@@ -505,11 +508,13 @@ const loadResults = async () => {
               fontSize: 16,
               color: "#333",
               whiteSpace: "pre-line",
+              mb: 2, // ⬅️ chỉ tăng khoảng cách text ↔ divider
             }}
           >
             {dialogContent}
           </Typography>
         </DialogContent>
+
 
         {/* Actions */}
         <DialogActions>
