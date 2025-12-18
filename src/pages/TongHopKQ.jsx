@@ -41,6 +41,7 @@ export default function TongHopKQ() {
 
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
+  const [snackbarSeverity, setSnackbarSeverity] = useState("success");
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogTitle, setDialogTitle] = useState("");
@@ -108,11 +109,13 @@ const loadResults = async () => {
 
     if (snapshot.empty) {
       setResults([]);
-      setSnackbarMessage(`❌ Không tìm thấy kết quả cho lớp ${selectedLop}`);
+      setSnackbarSeverity("warning"); // ✅ BẮT BUỘC
+      setSnackbarMessage(`Không tìm thấy kết quả cho lớp ${selectedLop}`);
       setSnackbarOpen(true);
       setLoading(false);
       return;
     }
+
 
     const data = snapshot.docs.map(docSnap => ({ docId: docSnap.id, ...docSnap.data() }));
 
@@ -159,23 +162,31 @@ const loadResults = async () => {
       `⚠️ Bạn có chắc muốn xóa kết quả ${hocKi} của lớp ${selectedLop}?\nHành động này không thể hoàn tác!`,
       async () => {
         try {
-          //setSnackbarMessage("⏳ Đang xóa dữ liệu...");
-          setSnackbarOpen(true);
-
           const colRef = collection(db, `${folder}/${hocKi}/${selectedLop}`);
           const snapshot = await getDocs(colRef);
 
-          if (!snapshot.empty) {
-            const batch = writeBatch(db);
-            snapshot.docs.forEach((d) => batch.delete(d.ref));
-            await batch.commit();
+          // ❌ Không có dữ liệu
+          if (snapshot.empty) {
+            setSnackbarSeverity("warning");
+            setSnackbarMessage(`Không có dữ liệu để xóa cho lớp ${selectedLop}!`);
+            setSnackbarOpen(true);
+            return;
           }
 
+          // ✅ Có dữ liệu → xóa
+          const batch = writeBatch(db);
+          snapshot.docs.forEach((d) => batch.delete(d.ref));
+          await batch.commit();
+
           setResults([]);
+          setSnackbarSeverity("success");
           setSnackbarMessage("✅ Đã xóa kết quả của lớp thành công!");
+          setSnackbarOpen(true);
         } catch (err) {
-          console.error(err);
+          console.error("❌ Lỗi khi xóa lớp:", err);
+          setSnackbarSeverity("error");
           setSnackbarMessage("❌ Xóa lớp thất bại!");
+          setSnackbarOpen(true);
         }
       }
     );
@@ -187,10 +198,22 @@ const loadResults = async () => {
       `⚠️ Bạn có chắc muốn xóa kết quả ${hocKi} của TOÀN TRƯỜNG?\nHành động này không thể hoàn tác!`,
       async () => {
         try {
-          // Xóa document học kỳ ở cấp trường
-          await deleteDoc(doc(db, folder, hocKi));
+          const hocKyRef = doc(db, folder, hocKi);
+          const hocKySnap = await getDoc(hocKyRef);
 
-          setResults([]); // reset hiển thị
+          // ❌ Không có dữ liệu
+          if (!hocKySnap.exists()) {
+            setSnackbarSeverity("warning");
+            setSnackbarMessage(`Không có dữ liệu ${hocKi} để xóa!`);
+            setSnackbarOpen(true);
+            return;
+          }
+
+          // ✅ Có dữ liệu → xóa
+          await deleteDoc(hocKyRef);
+
+          setResults([]);
+          setSnackbarSeverity("success");
           setSnackbarMessage(`✅ Đã xóa kết quả ${hocKi} của TOÀN TRƯỜNG`);
           setSnackbarOpen(true);
 
@@ -199,14 +222,14 @@ const loadResults = async () => {
           );
         } catch (err) {
           console.error("❌ Firestore: Xóa toàn trường thất bại:", err);
+          setSnackbarSeverity("error");
           setSnackbarMessage("❌ Lỗi khi xóa toàn trường!");
           setSnackbarOpen(true);
         }
-
-        setDialogOpen(false); // đóng dialog sau khi xử lý
       }
     );
   };
+
 
   // Xuất Excel
   const handleExportExcel = () => {
@@ -214,11 +237,29 @@ const loadResults = async () => {
       "Xuất Excel",
       `Bạn có muốn xuất kết quả lớp ${selectedLop} (${hocKi}) ra file Excel không?`,
       () => {
-        exportKetQuaExcel(results, selectedLop, selectedMon, hocKi);
-        setDialogOpen(false);
+        try {
+          if (!results || results.length === 0) {
+            setSnackbarSeverity("error");
+            setSnackbarMessage("Không có dữ liệu để xuất Excel!");
+            setSnackbarOpen(true);
+            return;
+          }
+
+          exportKetQuaExcel(results, selectedLop, selectedMon, hocKi);
+
+          setSnackbarSeverity("success");
+          setSnackbarMessage("✅ Xuất file Excel thành công!");
+          setSnackbarOpen(true);
+        } catch (err) {
+          console.error("❌ Lỗi xuất Excel:", err);
+          setSnackbarSeverity("error");
+          setSnackbarMessage("❌ Không thể xuất file Excel!");
+          setSnackbarOpen(true);
+        }
       }
     );
   };
+
 
   const openConfirmDialog = (title, content, onConfirm) => {
     setDialogTitle(title);
@@ -233,6 +274,29 @@ const loadResults = async () => {
     });
 
     setDialogOpen(true);
+  };
+
+  const snackbarStyleMap = {
+    success: {
+      backgroundColor: "#2e7d32",
+      color: "#fff",
+      fontWeight: "bold",
+    },
+    error: {
+      backgroundColor: "#d32f2f",
+      color: "#fff",
+      fontWeight: "bold",
+    },
+    warning: {
+      backgroundColor: "#ed6c02",
+      color: "#fff",
+      fontWeight: "bold",
+    },
+    info: {
+      backgroundColor: "#0288d1",
+      color: "#fff",
+      fontWeight: "bold",
+    },
   };
 
   return (
@@ -346,11 +410,31 @@ const loadResults = async () => {
           </Box>
         )}
 
-        <Snackbar open={snackbarOpen} autoHideDuration={3000} onClose={() => setSnackbarOpen(false)} anchorOrigin={{ vertical: "bottom", horizontal: "right" }}>
-          <Alert onClose={() => setSnackbarOpen(false)} severity="success" sx={{ width: "100%" }}>
+        <Snackbar
+          open={snackbarOpen}
+          autoHideDuration={3000}
+          onClose={() => setSnackbarOpen(false)}
+          anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        >
+          <Alert
+            onClose={() => setSnackbarOpen(false)}
+            severity={snackbarSeverity}
+            sx={{
+              width: "100%",
+              ...snackbarStyleMap[snackbarSeverity],
+
+              // ✅ ÉP MÀU ICON
+              "& .MuiAlert-icon": {
+                color: "#fff",
+              },
+            }}
+          >
             {snackbarMessage}
           </Alert>
+
         </Snackbar>
+
+
       </Paper>
       
       <Dialog
