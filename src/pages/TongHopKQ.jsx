@@ -183,7 +183,7 @@ const loadResults = async () => {
 
   const handleDeleteSchoolBySemester = () => {
     openConfirmDialog(
-      "XÓA TOÀN TRƯỜNG",
+      "Xóa toàn trường",
       `⚠️ Bạn có chắc muốn xóa kết quả ${hocKi} của TOÀN TRƯỜNG?\nHành động này không thể hoàn tác!`,
       async () => {
         try {
