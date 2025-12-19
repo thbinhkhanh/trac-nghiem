@@ -305,29 +305,58 @@ const loadResults = async () => {
   return (
     <Box sx={{ minHeight: "100vh", background: "linear-gradient(to bottom, #e3f2fd, #bbdefb)", pt: 3, px: 2, display: "flex", justifyContent: "center" }}>
       <Paper sx={{ p: 4, borderRadius: 3, width: "100%", maxWidth: 900, bgcolor: "white" }} elevation={6}>
-
-        <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+        <Box
+          sx={{
+            position: "relative",
+            display: "flex",
+            alignItems: "center",
+            mb: 2,
+            flexWrap: { xs: "wrap", sm: "nowrap" }, // cho phép xuống hàng trên mobile
+          }}
+        >
+          {/* ICON – GIỮ NGUYÊN */}
           <Stack direction="row" spacing={1}>
             <Tooltip title="Xuất Excel">
               <IconButton onClick={handleExportExcel} color="primary">
                 <FileDownload />
               </IconButton>
             </Tooltip>
+
             <Tooltip title="Xóa lớp">
               <IconButton onClick={handleDeleteClass} color="error" disabled={deleting}>
                 <Delete />
               </IconButton>
             </Tooltip>
-            {/* Nút xóa toàn trường theo học kỳ */}
+
             <Tooltip title="Xóa toàn trường theo học kỳ">
-              <IconButton onClick={handleDeleteSchoolBySemester} color="error" disabled={deleting}>
+              <IconButton
+                onClick={handleDeleteSchoolBySemester}
+                color="error"
+                disabled={deleting}
+              >
                 <DeleteForever />
               </IconButton>
             </Tooltip>
-
           </Stack>
 
-          <Typography variant="h5" fontWeight="bold" sx={{ color: "#1976d2", flexGrow: 1, textAlign: "center" }}>
+          {/* TIÊU ĐỀ */}
+          <Typography
+            variant="h5"
+            fontWeight="bold"
+            sx={{
+              color: "#1976d2",
+
+              /* Mobile: xuống hàng */
+              width: { xs: "100%", sm: "auto" },
+              textAlign: "center",
+              mt: { xs: 1, sm: 0 },
+
+              /* Desktop: căn giữa tuyệt đối */
+              position: { xs: "static", sm: "absolute" },
+              left: { sm: "50%" },
+              transform: { sm: "translateX(-50%)" },
+            }}
+          >
             KẾT QUẢ KIỂM TRA
           </Typography>
         </Box>
