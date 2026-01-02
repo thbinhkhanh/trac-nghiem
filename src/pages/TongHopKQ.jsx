@@ -326,7 +326,7 @@ export default function TongHopKQ() {
             {classesList.map(lop => <MenuItem key={lop} value={lop}>{lop}</MenuItem>)}
           </TextField>
 
-          <TextField
+          {/*<TextField
             select
             label="Môn"
             value={selectedMon}
@@ -335,7 +335,7 @@ export default function TongHopKQ() {
             sx={{ width: 130 }}
           >
             {["Tin học", "Công nghệ"].map(mon => <MenuItem key={mon} value={mon}>{mon}</MenuItem>)}
-          </TextField>
+          </TextField>*/}
 
           <TextField
             select
