@@ -107,28 +107,54 @@ const loadResults = async () => {
     const colRef = collection(db, `${folder}/${hocKi}/${selectedLop}`);
     const snapshot = await getDocs(colRef);
 
+    // ❌ Không có dữ liệu
     if (snapshot.empty) {
       setResults([]);
-      setSnackbarSeverity("warning"); // ✅ BẮT BUỘC
+      setSnackbarSeverity("warning");
       setSnackbarMessage(`Không tìm thấy kết quả cho lớp ${selectedLop}`);
       setSnackbarOpen(true);
       setLoading(false);
       return;
     }
 
+    // ===============================
+    // 🔹 MAP + CHUẨN HOÁ DỮ LIỆU
+    // ===============================
+    const data = snapshot.docs.map((docSnap) => {
+      const d = docSnap.data();
 
-    const data = snapshot.docs.map(docSnap => ({ docId: docSnap.id, ...docSnap.data() }));
+      // ✅ Chuẩn hoá ngày hiển thị
+      let ngayHienThi = "";
 
-    // Hàm sắp xếp tên chuẩn Việt Nam: từ TÊN → TÊN ĐỆM → HỌ
+      // Firestore Timestamp
+      if (d.ngayKiemTra?.seconds) {
+        ngayHienThi = new Date(d.ngayKiemTra.seconds * 1000)
+          .toLocaleDateString("vi-VN");
+      }
+      // String ngày
+      else if (typeof d.ngayKiemTra === "string") {
+        ngayHienThi = d.ngayKiemTra;
+      }
+
+      return {
+        docId: docSnap.id,
+        ...d,
+        ngayHienThi, // 👈 field bảng & Excel đang dùng
+      };
+    });
+
+    // ===============================
+    // 🔹 SẮP XẾP TÊN CHUẨN VIỆT NAM
+    // ===============================
     const compareVietnameseName = (a, b) => {
-      const namePartsA = a.hoVaTen.trim().split(" ").reverse();
-      const namePartsB = b.hoVaTen.trim().split(" ").reverse();
+      const namePartsA = a.hoVaTen?.trim().split(" ").reverse() || [];
+      const namePartsB = b.hoVaTen?.trim().split(" ").reverse() || [];
       const len = Math.max(namePartsA.length, namePartsB.length);
 
       for (let i = 0; i < len; i++) {
         const partA = (namePartsA[i] || "").toLowerCase();
         const partB = (namePartsB[i] || "").toLowerCase();
-        const cmp = partA.localeCompare(partB);
+        const cmp = partA.localeCompare(partB, "vi");
         if (cmp !== 0) return cmp;
       }
       return 0;
@@ -136,20 +162,25 @@ const loadResults = async () => {
 
     data.sort(compareVietnameseName);
 
-    // Thêm STT
-    const numberedData = data.map((item, idx) => ({ stt: idx + 1, ...item }));
-    setResults(numberedData);
+    // ===============================
+    // 🔹 THÊM STT
+    // ===============================
+    const numberedData = data.map((item, idx) => ({
+      stt: idx + 1,
+      ...item,
+    }));
 
+    setResults(numberedData);
   } catch (err) {
     console.error("❌ Lỗi khi load kết quả:", err);
     setResults([]);
+    setSnackbarSeverity("error");
     setSnackbarMessage("❌ Lỗi khi load kết quả!");
     setSnackbarOpen(true);
   }
 
   setLoading(false);
 };
-
 
   useEffect(() => {
     loadResults();
@@ -302,65 +333,103 @@ const loadResults = async () => {
     },
   };
 
+  const circleIconStyle = {
+    bgcolor: "white",
+    boxShadow: 1,
+    p: 0.5,          // giảm padding
+    width: 35,       // kích thước vòng tròn
+    height: 35,
+    "& svg": {
+      fontSize: 20,  // kích thước icon
+    },
+    "&:hover": {
+      bgcolor: "primary.light",
+      color: "white",
+    },
+  };
+
   return (
     <Box sx={{ minHeight: "100vh", background: "linear-gradient(to bottom, #e3f2fd, #bbdefb)", pt: 3, px: 2, display: "flex", justifyContent: "center" }}>
-      <Paper sx={{ p: 4, borderRadius: 3, width: "100%", maxWidth: 900, bgcolor: "white" }} elevation={6}>
+      <Paper sx={{ p: 4, borderRadius: 3, width: "100%", maxWidth: 700, bgcolor: "white" }} elevation={6}>
         <Box
           sx={{
             position: "relative",
-            display: "flex",
-            alignItems: "center",
             mb: 2,
-            flexWrap: { xs: "wrap", sm: "nowrap" }, // cho phép xuống hàng trên mobile
           }}
         >
-          {/* ICON – GIỮ NGUYÊN */}
-          <Stack direction="row" spacing={1}>
-            <Tooltip title="Xuất Excel">
-              <IconButton onClick={handleExportExcel} color="primary">
-                <FileDownload />
-              </IconButton>
-            </Tooltip>
+          {/* ICONS – luôn căn trái */}
+          <Box sx={{ display: "flex", alignItems: "center", mt: -2, ml: -2 }}>
+            <Stack direction="row" spacing={1}>
+              <Tooltip title="Xuất Excel">
+                <IconButton
+                  onClick={handleExportExcel}
+                  sx={{
+                    ...circleIconStyle,
+                    color: "primary.main",
+                  }}
+                >
+                  <FileDownload />
+                </IconButton>
+              </Tooltip>
 
-            <Tooltip title="Xóa lớp">
-              <IconButton onClick={handleDeleteClass} color="error" disabled={deleting}>
-                <Delete />
-              </IconButton>
-            </Tooltip>
+              <Tooltip title="Xóa lớp">
+                <IconButton
+                  onClick={handleDeleteClass}
+                  disabled={deleting}
+                  sx={{
+                    ...circleIconStyle,
+                    color: "error.main",
+                    "&:hover": {
+                      bgcolor: "error.main",
+                      color: "#fff",
+                    },
+                  }}
+                >
+                  <Delete />
+                </IconButton>
+              </Tooltip>
 
-            <Tooltip title="Xóa toàn trường theo học kỳ">
-              <IconButton
-                onClick={handleDeleteSchoolBySemester}
-                color="error"
-                disabled={deleting}
-              >
-                <DeleteForever />
-              </IconButton>
-            </Tooltip>
-          </Stack>
+              <Tooltip title="Xóa toàn trường theo học kỳ">
+                <IconButton
+                  onClick={handleDeleteSchoolBySemester}
+                  disabled={deleting}
+                  sx={{
+                    ...circleIconStyle,
+                    color: "#d32f2f",
+                    "&:hover": {
+                      bgcolor: "#d32f2f",
+                      color: "#fff",
+                    },
+                  }}
+                >
+                  <DeleteForever />
+                </IconButton>
+              </Tooltip>
+            </Stack>
+          </Box>
 
-          {/* TIÊU ĐỀ */}
-          <Typography
-            variant="h5"
-            fontWeight="bold"
+          {/* TIÊU ĐỀ – căn giữa như mẫu */}
+          <Box
             sx={{
-              color: "#1976d2",
-
-              /* Mobile: xuống hàng */
-              width: { xs: "100%", sm: "auto" },
-              textAlign: "center",
-              mt: { xs: 1, sm: 0 },
-
-              /* Desktop: căn giữa tuyệt đối */
-              position: { xs: "static", sm: "absolute" },
-              left: { sm: "50%" },
-              transform: { sm: "translateX(-50%)" },
+              display: "flex",
+              justifyContent: "center",
+              mb: 3,
             }}
           >
-            KẾT QUẢ KIỂM TRA
-          </Typography>
+            <Typography
+              variant="h5"
+              fontWeight="bold"
+              sx={{
+                color: "#1976d2",
+                mt: 1,
+                textAlign: "center",
+              }}
+            >
+              KẾT QUẢ KIỂM TRA
+            </Typography>
+          </Box>
         </Box>
-
+        
         <Box sx={{ display: "flex", gap: 2, mb: 3, flexWrap: "wrap", justifyContent: "center" }}>
           <TextField
             select
@@ -403,42 +472,113 @@ const loadResults = async () => {
           <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}><CircularProgress /></Box>
         ) : (
           <Box sx={{ width: "100%", overflowX: "auto" }}>
-            <TableContainer component={Paper} sx={{ boxShadow: "none", minWidth: 750 }}>
-              <Table size="small">
+            <TableContainer
+              component={Paper}
+              sx={{
+                boxShadow: "none",
+                minWidth: 700,        // ⬅️ tổng chiều rộng bảng
+                overflowX: "auto",
+              }}
+            >
+              <Table
+                size="small"
+                sx={{
+                  tableLayout: "fixed", // ⬅️ QUAN TRỌNG: ép width theo TableCell
+                }}
+              >
                 <TableHead>
                   <TableRow>
-                    <TableCell sx={{ bgcolor: "#1976d2", color: "#fff", textAlign: "center", width: 50 }}>STT</TableCell>
-                    <TableCell sx={{ bgcolor: "#1976d2", color: "#fff", textAlign: "center", width: 200 }}>Họ và tên</TableCell>
-                    <TableCell sx={{ bgcolor: "#1976d2", color: "#fff", textAlign: "center", width: 80 }}>Lớp</TableCell>
-                    <TableCell sx={{ bgcolor: "#1976d2", color: "#fff", textAlign: "center", width: 100 }}>Môn</TableCell>
-                    <TableCell sx={{ bgcolor: "#1976d2", color: "#fff", textAlign: "center", width: 120 }}>Ngày</TableCell>
-                    <TableCell sx={{ bgcolor: "#1976d2", color: "#fff", textAlign: "center", width: 120 }}>Thời gian</TableCell>
-                    <TableCell sx={{ bgcolor: "#1976d2", color: "#fff", textAlign: "center", width: 80 }}>Điểm</TableCell>
+                    <TableCell
+                      sx={{ bgcolor: "#1976d2", color: "#fff", textAlign: "center", width: 50 }}
+                    >
+                      STT
+                    </TableCell>
+
+                    <TableCell
+                      sx={{ bgcolor: "#1976d2", color: "#fff", textAlign: "center", width: 200 }}
+                    >
+                      Họ và tên
+                    </TableCell>
+
+                    <TableCell
+                      sx={{ bgcolor: "#1976d2", color: "#fff", textAlign: "center", width: 70 }}
+                    >
+                      Điểm
+                    </TableCell>
+
+                    <TableCell
+                      sx={{ bgcolor: "#1976d2", color: "#fff", textAlign: "center", width: 70 }}
+                    >
+                      Thời gian
+                    </TableCell>
+
+                    <TableCell
+                      sx={{ bgcolor: "#1976d2", color: "#fff", textAlign: "center", width: 100 }}
+                    >
+                      Ngày
+                    </TableCell>
                   </TableRow>
                 </TableHead>
+
                 <TableBody>
-                  {(results.length > 0 ? results : Array.from({ length: 5 }, (_, i) => ({
-                    stt: i + 1,
-                    hoVaTen: "",
-                    lop: "",
-                    mon: "",
-                    ngayKiemTra: "",
-                    thoiGianLamBai: "",
-                    diem: ""
-                  }))).map(r => (
+                  {(results.length > 0
+                    ? results
+                    : Array.from({ length: 5 }, (_, i) => ({
+                        stt: i + 1,
+                        hoVaTen: "",
+                        diem: "",
+                        thoiGianLamBai: "",
+                        ngayHienThi: "",
+                      }))
+                  ).map((r) => (
                     <TableRow key={r.stt}>
-                      <TableCell sx={{ px: 1, textAlign: "center", border: "1px solid rgba(0,0,0,0.12)" }}>{r.stt}</TableCell>
-                      <TableCell sx={{ px: 1, textAlign: "left", border: "1px solid rgba(0,0,0,0.12)" }}>{r.hoVaTen}</TableCell>
-                      <TableCell sx={{ px: 1, textAlign: "center", border: "1px solid rgba(0,0,0,0.12)" }}>{r.lop}</TableCell>
-                      <TableCell sx={{ px: 1, textAlign: "center", border: "1px solid rgba(0,0,0,0.12)" }}>{r.mon}</TableCell>
-                      <TableCell sx={{ px: 1, textAlign: "center", border: "1px solid rgba(0,0,0,0.12)" }}>{r.ngayKiemTra}</TableCell>
-                      <TableCell sx={{ px: 1, textAlign: "center", border: "1px solid rgba(0,0,0,0.12)" }}>{r.thoiGianLamBai}</TableCell>
-                      <TableCell sx={{ px: 1, textAlign: "center", border: "1px solid rgba(0,0,0,0.12)", fontWeight: "bold" }}>{r.diem}</TableCell>
+                      <TableCell
+                        sx={{ px: 1, textAlign: "center", border: "1px solid rgba(0,0,0,0.12)" }}
+                      >
+                        {r.stt}
+                      </TableCell>
+
+                      <TableCell
+                        sx={{
+                          px: 1,
+                          textAlign: "left",
+                          border: "1px solid rgba(0,0,0,0.12)",
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis", // ⬅️ tên dài không phá layout
+                        }}
+                      >
+                        {r.hoVaTen}
+                      </TableCell>
+
+                      <TableCell
+                        sx={{
+                          px: 1,
+                          textAlign: "center",
+                          border: "1px solid rgba(0,0,0,0.12)",
+                          fontWeight: "bold",
+                        }}
+                      >
+                        {r.diem}
+                      </TableCell>
+
+                      <TableCell
+                        sx={{ px: 1, textAlign: "center", border: "1px solid rgba(0,0,0,0.12)" }}
+                      >
+                        {r.thoiGianLamBai}
+                      </TableCell>
+
+                      <TableCell
+                        sx={{ px: 1, textAlign: "center", border: "1px solid rgba(0,0,0,0.12)" }}
+                      >
+                        {r.ngayHienThi}
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
             </TableContainer>
+
           </Box>
         )}
 

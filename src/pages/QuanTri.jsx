@@ -384,8 +384,6 @@ export default function QuanTri() {
     }
   };
 
-
-
   const renderConfig = isLamVanBen ? configLocal : configOther;
 
   return (

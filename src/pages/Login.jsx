@@ -21,7 +21,7 @@ import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebase";
 
 // ⭐ Danh sách tài khoản
-const ACCOUNTS = ["TH Bình Khánh", "TH Lâm Văn Bền", "Admin"];
+const ACCOUNTS = ["TH Lâm Văn Bền", "Admin"];
 
 export default function Login() {
   const [username, setUsername] = useState(ACCOUNTS[0]);
@@ -30,46 +30,56 @@ export default function Login() {
   const navigate = useNavigate();
 
   const handleLogin = async () => {
-    if (!ACCOUNTS.includes(username)) {
-      setSnackbar({ open: true, message: "❌ Tài khoản không tồn tại!", severity: "error" });
+  if (!ACCOUNTS.includes(username)) {
+    setSnackbar({
+      open: true,
+      message: "❌ Tài khoản không tồn tại!",
+      severity: "error",
+    });
+    return;
+  }
+
+  try {
+    // ⭐ Xác định document ID trong MATKHAU
+    const docId = username === "TH Lâm Văn Bền" ? "LVB" : "ADMIN";
+
+    // ⭐ Lấy mật khẩu lưu trong Firestore
+    const snap = await getDoc(doc(db, "MATKHAU", docId));
+    const savedPw = snap.exists() ? snap.data().pass : null;
+
+    if (!savedPw) {
+      setSnackbar({
+        open: true,
+        message: "❌ Không tìm thấy mật khẩu!",
+        severity: "error",
+      });
       return;
     }
 
-    try {
-      // ⭐ Xác định document ID trong MATKHAU
-      let docId = "ADMIN";
-      if (username === "TH Lâm Văn Bền") docId = "LVB";
-      else if (username === "TH Bình Khánh") docId = "BK";
-
-      // ⭐ Lấy mật khẩu lưu trong Firestore
-      const snap = await getDoc(doc(db, "MATKHAU", docId));
-      const savedPw = snap.exists() ? snap.data().pass : null;
-
-      if (!savedPw) {
-        setSnackbar({ open: true, message: "❌ Không tìm thấy mật khẩu!", severity: "error" });
-        return;
-      }
-
-      // ⭐ So sánh mật khẩu
-      if (password === savedPw) {
-        localStorage.setItem("loggedIn", "true");
-        localStorage.setItem("account", username);
-        localStorage.setItem("school", username);
-        window.dispatchEvent(new Event("storage"));
-        navigate("/tracnghiem-gv");
-      } else {
-        setSnackbar({ open: true, message: "❌ Mật khẩu sai!", severity: "error" });
-      }
-
-    } catch (err) {
-      console.error(err);
+    // ⭐ So sánh mật khẩu
+    if (password === savedPw) {
+      localStorage.setItem("loggedIn", "true");
+      localStorage.setItem("account", username);
+      localStorage.setItem("school", "TH Lâm Văn Bền");
+      window.dispatchEvent(new Event("storage"));
+      navigate("/tracnghiem-gv");
+    } else {
       setSnackbar({
         open: true,
-        message: "❌ Lỗi kết nối Firestore!",
+        message: "❌ Mật khẩu sai!",
         severity: "error",
       });
     }
-  };
+  } catch (err) {
+    console.error(err);
+    setSnackbar({
+      open: true,
+      message: "❌ Lỗi kết nối Firestore!",
+      severity: "error",
+    });
+  }
+};
+
 
 
   const handleClose = () => navigate("/hocsinh");
