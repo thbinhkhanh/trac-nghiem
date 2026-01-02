@@ -1,26 +1,21 @@
 import React, { createContext, useState, useEffect, useContext } from "react";
-import { doc, onSnapshot, setDoc, getDoc } from "firebase/firestore";
+import { doc, onSnapshot, setDoc } from "firebase/firestore";
 import { db } from "../firebase";
 
 export const ConfigContext = createContext();
 
 export const ConfigProvider = ({ children }) => {
+  // Các field cần thiết
   const defaultConfig = {
-    tuan: 1,
-    mon: "Tin học",
-    login: false,
-    hocKy: "Giữa kỳ I",
-    lop: "",
-    tracNghiem: false,
-    deTracNghiem: "",
-    timeLimit: 1, 
-    choXemDiem: false,  
-    choXemDapAn: false,     
-    xuatFileBaiLam: false,  
-    truyCap_BinhKhanh: false,
-    truyCap_LamVanBen: false,
+    choXemDapAn: false,
+    choXemDiem: false,
+    hocKy: "Cuối kỳ I",
+    timeLimit: 20,        // phút
+    xuatFileBaiLam: true,
+    deTracNghiem: null,
   };
 
+  // Load từ localStorage
   const storedConfig = JSON.parse(localStorage.getItem("appConfig") || "{}");
   const allowedKeys = Object.keys(defaultConfig);
   const filteredStored = Object.fromEntries(
@@ -34,7 +29,7 @@ export const ConfigProvider = ({ children }) => {
     localStorage.setItem("appConfig", JSON.stringify(config));
   }, [config]);
 
-  // Chỉ đọc Firestore snapshot, không ghi lại
+  // 🔹 Snapshot realtime: chỉ đồng bộ checkbox, không ghi đè hocKy & timeLimit
   useEffect(() => {
     const docRef = doc(db, "CONFIG", "config");
     const unsubscribe = onSnapshot(
@@ -43,12 +38,14 @@ export const ConfigProvider = ({ children }) => {
         if (!snapshot.exists()) return;
         const data = snapshot.data();
 
-        setConfig((prev) => {
-          const hasDiff = Object.keys(defaultConfig).some(
-            (key) => prev[key] !== data[key]
-          );
-          return hasDiff ? { ...prev, ...data } : prev;
-        });
+        setConfig((prev) => ({
+          ...prev,
+          choXemDapAn: data.choXemDapAn ?? prev.choXemDapAn,
+          choXemDiem: data.choXemDiem ?? prev.choXemDiem,
+          xuatFileBaiLam: data.xuatFileBaiLam ?? prev.xuatFileBaiLam,
+          deTracNghiem: data.deTracNghiem ?? prev.deTracNghiem,
+          // hocKy và timeLimit giữ nguyên giá trị local
+        }));
       },
       (err) => console.error("❌ Firestore snapshot lỗi:", err)
     );
@@ -56,13 +53,12 @@ export const ConfigProvider = ({ children }) => {
     return () => unsubscribe();
   }, []);
 
-  // Hàm cập nhật config do người dùng thao tác
+  // 🔹 Hàm cập nhật config do user thao tác
   const updateConfig = async (newValues) => {
     const filtered = Object.fromEntries(
       Object.entries(newValues).filter(([k]) => allowedKeys.includes(k))
     );
 
-    // Chỉ update nếu khác hẳn state hiện tại
     const hasDiff = Object.keys(filtered).some((k) => filtered[k] !== config[k]);
     if (!hasDiff) return;
 
@@ -80,4 +76,5 @@ export const ConfigProvider = ({ children }) => {
   );
 };
 
+// Hook tiện lợi
 export const useConfig = () => useContext(ConfigContext);

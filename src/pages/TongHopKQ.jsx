@@ -1,34 +1,15 @@
 import React, { useState, useEffect } from "react";
 import {
-  Box,
-  Paper,
-  Typography,
-  TextField,
-  MenuItem,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  CircularProgress,
-  IconButton,
-  Stack,
-  Tooltip,
-  Snackbar, 
-  Alert,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
+  Box, Paper, Typography, TextField, MenuItem,
+  Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
+  CircularProgress, IconButton, Stack, Tooltip, Snackbar, Alert,
+  Dialog, DialogTitle, DialogContent, DialogActions, Button
 } from "@mui/material";
 import { db } from "../firebase";
 import { collection, getDocs, doc, getDoc, writeBatch, deleteDoc } from "firebase/firestore";
 import { Delete, DeleteForever, FileDownload } from "@mui/icons-material";
 import { exportKetQuaExcel } from "../utils/exportKetQuaExcel";
 import CloseIcon from "@mui/icons-material/Close";
-
 
 export default function TongHopKQ() {
   const [classesList, setClassesList] = useState([]);
@@ -37,7 +18,7 @@ export default function TongHopKQ() {
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [hocKi, setHocKi] = useState(""); // Học kỳ
+  const [hocKi, setHocKi] = useState(""); 
 
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
@@ -48,168 +29,114 @@ export default function TongHopKQ() {
   const [dialogContent, setDialogContent] = useState("");
   const [dialogAction, setDialogAction] = useState(null);
 
+  const folder = "LAMVANBEN"; 
 
-  // Lấy học kỳ và danh sách lớp từ Firestore
-  const username = localStorage.getItem("account") || "";
-const folder = username === "TH Lâm Văn Bền" ? "LAMVANBEN" : "BINHKHANH";
-
-// Lấy học kỳ
-useEffect(() => {
-  const fetchHocKi = async () => {
-    try {
-      const folder = username === "TH Lâm Văn Bền" ? "LAMVANBEN" : "BINHKHANH";
-      console.log("📌 Folder (trường):", folder);
-
-      const configRef = doc(db, folder, "config");
-      const configSnap = await getDoc(configRef);
-
-      const hocKiValue = configSnap.exists() ? configSnap.data().hocKy : "GKI";
-      setHocKi(hocKiValue);
-
-      console.log("📌 Học kỳ lấy được từ config:", hocKiValue);
-    } catch (err) {
-      console.error("❌ Lỗi khi lấy học kỳ:", err);
-      setHocKi("GKI");
-    }
-  };
-
-  fetchHocKi();
-}, [username]);
-
-// Lấy danh sách lớp
-useEffect(() => {
-  const fetchClasses = async () => {
-    try {
-      let classList = [];
-      if (folder === "LAMVANBEN") {
-        const lopSnap = await getDoc(doc(db, folder, "lop"));
-        classList = lopSnap.exists() ? lopSnap.data().list ?? [] : [];
-      } else {
-        const snapshot = await getDocs(collection(db, "DANHSACH"));
-        classList = snapshot.docs.map(doc => doc.id);
-      }
-      classList.sort((a, b) => a.localeCompare(b));
-      setClassesList(classList);
-      setSelectedLop(classList[0] || "");
-    } catch (err) {
-      console.error(err);
-    }
-  };
-  fetchClasses();
-}, [folder]);
-
-// Load kết quả
-const loadResults = async () => {
-  if (!selectedLop || !selectedMon || !hocKi) return;
-  setLoading(true);
-
-  try {
-    const colRef = collection(db, `${folder}/${hocKi}/${selectedLop}`);
-    const snapshot = await getDocs(colRef);
-
-    // ❌ Không có dữ liệu
-    if (snapshot.empty) {
-      setResults([]);
-      setSnackbarSeverity("warning");
-      setSnackbarMessage(`Không tìm thấy kết quả cho lớp ${selectedLop}`);
-      setSnackbarOpen(true);
-      setLoading(false);
-      return;
-    }
-
-    // ===============================
-    // 🔹 MAP + CHUẨN HOÁ DỮ LIỆU
-    // ===============================
-    const data = snapshot.docs.map((docSnap) => {
-      const d = docSnap.data();
-
-      // ✅ Chuẩn hoá ngày hiển thị
-      let ngayHienThi = "";
-
-      // Firestore Timestamp
-      if (d.ngayKiemTra?.seconds) {
-        ngayHienThi = new Date(d.ngayKiemTra.seconds * 1000)
-          .toLocaleDateString("vi-VN");
-      }
-      // String ngày
-      else if (typeof d.ngayKiemTra === "string") {
-        ngayHienThi = d.ngayKiemTra;
-      }
-
-      return {
-        docId: docSnap.id,
-        ...d,
-        ngayHienThi, // 👈 field bảng & Excel đang dùng
-      };
-    });
-
-    // ===============================
-    // 🔹 SẮP XẾP TÊN CHUẨN VIỆT NAM
-    // ===============================
-    const compareVietnameseName = (a, b) => {
-      const namePartsA = a.hoVaTen?.trim().split(" ").reverse() || [];
-      const namePartsB = b.hoVaTen?.trim().split(" ").reverse() || [];
-      const len = Math.max(namePartsA.length, namePartsB.length);
-
-      for (let i = 0; i < len; i++) {
-        const partA = (namePartsA[i] || "").toLowerCase();
-        const partB = (namePartsB[i] || "").toLowerCase();
-        const cmp = partA.localeCompare(partB, "vi");
-        if (cmp !== 0) return cmp;
-      }
-      return 0;
-    };
-
-    data.sort(compareVietnameseName);
-
-    // ===============================
-    // 🔹 THÊM STT
-    // ===============================
-    const numberedData = data.map((item, idx) => ({
-      stt: idx + 1,
-      ...item,
-    }));
-
-    setResults(numberedData);
-  } catch (err) {
-    console.error("❌ Lỗi khi load kết quả:", err);
-    setResults([]);
-    setSnackbarSeverity("error");
-    setSnackbarMessage("❌ Lỗi khi load kết quả!");
-    setSnackbarOpen(true);
-  }
-
-  setLoading(false);
-};
-
+  // 🔹 Lấy học kỳ từ CONFIG/config
   useEffect(() => {
-    loadResults();
-  }, [selectedLop, selectedMon, hocKi]);
-  
-  // Xóa toàn bộ lớp
+    const fetchHocKi = async () => {
+      try {
+        const configRef = doc(db, "CONFIG", "config"); 
+        const configSnap = await getDoc(configRef);
+        const hocKiValue = configSnap.exists() ? configSnap.data().hocKy : "GKI";
+        setHocKi(hocKiValue);
+      } catch (err) {
+        console.error("❌ Lỗi khi lấy học kỳ:", err);
+        setHocKi("GKI");
+      }
+    };
+    fetchHocKi();
+  }, []);
+
+
+  // Lấy danh sách lớp
+  useEffect(() => {
+    const fetchClasses = async () => {
+      try {
+        const lopSnap = await getDoc(doc(db, folder, "lop"));
+        const classList = lopSnap.exists() ? lopSnap.data().list ?? [] : [];
+        classList.sort((a, b) => a.localeCompare(b));
+        setClassesList(classList);
+        setSelectedLop(classList[0] || "");
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchClasses();
+  }, []);
+
+  // Load kết quả
+  const loadResults = async () => {
+    if (!selectedLop || !selectedMon || !hocKi) return;
+    setLoading(true);
+    try {
+      const colRef = collection(db, `${folder}/${hocKi}/${selectedLop}`);
+      const snapshot = await getDocs(colRef);
+      if (snapshot.empty) {
+        setResults([]);
+        setSnackbarSeverity("warning");
+        setSnackbarMessage(`Không tìm thấy kết quả cho lớp ${selectedLop}`);
+        setSnackbarOpen(true);
+        setLoading(false);
+        return;
+      }
+
+      const data = snapshot.docs.map((docSnap) => {
+        const d = docSnap.data();
+        let ngayHienThi = "";
+        if (d.ngayKiemTra?.seconds) {
+          ngayHienThi = new Date(d.ngayKiemTra.seconds * 1000).toLocaleDateString("vi-VN");
+        } else if (typeof d.ngayKiemTra === "string") {
+          ngayHienThi = d.ngayKiemTra;
+        }
+        return { docId: docSnap.id, ...d, ngayHienThi };
+      });
+
+      const compareVietnameseName = (a, b) => {
+        const namePartsA = a.hoVaTen?.trim().split(" ").reverse() || [];
+        const namePartsB = b.hoVaTen?.trim().split(" ").reverse() || [];
+        const len = Math.max(namePartsA.length, namePartsB.length);
+        for (let i = 0; i < len; i++) {
+          const partA = (namePartsA[i] || "").toLowerCase();
+          const partB = (namePartsB[i] || "").toLowerCase();
+          const cmp = partA.localeCompare(partB, "vi");
+          if (cmp !== 0) return cmp;
+        }
+        return 0;
+      };
+      data.sort(compareVietnameseName);
+
+      const numberedData = data.map((item, idx) => ({ stt: idx + 1, ...item }));
+      setResults(numberedData);
+    } catch (err) {
+      console.error("❌ Lỗi khi load kết quả:", err);
+      setResults([]);
+      setSnackbarSeverity("error");
+      setSnackbarMessage("❌ Lỗi khi load kết quả!");
+      setSnackbarOpen(true);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => { loadResults(); }, [selectedLop, selectedMon, hocKi]);
+
+  // Xóa lớp
   const handleDeleteClass = () => {
     openConfirmDialog(
       "Xóa kết quả lớp",
-      //`⚠️ Bạn có chắc muốn xóa kết quả ${hocKi} của lớp ${selectedLop}?\nHành động này không thể hoàn tác!`,
       `⚠️ Bạn có chắc muốn xóa kết quả của lớp ${selectedLop}?\nHành động này không thể hoàn tác!`,
       async () => {
         try {
           const colRef = collection(db, `${folder}/${hocKi}/${selectedLop}`);
           const snapshot = await getDocs(colRef);
-
-          // ❌ Không có dữ liệu
           if (snapshot.empty) {
             setSnackbarSeverity("warning");
             setSnackbarMessage(`Không có dữ liệu để xóa cho lớp ${selectedLop}!`);
             setSnackbarOpen(true);
             return;
           }
-
-          // ✅ Có dữ liệu → xóa
           const batch = writeBatch(db);
           snapshot.docs.forEach((d) => batch.delete(d.ref));
           await batch.commit();
-
           setResults([]);
           setSnackbarSeverity("success");
           setSnackbarMessage("✅ Đã xóa kết quả của lớp thành công!");
@@ -224,35 +151,26 @@ const loadResults = async () => {
     );
   };
 
+  // Xóa toàn trường
   const handleDeleteSchoolBySemester = () => {
     openConfirmDialog(
       "Xóa toàn trường",
-      //`⚠️ Bạn có chắc muốn xóa kết quả ${hocKi} của TOÀN TRƯỜNG?\nHành động này không thể hoàn tác!`,
       `⚠️ Bạn có chắc muốn xóa kết quả của toàn trường?\nHành động này không thể hoàn tác!`,
       async () => {
         try {
           const hocKyRef = doc(db, folder, hocKi);
           const hocKySnap = await getDoc(hocKyRef);
-
-          // ❌ Không có dữ liệu
           if (!hocKySnap.exists()) {
             setSnackbarSeverity("warning");
             setSnackbarMessage(`Không có dữ liệu ${hocKi} để xóa!`);
             setSnackbarOpen(true);
             return;
           }
-
-          // ✅ Có dữ liệu → xóa
           await deleteDoc(hocKyRef);
-
           setResults([]);
           setSnackbarSeverity("success");
           setSnackbarMessage(`✅ Đã xóa kết quả ${hocKi} của TOÀN TRƯỜNG`);
           setSnackbarOpen(true);
-
-          console.log(
-            `🔥 Firestore: Xóa toàn trường theo học kỳ ${hocKi} thành công`
-          );
         } catch (err) {
           console.error("❌ Firestore: Xóa toàn trường thất bại:", err);
           setSnackbarSeverity("error");
@@ -263,12 +181,10 @@ const loadResults = async () => {
     );
   };
 
-
   // Xuất Excel
   const handleExportExcel = () => {
     openConfirmDialog(
       "Xuất Excel",
-      //`Bạn có muốn xuất kết quả lớp ${selectedLop} (${hocKi}) ra file Excel không?`,
       `Bạn có muốn xuất kết quả lớp ${selectedLop} ra file Excel không?`,
       () => {
         try {
@@ -278,9 +194,7 @@ const loadResults = async () => {
             setSnackbarOpen(true);
             return;
           }
-
           exportKetQuaExcel(results, selectedLop, selectedMon, hocKi);
-
           setSnackbarSeverity("success");
           setSnackbarMessage("✅ Xuất file Excel thành công!");
           setSnackbarOpen(true);
@@ -294,58 +208,28 @@ const loadResults = async () => {
     );
   };
 
-
   const openConfirmDialog = (title, content, onConfirm) => {
     setDialogTitle(title);
     setDialogContent(content);
-
-    // ❗ đóng dialog NGAY rồi mới chạy xử lý
-    setDialogAction(() => () => {
-      setDialogOpen(false);
-      setTimeout(() => {
-        onConfirm();
-      }, 0);
-    });
-
+    setDialogAction(() => () => { setDialogOpen(false); setTimeout(() => onConfirm(), 0); });
     setDialogOpen(true);
   };
 
   const snackbarStyleMap = {
-    success: {
-      backgroundColor: "#2e7d32",
-      color: "#fff",
-      fontWeight: "bold",
-    },
-    error: {
-      backgroundColor: "#d32f2f",
-      color: "#fff",
-      fontWeight: "bold",
-    },
-    warning: {
-      backgroundColor: "#ed6c02",
-      color: "#fff",
-      fontWeight: "bold",
-    },
-    info: {
-      backgroundColor: "#0288d1",
-      color: "#fff",
-      fontWeight: "bold",
-    },
+    success: { backgroundColor: "#2e7d32", color: "#fff", fontWeight: "bold" },
+    error: { backgroundColor: "#d32f2f", color: "#fff", fontWeight: "bold" },
+    warning: { backgroundColor: "#ed6c02", color: "#fff", fontWeight: "bold" },
+    info: { backgroundColor: "#0288d1", color: "#fff", fontWeight: "bold" },
   };
 
   const circleIconStyle = {
     bgcolor: "white",
     boxShadow: 1,
-    p: 0.5,          // giảm padding
-    width: 35,       // kích thước vòng tròn
+    p: 0.5,
+    width: 35,
     height: 35,
-    "& svg": {
-      fontSize: 20,  // kích thước icon
-    },
-    "&:hover": {
-      bgcolor: "primary.light",
-      color: "white",
-    },
+    "& svg": { fontSize: 20 },
+    "&:hover": { bgcolor: "primary.light", color: "white" },
   };
 
   return (

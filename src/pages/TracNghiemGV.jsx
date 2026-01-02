@@ -103,7 +103,6 @@ const [examLetter, setExamLetter] = useState(savedConfig.examLetter || "");
     return data.secure_url; // URL hình đã upload
   };
 
-
   useEffect(() => {
     const savedId = localStorage.getItem("deTracNghiemId");
     if (savedId) {
@@ -116,23 +115,19 @@ const [examLetter, setExamLetter] = useState(savedConfig.examLetter || "");
     const fetchInitialQuiz = async () => {
       try {
         // Lấy tên trường ưu tiên từ state, fallback localStorage
+        // (bỏ qua điều kiện riêng cho TH Lâm Văn Bền)
         const schoolFromState = location?.state?.school;
         const schoolToUse = schoolFromState || localStorage.getItem("school") || "";
 
         let docId = null;
-        let collectionName = "TRACNGHIEM_LVB"; // ✅ Chỉ dùng collection LVB
+        const collectionName = "TRACNGHIEM_LVB"; // chỉ dùng collection LVB
 
-        // Lấy config từ Firestore
-        let cfgRef;
-        if (schoolToUse === "TH Lâm Văn Bền") {
-          cfgRef = doc(db, "LAMVANBEN", "config");
-        } else {
-          cfgRef = doc(db, "CONFIG", "config");
-        }
+        // Lấy config từ Firestore (luôn lấy CONFIG/config)
+        const cfgRef = doc(db, "CONFIG", "config");
 
         const cfgSnap = await getDoc(cfgRef);
         if (!cfgSnap.exists()) {
-          console.warn(`Không tìm thấy config ${schoolToUse === "TH Lâm Văn Bền" ? "LAMVANBEN" : "CONFIG/config"}`);
+          console.warn("Không tìm thấy config CONFIG/config");
           setQuestions([]);
           return;
         }
@@ -185,6 +180,7 @@ const [examLetter, setExamLetter] = useState(savedConfig.examLetter || "");
 
     fetchInitialQuiz();
   }, [location?.state?.school]);
+
 
 
 
@@ -463,6 +459,15 @@ useEffect(() => {
         examLetter,
         questions: questionsToSave,
       });
+      
+      const configRef = doc(db, "CONFIG", "config");
+      await setDoc(
+        configRef,
+        {
+          deTracNghiem: docId, 
+        },
+        { merge: true } // giữ các field khác nguyên vẹn
+      );
 
       // Cập nhật context nếu là đề mới
       const newDoc = { id: docId, class: selectedClass, subject: selectedSubject, semester, questions: questionsToSave };
@@ -533,7 +538,6 @@ useEffect(() => {
     }
   };
 
-
   // 🔹 Hàm mở đề được chọn
   const handleOpenSelectedDoc = async () => {
     if (!selectedDoc) {
@@ -599,22 +603,25 @@ useEffect(() => {
       setOpenDialog(false);
       setIsEditingNewDoc(false);
 
-      // 🔹 Nếu muốn vẫn ghi vào LAMVANBEN/config
       if (localStorage.getItem("school") === "TH Lâm Văn Bền") {
-        const lvbConfigRef = doc(db, "LAMVANBEN", "config");
+        const configRef = doc(db, "CONFIG", "config");
+
         await setDoc(
-          lvbConfigRef,
+          configRef,
           {
-            choXemDiem: true,
-            hocKy: "Giữa kỳ I",
-            lop: "3A",
-            mon: "Tin học",
-            xuatFileBaiLam: true,
+            //choXemDiem: true,
+            //deHocKy: data.semester || "Giữa kỳ I",   // lấy trực tiếp từ document
+            //lop: data.class || "3A",                  // lấy trực tiếp từ document
+            // mon: data.subject,                      // nếu muốn lưu môn cũng có thể thêm
+            //xuatFileBaiLam: true,
             deTracNghiem: selectedDoc,
           },
           { merge: true }
         );
-        console.log(`✅ Đã ghi deTracNghiem = "${selectedDoc}" vào LAMVANBEN/config`);
+
+        console.log(
+          `✅ Đã ghi deTracNghiem = "${selectedDoc}", deHocKy = "${data.semester}", lop = "${data.class}" vào CONFIG/config`
+        );
       }
 
     } catch (err) {
@@ -699,22 +706,55 @@ useEffect(() => {
 
 
   useEffect(() => {
-    // Ưu tiên lấy từ context nếu có
-    const contextDocId = quizConfig?.deTracNghiem;
+    const openQuizFromConfig = async () => {
+      const docId = config.deTracNghiem || localStorage.getItem("deTracNghiemId");
+      if (!docId) {
+        setIsEditingNewDoc(true);
+        return;
+      }
 
-    // Nếu không có trong context, thử lấy từ localStorage
-    const storedDocId = localStorage.getItem("deTracNghiemId");
+      try {
+        const collectionName = "TRACNGHIEM_LVB";
+        const docRef = doc(db, collectionName, docId);
+        const docSnap = await getDoc(docRef);
 
-    const docId = contextDocId || storedDocId || null;
+        if (!docSnap.exists()) {
+          console.warn("Không tìm thấy đề:", docId);
+          setIsEditingNewDoc(true);
+          return;
+        }
 
-    if (docId) {
-      setSelectedDoc(docId);
-      setIsEditingNewDoc(false); // có đề → không phải đề mới
-    } else {
-      setIsEditingNewDoc(true); // không có đề → là đề mới
-    }
-  }, []);
+        const data = docSnap.data();
+        setQuestions(data.questions || []);
+        setSelectedClass(data.class || "");
+        setSelectedSubject(data.subject || "");
+        setSemester(data.semester || "");
+        setSchoolYear(data.schoolYear || "");
+        setExamLetter(data.examLetter || "");
+        setSelectedDoc(docId);
+        setIsEditingNewDoc(false);
 
+        localStorage.setItem("deTracNghiemId", docId);
+        localStorage.setItem("teacherQuiz", JSON.stringify(data.questions || []));
+        localStorage.setItem(
+          "teacherConfig",
+          JSON.stringify({
+            selectedClass: data.class,
+            selectedSubject: data.subject,
+            semester: data.semester,
+            schoolYear: data.schoolYear,
+            examLetter: data.examLetter,
+          })
+        );
+
+        console.log("✅ Đã mở đề:", docId);
+      } catch (err) {
+        console.error("❌ Lỗi mở đề:", err);
+      }
+    };
+
+    openQuizFromConfig();
+  }, [config.deTracNghiem]);
 
   const handleImageChange = async (qi, oi, file) => {
     try {
@@ -748,6 +788,33 @@ useEffect(() => {
         severity: "error",
       });
     }
+  };
+
+  // Hàm format tên đề
+  const formatExamTitle = (examName = "") => {
+    if (!examName) return "";
+
+    // 1. Loại bỏ prefix "quiz_" nếu có
+    let name = examName.startsWith("quiz_") ? examName.slice(5) : examName;
+
+    // 2. Tách các phần theo dấu "_"
+    const parts = name.split("_");
+
+    // 3. Tìm lớp (ví dụ: "Lớp 4")
+    const classPart = parts.find(p => p.toLowerCase().includes("lớp")) || "";
+    const classNumber = classPart.match(/\d+/)?.[0] || "";
+
+    // 4. Tìm môn (giả sử môn là phần không phải "Lớp" và không phải CKI)
+    const subjectPart = parts.find(
+      p => !p.toLowerCase().includes("lớp") && !p.toLowerCase().includes("cki")
+    ) || "";
+
+    // 5. Tìm ký hiệu đề (A, B, ...) trong ngoặc
+    const match = examName.match(/\(([^)]+)\)/);
+    const examLetter = match ? match[1] : "";
+
+    // 6. Kết hợp lại: "Môn Lớp (Đề X)"
+    return `${subjectPart.trim()} ${classNumber} ${examLetter ? `(Đề ${examLetter})` : ""}`.trim();
   };
 
   return (
@@ -823,7 +890,7 @@ useEffect(() => {
             </FormControl>
 
             {/* Môn học */}
-            <FormControl size="small" sx={{ flex: 1, minWidth: 120 }}>
+            {/*<FormControl size="small" sx={{ flex: 1, minWidth: 120 }}>
               <InputLabel>Môn học</InputLabel>
               <Select
                 value={selectedSubject || ""}
@@ -836,7 +903,7 @@ useEffect(() => {
                   </MenuItem>
                 ))}
               </Select>
-            </FormControl>
+            </FormControl>*/}
 
             {/* Học kỳ */}
             <FormControl size="small" sx={{ flex: 1, minWidth: 120 }}>
@@ -1617,7 +1684,8 @@ useEffect(() => {
                       onClick={() => setSelectedDoc(doc.id)}
                       onDoubleClick={() => handleOpenSelectedDoc(doc.id)}
                     >
-                      <Typography variant="subtitle1">{doc.id}</Typography>
+                      {/*<Typography variant="subtitle1">{doc.id}</Typography>*/}
+                      <Typography variant="subtitle1">{formatExamTitle(doc.id)}</Typography>
                     </Stack>
                   ))
               )}

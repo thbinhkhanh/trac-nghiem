@@ -25,8 +25,8 @@ import ExamManager from "./pages/ExamManager";
 import { StudentProvider } from "./context/StudentContext";
 import { ConfigProvider, ConfigContext } from "./context/ConfigContext";
 import { TracNghiemProvider } from "./context/TracNghiemContext";
-import { StudentDataProvider } from "./context/StudentDataContext";
-import { StudentKTDKProvider } from "./context/StudentKTDKContext";
+//import { StudentDataProvider } from "./context/StudentDataContext";
+//import { StudentKTDKProvider } from "./context/StudentKTDKContext";
 
 // 🔹 Import icon
 import MenuBookIcon from "@mui/icons-material/MenuBook";
@@ -163,11 +163,11 @@ export default function App() {
     <ConfigProvider>
       <TracNghiemProvider>
         <StudentProvider>
-          <StudentDataProvider>
-            <StudentKTDKProvider>
+          
+            
               <AppContent />
-            </StudentKTDKProvider>
-          </StudentDataProvider>
+            
+          
         </StudentProvider>
       </TracNghiemProvider>
     </ConfigProvider>

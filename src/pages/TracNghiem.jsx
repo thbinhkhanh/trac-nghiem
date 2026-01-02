@@ -168,30 +168,15 @@ export default function TracNghiem() {
 
       const classLabel = `Lớp ${classNumber}`;
 
-      // 🔹 Lấy config từ LAMVANBEN/config
-      const lvbConfigRef = doc(db, "LAMVANBEN", "config");
-      const lvbConfigSnap = await getDoc(lvbConfigRef);
-      prog += 30;
-      setProgress(prog);
-
-      if (!lvbConfigSnap.exists()) {
-        setSnackbar({
-          open: true,
-          message: "❌ Không tìm thấy config LAMVANBEN!",
-          severity: "error",
-        });
-        setLoading(false);
-        return;
-      }
-
-      const lvbConfigData = lvbConfigSnap.data();
-      hocKiFromConfig = lvbConfigData.hocKy || "";
-      monHocFromConfig = lvbConfigData.mon || "";
-      timeLimitMinutes = lvbConfigData.timeLimit ?? 0;
+      // 🔹 Lấy config trực tiếp từ context
+      hocKiFromConfig = config.hocKy || "Cuối kỳ I";
+      //monHocFromConfig = config.mon || ""; // giữ môn nếu có
+      timeLimitMinutes = config.timeLimit ?? 20;
 
       setTimeLimitMinutes(timeLimitMinutes);
-      setChoXemDiem(lvbConfigData.choXemDiem ?? false);
-      setChoXemDapAn(lvbConfigData.choXemDapAn ?? false);
+      setChoXemDiem(config.choXemDiem ?? false);
+      setChoXemDapAn(config.choXemDapAn ?? false);
+
 
       // 🔹 Lấy đề thi theo lớp
       const deThiRef = collection(db, "DETHI_LVB");
@@ -571,7 +556,7 @@ export default function TracNghiem() {
       const lop = studentClass;
       const docId = normalizeName(studentName);
 
-      const collectionRoot = school === "TH Lâm Văn Bền" ? "LAMVANBEN" : "BINHKHANH";
+      const collectionRoot = "LAMVANBEN";
 
       const docRef = doc(db, `${collectionRoot}/${hocKi}/${lop}/${docId}`);
       await setDoc(docRef, {
@@ -714,7 +699,7 @@ export default function TracNghiem() {
       const lop = studentClass;
       const docId = normalizeName(studentName);
 
-      const collectionRoot = school === "TH Lâm Văn Bền" ? "LAMVANBEN" : "BINHKHANH";
+      const collectionRoot = "LAMVANBEN";
 
       const docRef = doc(db, `${collectionRoot}/${hocKi}/${lop}/${docId}`);
       await setDoc(docRef, {

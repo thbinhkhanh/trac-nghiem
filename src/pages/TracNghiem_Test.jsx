@@ -215,30 +215,15 @@ export default function TracNghiem_Test() {
             return;
           }
 
-          // 🔹 Lấy config từ LAMVANBEN/config
-          const lvbConfigRef = doc(db, "LAMVANBEN", "config");
-          const lvbConfigSnap = await getDoc(lvbConfigRef);
-          prog += 30;
-          setProgress(prog);
-
-          if (!lvbConfigSnap.exists()) {
-            setSnackbar({
-              open: true,
-              message: "❌ Không tìm thấy config LAMVANBEN!",
-              severity: "error",
-            });
-            setLoading(false);
-            return;
-          }
-
-          const lvbConfigData = lvbConfigSnap.data();
-          hocKiFromConfig = lvbConfigData.hocKy || "";
-          monHocFromConfig = lvbConfigData.mon || "";
-          timeLimitMinutes = lvbConfigData.timeLimit ?? 0;
+          // 🔹 Lấy config trực tiếp từ context
+          hocKiFromConfig = config.hocKy || "Cuối kỳ I";
+          //monHocFromConfig = config.mon || ""; // nếu bạn vẫn muốn giữ môn
+          timeLimitMinutes = config.timeLimit ?? 20;
 
           setTimeLimitMinutes(timeLimitMinutes);
-          setChoXemDiem(lvbConfigData.choXemDiem ?? false);
-          setChoXemDapAn(lvbConfigData.choXemDapAn ?? false);
+          setChoXemDiem(config.choXemDiem ?? false);
+          setChoXemDapAn(config.choXemDapAn ?? false);
+
 
           // 🔹 Kiểm tra đề được chọn
           if (!selectedExam) {
@@ -609,24 +594,6 @@ export default function TracNghiem_Test() {
       });
       setOpenResultDialog(true);
 
-            // --- LƯU FIRESTORE ---
-      /*const lop = studentClass;
-      const docId = normalizeName(studentName);
-
-      const collectionRoot = school === "TH Lâm Văn Bền" ? "LAMVANBEN" : "BINHKHANH";
-
-      const docRef = doc(db, `${collectionRoot}/${hocKi}/${lop}/${docId}`);
-      await setDoc(docRef, {
-        hoVaTen: capitalizeName(studentName),
-        lop: lop,
-        mon: monHoc,
-        diem: total,
-        ngayKiemTra,
-        thoiGianLamBai: durationStr,
-      }, { merge: true });
-
-      console.log(`✔ LƯU VÀO ${collectionRoot}:`, hocKi, lop, docId);*/
-
     } catch (err) {
       console.error("❌ Lỗi khi lưu điểm:", err);
     } finally {
@@ -752,24 +719,6 @@ export default function TracNghiem_Test() {
       });
       setOpenResultDialog(true);
 
-            // --- LƯU FIRESTORE ---
-      /*const lop = studentClass;
-      const docId = normalizeName(studentName);
-
-      const collectionRoot = school === "TH Lâm Văn Bền" ? "LAMVANBEN" : "BINHKHANH";
-
-      const docRef = doc(db, `${collectionRoot}/${hocKi}/${lop}/${docId}`);
-      await setDoc(docRef, {
-        hoVaTen: capitalizeName(studentName),
-        lop: lop,
-        mon: monHoc,
-        diem: total,
-        ngayKiemTra,
-        thoiGianLamBai: durationStr,
-      }, { merge: true });
-
-      console.log(`✔ LƯU VÀO ${collectionRoot}:`, hocKi, lop, docId);*/
-
     } catch (err) {
       console.error("❌ Lỗi khi lưu điểm:", err);
     } finally {
@@ -857,6 +806,32 @@ const handleDragEnd = (result) => {
   });
 };
 
+const formatExamTitle = (examName = "") => {
+  if (!examName) return "";
+
+  // 1. Loại bỏ prefix "quiz_" nếu có
+  let name = examName.startsWith("quiz_") ? examName.slice(5) : examName;
+
+  // 2. Tách các phần theo dấu "_"
+  const parts = name.split("_");
+
+  // 3. Tìm lớp (ví dụ: "Lớp 4")
+  const classPart = parts.find(p => p.toLowerCase().includes("lớp")) || "";
+  const classNumber = classPart.match(/\d+/)?.[0] || "";
+
+  // 4. Tìm môn (giả sử môn là phần không phải "Lớp" và không phải CKI)
+  const subjectPart = parts.find(
+    p => !p.toLowerCase().includes("lớp") && !p.toLowerCase().includes("cki")
+  ) || "";
+
+  // 5. Tìm ký hiệu đề (A, B, ...) trong ngoặc
+  const match = examName.match(/\(([^)]+)\)/);
+  const examLetter = match ? match[1] : "";
+
+  // 6. Kết hợp lại: "Môn Lớp (Đề X)"
+  return `${subjectPart.trim()} ${classNumber} ${examLetter ? `(Đề ${examLetter})` : ""}`.trim();
+};
+
 return (
   <Box
     id="quiz-container"  // <-- Thêm dòng này
@@ -938,61 +913,57 @@ return (
 
       {/* Tiêu đề */}
       <Box
-  sx={{
-    width: "60%",
-    maxWidth: 350,
-    mt: 1,
-    mb: 2,
-    ml: "auto",
-    mr: "auto",
-    textAlign: "center",
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-  }}
->
-  {/* Tiêu đề */}
-  <Typography
-    variant="h6"
-    sx={{
-      fontWeight: "bold",
-      fontSize: "20px",
-      mb: 2,
-      mt: -1,
-      color: "#1976d2", // màu xanh
-    }}
-  >
-    TEST ĐỀ KIỂM TRA
-  </Typography>
+        sx={{
+          width: "60%",
+          maxWidth: 350,
+          mt: 1,
+          mb: 2,
+          ml: "auto",
+          mr: "auto",
+          textAlign: "center",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+        }}
+      >
+        {/* Tiêu đề */}
+        <Typography
+          variant="h6"
+          sx={{
+            fontWeight: "bold",
+            fontSize: "20px",
+            mb: 2,
+            mt: -1,
+            color: "#1976d2", // màu xanh
+          }}
+        >
+          TEST ĐỀ KIỂM TRA
+        </Typography>
 
-  {/* Ô chọn đề */}
-  <FormControl fullWidth size="small" sx={{ mb: -2 }}>
-    <InputLabel
-      id="exam-select-label"
-      sx={{ fontSize: "16px", fontWeight: "bold" }}
-    >
-      Chọn đề
-    </InputLabel>
+        {/* Ô chọn đề */}
+        <FormControl size="small" sx={{ mb: -2, width: 250 }}> {/* Đặt rộng 300px */}
+          <InputLabel
+            id="exam-select-label"
+            sx={{ fontSize: "16px", fontWeight: "bold" }}
+          >
+            Chọn đề
+          </InputLabel>
 
-    <Select
-      labelId="exam-select-label"
-      value={selectedExam}
-      label="Chọn đề"
-      onChange={(e) => setSelectedExam(e.target.value)}
-      sx={{ fontSize: "16px", fontWeight: 500 }}
-    >
-      {examList.map((exam) => (
-        <MenuItem key={exam} value={exam} sx={{ fontSize: "16px" }}>
-          {exam}
-        </MenuItem>
-      ))}
-    </Select>
-  </FormControl>
-</Box>
-
-
-
-
+          <Select
+            labelId="exam-select-label"
+            value={selectedExam}
+            label="Chọn đề"
+            onChange={(e) => setSelectedExam(e.target.value)}
+            sx={{ fontSize: "16px", fontWeight: 500 }}
+          >
+            {examList.map((exam) => (
+              <MenuItem key={exam} value={exam} sx={{ fontSize: "16px" }}>
+                {formatExamTitle(exam)}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      </Box>
 
       {/* Đồng hồ với vị trí cố định */}
       <Box

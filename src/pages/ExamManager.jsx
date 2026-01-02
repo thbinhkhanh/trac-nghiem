@@ -128,6 +128,33 @@ export default function ExamManager() {
     }
   };
 
+  // Hàm format tên đề
+  const formatExamTitle = (examName = "") => {
+    if (!examName) return "";
+
+    // 1. Loại bỏ prefix "quiz_" nếu có
+    let name = examName.startsWith("quiz_") ? examName.slice(5) : examName;
+
+    // 2. Tách các phần theo dấu "_"
+    const parts = name.split("_");
+
+    // 3. Tìm lớp (ví dụ: "Lớp 4")
+    const classPart = parts.find(p => p.toLowerCase().includes("lớp")) || "";
+    const classNumber = classPart.match(/\d+/)?.[0] || "";
+
+    // 4. Tìm môn (giả sử môn là phần không phải "Lớp" và không phải CKI)
+    const subjectPart = parts.find(
+      p => !p.toLowerCase().includes("lớp") && !p.toLowerCase().includes("cki")
+    ) || "";
+
+    // 5. Tìm ký hiệu đề (A, B, ...) trong ngoặc
+    const match = examName.match(/\(([^)]+)\)/);
+    const examLetter = match ? match[1] : "";
+
+    // 6. Kết hợp lại: "Môn Lớp (Đề X)"
+    return `${subjectPart.trim()} ${classNumber} ${examLetter ? `(Đề ${examLetter})` : ""}`.trim();
+  };
+
   return (
     <Box
       sx={{
@@ -144,7 +171,7 @@ export default function ExamManager() {
           p: 3,
           borderRadius: 3,
           width: "100%",
-          maxWidth: 700,
+          maxWidth: 600,
           backgroundColor: "#fff",
           maxHeight: "80vh",       // 👈 giảm chiều cao card
           overflowY: "auto",       // 👈 nếu nội dung vượt → card tự cuộn
@@ -200,7 +227,8 @@ export default function ExamManager() {
                     onMouseEnter={() => setPendingExam(ex)}
                     onMouseLeave={() => setPendingExam(null)}
                   >
-                    <Typography>{ex.tenDe || ex.id}</Typography>
+                    {/*<Typography>{ex.tenDe || ex.id}</Typography>*/}
+                    <Typography>{formatExamTitle(ex.tenDe || ex.id)}</Typography>
 
                     <IconButton
                       onClick={async (e) => {
@@ -260,7 +288,8 @@ export default function ExamManager() {
                     onMouseEnter={() => setPendingSelectedExam(ex)}
                     onMouseLeave={() => setPendingSelectedExam(null)}
                   >
-                    <Typography>{ex.tenDe || ex.id}</Typography>
+                    {/*<Typography>{ex.tenDe || ex.id}</Typography>*/}
+                    <Typography>{formatExamTitle(ex.tenDe || ex.id)}</Typography>
 
                     <IconButton
                       color="error"

@@ -12,7 +12,7 @@ export default function KetQua() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const configSnap = await getDoc(doc(db, "LAMVANBEN", "config"));
+        const configSnap = await getDoc(doc(db, "CONFIG", "config"));
         const configData = configSnap.exists() ? configSnap.data() : {};
 
         if (configData.choXemDiem) {
