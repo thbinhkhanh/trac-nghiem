@@ -147,7 +147,7 @@ export default function TracNghiem() {
       let prog = 0;
 
       let docId = null;
-      const collectionName = "TRACNGHIEM_LVB";
+      const collectionName = "NGANHANG_DE";
       let hocKiFromConfig = "";
       let monHocFromConfig = "";
       let timeLimitMinutes = 0;
@@ -179,7 +179,7 @@ export default function TracNghiem() {
 
 
       // 🔹 Lấy đề thi theo lớp
-      const deThiRef = collection(db, "DETHI_LVB");
+      const deThiRef = collection(db, "DETHI");
       const deThiSnap = await getDocs(deThiRef);
       const matchedDoc = deThiSnap.docs.find(d => d.id.includes(classLabel));
 

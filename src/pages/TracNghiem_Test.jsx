@@ -152,7 +152,7 @@ export default function TracNghiem_Test() {
   useEffect(() => {
     const fetchExams = async () => {
         try {
-        const colName = "TRACNGHIEM_LVB";
+        const colName = "NGANHANG_DE";
         const colRef = collection(db, colName);
         const snapshot = await getDocs(colRef);
         const exams = snapshot.docs.map(d => d.id);
@@ -202,7 +202,7 @@ export default function TracNghiem_Test() {
           let prog = 0;
 
           let docId = null;
-          let collectionName = "TRACNGHIEM_LVB"; // ✅ CỐ ĐỊNH
+          let collectionName = "NGANHANG_DE"; // ✅ CỐ ĐỊNH
           let hocKiFromConfig = "";
           let monHocFromConfig = "";
           let timeLimitMinutes = 0;

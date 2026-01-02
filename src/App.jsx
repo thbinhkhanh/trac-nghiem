@@ -19,7 +19,7 @@ import TracNghiem from "./pages/TracNghiem";
 import TracNghiemGV from "./pages/TracNghiemGV";
 import TracNghiem_Test from "./pages/TracNghiem_Test";
 import TongHopKQ from "./pages/TongHopKQ";
-import ExamManager from "./pages/ExamManager";
+import DeThi from "./pages/DeThi";
 
 // 🔹 Import context
 import { StudentProvider } from "./context/StudentContext";
@@ -149,7 +149,7 @@ function AppContent() {
           <Route path="/tracnghiem" element={<TracNghiem />} />
           <Route path="/tracnghiem-gv" element={<TracNghiemGV />} />
           <Route path="/tracnghiem-test" element={<TracNghiem_Test />} />
-          <Route path="/de-thi" element={<ExamManager />} />
+          <Route path="/de-thi" element={<DeThi />} />
           <Route path="/quan-tri" element={<QuanTri />} />
           <Route path="/login" element={<Login />} />
         </Routes>

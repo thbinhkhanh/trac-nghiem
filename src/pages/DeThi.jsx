@@ -13,7 +13,7 @@ import { ChevronRight, ChevronLeft } from "@mui/icons-material";
 import { collection, getDocs, setDoc, deleteDoc, doc } from "firebase/firestore";
 import { db } from "../firebase";
 
-export default function ExamManager() {
+export default function DeThi() {
   // ===== STATE =====
   const [examList, setExamList] = useState([]);          // danh sách đề
   const [selectedExam, setSelectedExam] = useState([]);  // đề đã chọn
@@ -31,7 +31,7 @@ export default function ExamManager() {
   useEffect(() => {
     const fetchExams = async () => {
       try {
-        const folder = "TRACNGHIEM_LVB"; // ✅ chỉ LVB
+        const folder = "NGANHANG_DE"; // ✅ chỉ LVB
         const snap = await getDocs(collection(db, folder));
 
         const list = snap.docs.map((d) => ({
@@ -52,7 +52,7 @@ export default function ExamManager() {
   useEffect(() => {
     const fetchSelectedExams = async () => {
       try {
-        const folder = "DETHI_LVB"; // ✅ chỉ LVB
+        const folder = "DETHI"; // ✅ chỉ LVB
         const snap = await getDocs(collection(db, folder));
 
         const list = snap.docs.map((d) => ({
@@ -72,7 +72,7 @@ export default function ExamManager() {
   // ===== ADD TO FIRESTORE =====
   const addExamToFirestore = async (ex) => {
     try {
-      const folder = "DETHI_LVB"; // ✅ chỉ LVB
+      const folder = "DETHI"; // ✅ chỉ LVB
       const ref = doc(db, folder, ex.tenDe || ex.id);
       await setDoc(ref, { name: ex.tenDe || ex.id });
     } catch (err) {
@@ -83,7 +83,7 @@ export default function ExamManager() {
   // ===== DELETE FROM FIRESTORE =====
   const removeExamFromFirestore = async (ex) => {
     try {
-      const folder = "DETHI_LVB"; // ✅ chỉ LVB
+      const folder = "DETHI"; // ✅ chỉ LVB
       const ref = doc(db, folder, ex.tenDe || ex.id);
       await deleteDoc(ref);
     } catch (err) {
@@ -101,7 +101,7 @@ export default function ExamManager() {
     if (!shouldDelete) return;
 
     try {
-      const folder = "TRACNGHIEM_LVB"; // ✅ chỉ LVB
+      const folder = "NGANHANG_DE"; // ✅ chỉ LVB
       await deleteDoc(doc(db, folder, selectedExamToDelete.id));
 
       // cập nhật UI
@@ -196,7 +196,7 @@ export default function ExamManager() {
 
             <Box
               sx={{
-                maxHeight: 450,
+                maxHeight: 480,
                 overflowY: "auto",
                 border: "1px solid #ccc",
                 borderRadius: 2,
@@ -212,8 +212,8 @@ export default function ExamManager() {
                     alignItems="center"
                     justifyContent="space-between"
                     sx={{
-                      px: 2,
-                      py: 1,
+                      px: 1,
+                      py: 0.5,
                       cursor: "pointer",
                       backgroundColor:
                         selectedExamToDelete?.id === ex.id
@@ -281,8 +281,8 @@ export default function ExamManager() {
                     alignItems="center"
                     justifyContent="space-between"
                     sx={{
-                      px: 2,
-                      py: 1,
+                      px: 1,
+                      py: 0.5,
                       "&:hover": { background: "#e3f2fd" },
                     }}
                     onMouseEnter={() => setPendingSelectedExam(ex)}

@@ -120,7 +120,7 @@ const [examLetter, setExamLetter] = useState(savedConfig.examLetter || "");
         const schoolToUse = schoolFromState || localStorage.getItem("school") || "";
 
         let docId = null;
-        const collectionName = "TRACNGHIEM_LVB"; // chỉ dùng collection LVB
+        const collectionName = "NGANHANG_DE"; // chỉ dùng collection LVB
 
         // Lấy config từ Firestore (luôn lấy CONFIG/config)
         const cfgRef = doc(db, "CONFIG", "config");
@@ -429,9 +429,8 @@ useEffect(() => {
       if (!selectedClass || !selectedSubject) {
         throw new Error("Vui lòng chọn lớp và môn trước khi lưu");
       }
-
-      // Chỉ dùng TRACNGHIEM_LVB
-      const collectionName = "TRACNGHIEM_LVB";
+      
+      const collectionName = "NGANHANG_DE";
 
       // Map rút gọn học kỳ
       const semesterMap = {
@@ -506,9 +505,8 @@ useEffect(() => {
     setLoadingList(true);
     setFilterClass("Tất cả"); // reset mỗi lần mở dialog
 
-    try {
-      // ✅ Chỉ dùng TRACNGHIEM_LVB
-      const collectionName = "TRACNGHIEM_LVB";
+    try {  
+      const collectionName = "NGANHANG_DE";
 
       // Lấy tất cả document trong collection
       const colRef = collection(db, collectionName);
@@ -549,9 +547,8 @@ useEffect(() => {
       return;
     }
 
-    try {
-      // 🔹 Chỉ dùng TRACNGHIEM_LVB
-      const collectionName = "TRACNGHIEM_LVB";
+    try {     
+      const collectionName = "NGANHANG_DE";
 
       const docRef = doc(db, collectionName, selectedDoc);
       const docSnap = await getDoc(docRef);
@@ -666,7 +663,7 @@ useEffect(() => {
       const school = localStorage.getItem("school") || "";
 
       // 🔹 Chọn collection theo trường
-      const collectionName = "TRACNGHIEM_LVB";
+      const collectionName = "NGANHANG_DE";
 
       await deleteDoc(doc(db, collectionName, selectedDoc));
 
@@ -714,7 +711,7 @@ useEffect(() => {
       }
 
       try {
-        const collectionName = "TRACNGHIEM_LVB";
+        const collectionName = "NGANHANG_DE";
         const docRef = doc(db, collectionName, docId);
         const docSnap = await getDoc(docRef);
 
