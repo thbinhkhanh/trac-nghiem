@@ -14,9 +14,6 @@ import { collection, getDocs, setDoc, deleteDoc, doc } from "firebase/firestore"
 import { db } from "../firebase";
 
 export default function ExamManager() {
-  const account = localStorage.getItem("account") || "";
-  const isLamVanBen = account === "TH Lâm Văn Bền";
-
   // ===== STATE =====
   const [examList, setExamList] = useState([]);          // danh sách đề
   const [selectedExam, setSelectedExam] = useState([]);  // đề đã chọn
@@ -34,7 +31,7 @@ export default function ExamManager() {
   useEffect(() => {
     const fetchExams = async () => {
       try {
-        const folder = isLamVanBen ? "TRACNGHIEM_LVB" : "TRACNGHIEM_BK";
+        const folder = "TRACNGHIEM_LVB"; // ✅ chỉ LVB
         const snap = await getDocs(collection(db, folder));
 
         const list = snap.docs.map((d) => ({
@@ -49,13 +46,13 @@ export default function ExamManager() {
     };
 
     fetchExams();
-  }, [isLamVanBen]);
+  }, []);
 
   // ===== LOAD ĐỀ ĐÃ CHỌN =====
   useEffect(() => {
     const fetchSelectedExams = async () => {
       try {
-        const folder = isLamVanBen ? "DETHI_LVB" : "DETHI_BK";
+        const folder = "DETHI_LVB"; // ✅ chỉ LVB
         const snap = await getDocs(collection(db, folder));
 
         const list = snap.docs.map((d) => ({
@@ -70,12 +67,12 @@ export default function ExamManager() {
     };
 
     fetchSelectedExams();
-  }, [isLamVanBen]);
+  }, []);
 
   // ===== ADD TO FIRESTORE =====
   const addExamToFirestore = async (ex) => {
     try {
-      const folder = isLamVanBen ? "DETHI_LVB" : "DETHI_BK";
+      const folder = "DETHI_LVB"; // ✅ chỉ LVB
       const ref = doc(db, folder, ex.tenDe || ex.id);
       await setDoc(ref, { name: ex.tenDe || ex.id });
     } catch (err) {
@@ -86,7 +83,7 @@ export default function ExamManager() {
   // ===== DELETE FROM FIRESTORE =====
   const removeExamFromFirestore = async (ex) => {
     try {
-      const folder = isLamVanBen ? "DETHI_LVB" : "DETHI_BK";
+      const folder = "DETHI_LVB"; // ✅ chỉ LVB
       const ref = doc(db, folder, ex.tenDe || ex.id);
       await deleteDoc(ref);
     } catch (err) {
@@ -104,7 +101,7 @@ export default function ExamManager() {
     if (!shouldDelete) return;
 
     try {
-      const folder = isLamVanBen ? "TRACNGHIEM_LVB" : "TRACNGHIEM_BK";
+      const folder = "TRACNGHIEM_LVB"; // ✅ chỉ LVB
       await deleteDoc(doc(db, folder, selectedExamToDelete.id));
 
       // cập nhật UI
@@ -116,6 +113,7 @@ export default function ExamManager() {
       setSelectedExam((prev) =>
         prev.filter((it) => it.id !== selectedExamToDelete.id)
       );
+
       await removeExamFromFirestore(selectedExamToDelete);
 
       setSnackbar({
@@ -143,15 +141,15 @@ export default function ExamManager() {
       <Card
         elevation={6}
         sx={{
-            p: 3,
-            borderRadius: 3,
-            width: "100%",
-            maxWidth: 700,
-            backgroundColor: "#fff",
-            maxHeight: "80vh",       // 👈 giảm chiều cao card
-            overflowY: "auto",       // 👈 nếu nội dung vượt → card tự cuộn
+          p: 3,
+          borderRadius: 3,
+          width: "100%",
+          maxWidth: 700,
+          backgroundColor: "#fff",
+          maxHeight: "80vh",       // 👈 giảm chiều cao card
+          overflowY: "auto",       // 👈 nếu nội dung vượt → card tự cuộn
         }}
-        >
+      >
         <Typography
           variant="h5"
           fontWeight="bold"

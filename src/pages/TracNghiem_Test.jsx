@@ -152,7 +152,7 @@ export default function TracNghiem_Test() {
   useEffect(() => {
     const fetchExams = async () => {
         try {
-        const colName = school === "TH Lâm Văn Bền" ? "TRACNGHIEM_LVB" : "TRACNGHIEM_BK";
+        const colName = "TRACNGHIEM_LVB";
         const colRef = collection(db, colName);
         const snapshot = await getDocs(colRef);
         const exams = snapshot.docs.map(d => d.id);
@@ -198,79 +198,61 @@ export default function TracNghiem_Test() {
   useEffect(() => {
     const fetchQuestions = async () => {
         try {
-        setLoading(true);
-        let prog = 0;
+          setLoading(true);
+          let prog = 0;
 
-        let docId = null;
-        let collectionName = "TRACNGHIEM_BK";
-        let hocKiFromConfig = "";
-        let monHocFromConfig = "";
-        let timeLimitMinutes = 0; // ⬅ để lưu thời gian
+          let docId = null;
+          let collectionName = "TRACNGHIEM_LVB"; // ✅ CỐ ĐỊNH
+          let hocKiFromConfig = "";
+          let monHocFromConfig = "";
+          let timeLimitMinutes = 0;
 
-        // 🔹 Lấy config dựa vào trường
-        if (school === "TH Lâm Văn Bền") {
-            // 🔹 Lấy lớp học sinh từ studentInfo
-            const studentClass = studentInfo?.class || ""; // ví dụ: "3A"
-            const classNumber = studentClass.match(/\d+/)?.[0]; // "3A" -> "3"
-            if (!classNumber) {
-            //setSnackbar({ open: true, message: "❌ Không xác định được lớp của học sinh!", severity: "error" });
+          // 🔹 Lấy lớp học sinh từ studentInfo
+          const studentClass = studentInfo?.class || ""; // ví dụ: "3A"
+          const classNumber = studentClass.match(/\d+/)?.[0]; // "3A" -> "3"
+          if (!classNumber) {
             setLoading(false);
             return;
-            }
-            const classLabel = `Lớp ${classNumber}`; // "Lớp 3"
+          }
 
-            // 🔹 Lấy config vẫn từ LAMVANBEN/config
-            const lvbConfigRef = doc(db, "LAMVANBEN", "config");
-            const lvbConfigSnap = await getDoc(lvbConfigRef);
-            prog += 30;
-            setProgress(prog);
+          // 🔹 Lấy config từ LAMVANBEN/config
+          const lvbConfigRef = doc(db, "LAMVANBEN", "config");
+          const lvbConfigSnap = await getDoc(lvbConfigRef);
+          prog += 30;
+          setProgress(prog);
 
-            if (!lvbConfigSnap.exists()) {
-            setSnackbar({ open: true, message: "❌ Không tìm thấy config LAMVANBEN!", severity: "error" });
+          if (!lvbConfigSnap.exists()) {
+            setSnackbar({
+              open: true,
+              message: "❌ Không tìm thấy config LAMVANBEN!",
+              severity: "error",
+            });
             setLoading(false);
             return;
-            }
+          }
 
-            const lvbConfigData = lvbConfigSnap.data();
-            hocKiFromConfig = lvbConfigData.hocKy || "";
-            monHocFromConfig = lvbConfigData.mon || "";
-            timeLimitMinutes = lvbConfigData.timeLimit ?? 0; // ⬅ lấy timeLimit
-            setTimeLimitMinutes(timeLimitMinutes);
-            setChoXemDiem(lvbConfigData.choXemDiem ?? false);
-            setChoXemDapAn(lvbConfigData.choXemDapAn ?? false);
+          const lvbConfigData = lvbConfigSnap.data();
+          hocKiFromConfig = lvbConfigData.hocKy || "";
+          monHocFromConfig = lvbConfigData.mon || "";
+          timeLimitMinutes = lvbConfigData.timeLimit ?? 0;
 
-        } else {
-            // 🔹 Trường khác, lấy config từ CONFIG/config
-            const configRef = doc(db, "CONFIG", "config");
-            const configSnap = await getDoc(configRef);
-            prog += 30;
-            setProgress(prog);
+          setTimeLimitMinutes(timeLimitMinutes);
+          setChoXemDiem(lvbConfigData.choXemDiem ?? false);
+          setChoXemDapAn(lvbConfigData.choXemDapAn ?? false);
 
-            if (!configSnap.exists()) {
-            setSnackbar({ open: true, message: "❌ Không tìm thấy config!", severity: "error" });
+          // 🔹 Kiểm tra đề được chọn
+          if (!selectedExam) {
+            setSnackbar({
+              open: true,
+              message: "Vui lòng chọn đề!",
+              severity: "warning",
+            });
             setLoading(false);
             return;
-            }
+          }
 
-            const configData = configSnap.data();
-            hocKiFromConfig = configData.hocKy || "";
-            monHocFromConfig = configData.mon || "";
-            timeLimitMinutes = configData.timeLimit ?? 0;   // ⬅ lấy timeLimit
-            setTimeLimitMinutes(timeLimitMinutes);
-            setChoXemDiem(configData.choXemDiem ?? false);
-            setChoXemDapAn(configData.choXemDapAn ?? false);
-            
-        }
+          docId = selectedExam;
 
-        // 🔹 Lấy docId theo đề được chọn từ dropdown (áp dụng cho mọi trường)
-            if (!selectedExam) {
-                setSnackbar({ open: true, message: "Vui lòng chọn đề!", severity: "warning" });
-                setLoading(false);
-            return;
-            }
-
-            docId = selectedExam;
-            collectionName = school === "TH Lâm Văn Bền" ? "TRACNGHIEM_LVB" : "TRACNGHIEM_BK";
 
 
         // 🔹 Set thời gian làm bài (giây)
