@@ -13,6 +13,7 @@ export const ConfigProvider = ({ children }) => {
     timeLimit: 20,        // phút
     xuatFileBaiLam: true,
     deTracNghiem: null,
+    namHoc: "2025-2026",
   };
 
   // Load từ localStorage

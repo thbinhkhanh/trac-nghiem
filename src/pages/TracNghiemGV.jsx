@@ -41,6 +41,8 @@ import DialogActions from "@mui/material/DialogActions";
 export default function TracNghiemGV() {
   const { config, setConfig } = useConfig(); // 🔹 thêm dòng này
   const { config: quizConfig, updateConfig: updateQuizConfig } = useTracNghiem();
+  //const { config } = useContext(ConfigContext);
+
 
   // ⚙️ State cho dialog mở đề
   const [openDialog, setOpenDialog] = useState(false);
@@ -55,12 +57,12 @@ export default function TracNghiemGV() {
   // ⚙️ CẤU HÌNH ĐỀ THI – ĐÚNG CHUẨN FIRESTORE
   const savedConfig = JSON.parse(localStorage.getItem("teacherConfig") || "{}");
 
-const [selectedClass, setSelectedClass] = useState(savedConfig.selectedClass || "");
-const [selectedSubject, setSelectedSubject] = useState(savedConfig.selectedSubject || "");
-const [semester, setSemester] = useState(savedConfig.semester || "");
-const [schoolYear, setSchoolYear] = useState(savedConfig.schoolYear || "2025-2026");
-const [examLetter, setExamLetter] = useState(savedConfig.examLetter || "");
-
+  const [selectedClass, setSelectedClass] = useState(savedConfig.selectedClass || "");
+  const [selectedSubject, setSelectedSubject] = useState(savedConfig.selectedSubject || "");
+  const [semester, setSemester] = useState(savedConfig.semester || "");
+  const [schoolYear, setSchoolYear] = useState(savedConfig.schoolYear || "2025-2026");
+  const [examLetter, setExamLetter] = useState(savedConfig.examLetter || "");
+  const [selectedYear, setSelectedYear] = useState(config.namHoc || "2025-2026");
 
   // ⚙️ Dropdown cố định
   const semesters = ["Giữa kỳ I", "Cuối kỳ I", "Giữa kỳ II", "Cả năm"];
@@ -797,22 +799,43 @@ useEffect(() => {
     // 2. Tách các phần theo dấu "_"
     const parts = name.split("_");
 
-    // 3. Tìm lớp (ví dụ: "Lớp 4")
+    // 3. Tìm lớp
     const classPart = parts.find(p => p.toLowerCase().includes("lớp")) || "";
     const classNumber = classPart.match(/\d+/)?.[0] || "";
 
-    // 4. Tìm môn (giả sử môn là phần không phải "Lớp" và không phải CKI)
-    const subjectPart = parts.find(
-      p => !p.toLowerCase().includes("lớp") && !p.toLowerCase().includes("cki")
-    ) || "";
+    // 4. Tìm chỉ số lớp trong mảng để lấy môn
+    const classIndex = parts.indexOf(classPart);
 
-    // 5. Tìm ký hiệu đề (A, B, ...) trong ngoặc
+    // 5. Tìm môn: phần ngay sau lớp (hoặc phần đầu nếu lớp là đầu)
+    let subjectPart = "";
+    for (let i = classIndex + 1; i < parts.length; i++) {
+      // bỏ qua CKI, CKII, CN, năm học cuối, chỉ lấy môn
+      const p = parts[i];
+      if (!p.toLowerCase().includes("cki") && !p.toLowerCase().includes("cn") && !/\d{2}-\d{2}/.test(p)) {
+        subjectPart = p;
+        break;
+      }
+    }
+
+    // 6. Tìm phần mở rộng (CKI/CKII/CN) sau môn và lớp
+    let extraPart = "";
+    for (let i = classIndex + 1; i < parts.length; i++) {
+      const p = parts[i];
+      if (p.toLowerCase().includes("cki") || p.toLowerCase() === "cn") {
+        extraPart = p.toUpperCase();
+        break;
+      }
+    }
+
+    // 7. Tìm ký hiệu đề (A, B, ...) trong ngoặc
     const match = examName.match(/\(([^)]+)\)/);
     const examLetter = match ? match[1] : "";
 
-    // 6. Kết hợp lại: "Môn Lớp (Đề X)"
-    return `${subjectPart.trim()} ${classNumber} ${examLetter ? `(Đề ${examLetter})` : ""}`.trim();
+    // 8. Kết hợp lại
+    return `${subjectPart} ${classNumber}${extraPart ? ` - ${extraPart}` : ""} ${examLetter ? `(${examLetter})` : ""}`.trim();
   };
+
+
 
   return (
     <Box sx={{ minHeight: "100vh", p: 3, backgroundColor: "#e3f2fd", display: "flex", justifyContent: "center" }}>
@@ -952,8 +975,6 @@ useEffect(() => {
           </Stack>
         </Paper>
 
-
-
         {/* DANH SÁCH CÂU HỎI */}
         <Stack spacing={3}>
           {questions.map((q, qi) => (
@@ -1018,7 +1039,6 @@ useEffect(() => {
                   </Button>
                 )}
               </Box>
-
 
               <Stack direction={{ xs: "row", sm: "row" }} spacing={2} sx={{ mb: 2 }}>
                 <FormControl size="small" sx={{ width: 180 }}>
@@ -1573,6 +1593,7 @@ useEffect(() => {
               boxShadow: 6,
               bgcolor: "#f9f9f9",
               overflow: "hidden", // để borderRadius và icon X hiển thị đúng
+              height: 480,
             },
           }}
         >
@@ -1610,14 +1631,15 @@ useEffect(() => {
           <DialogContent
             dividers
             sx={{
-              maxHeight: 350,
-              overflowY: "auto",
               px: 2,
               py: 2,
               bgcolor: "#fff",
+              display: "flex",
+              flexDirection: "column",
+              height: 370, // cố định chiều cao dialogContent
             }}
           >
-            {/* Bộ lọc lớp */}
+            {/* Bộ lọc lớp / năm học */}
             <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
               <Typography variant="body2" sx={{ alignSelf: "center" }}>
                 Lọc theo lớp:
@@ -1637,16 +1659,38 @@ useEffect(() => {
                   ))}
                 </Select>
               </FormControl>
+
+              <Typography variant="body2" sx={{ alignSelf: "center" }}>
+                Năm học:
+              </Typography>
+
+              <FormControl size="small" sx={{ minWidth: 120 }}>
+                <Select
+                  value={selectedYear}
+                  onChange={(e) => setSelectedYear(e.target.value)}
+                  displayEmpty
+                >
+                  {Array.from({ length: 5 }, (_, i) => {
+                    const start = 2025 + i;
+                    const end = start + 1;
+                    const value = `${start}-${end}`;
+                    return (
+                      <MenuItem key={value} value={value}>
+                        {value}
+                      </MenuItem>
+                    );
+                  })}
+                </Select>
+              </FormControl>
             </Stack>
 
-            {/* Bảng danh sách đề */}
+            {/* Danh sách đề scroll */}
             <Box
               sx={{
-                maxHeight: 260,
-                overflowY: "auto",
+                flexGrow: 1,           // chiếm toàn bộ chiều cao còn lại
+                overflowY: "auto",     // scroll nếu quá dài
                 border: "1px solid #ccc",
                 borderRadius: 2,
-                mb: 1,
               }}
             >
               {loadingList ? (
@@ -1659,9 +1703,21 @@ useEffect(() => {
                 </Typography>
               ) : (
                 docList
-                  .filter((doc) =>
-                    filterClass === "Tất cả" ? true : doc.class === filterClass
-                  )
+                  .filter((doc) => {
+                    const classCheck =
+                      filterClass === "Tất cả" ? true : doc.class === filterClass;
+
+                    const yearSuffix = selectedYear
+                      ? selectedYear
+                          .split("-")[0]
+                          .slice(-2) +
+                        "-" +
+                        selectedYear.split("-")[1].slice(-2)
+                      : "";
+                    const yearCheck = doc.id.includes(yearSuffix);
+
+                    return classCheck && yearCheck;
+                  })
                   .map((doc) => (
                     <Stack
                       key={doc.id}
@@ -1669,8 +1725,8 @@ useEffect(() => {
                       alignItems="center"
                       justifyContent="space-between"
                       sx={{
-                        px: 2,
-                        py: 1,
+                        px: 1,
+                        py: 0.5,
                         height: 36,
                         cursor: "pointer",
                         borderRadius: 1,
@@ -1681,13 +1737,15 @@ useEffect(() => {
                       onClick={() => setSelectedDoc(doc.id)}
                       onDoubleClick={() => handleOpenSelectedDoc(doc.id)}
                     >
-                      {/*<Typography variant="subtitle1">{doc.id}</Typography>*/}
-                      <Typography variant="subtitle1">{formatExamTitle(doc.id)}</Typography>
+                      <Typography variant="subtitle1">
+                        {formatExamTitle(doc.id)}
+                      </Typography>
                     </Stack>
                   ))
               )}
             </Box>
           </DialogContent>
+
 
           {/* Các nút hành động */}
           <DialogActions

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import {
   Box,
   Typography,
@@ -8,10 +8,15 @@ import {
   Button,
   Snackbar,
   Alert,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from "@mui/material";
 import { ChevronRight, ChevronLeft } from "@mui/icons-material";
 import { collection, getDocs, setDoc, deleteDoc, doc } from "firebase/firestore";
 import { db } from "../firebase";
+import { ConfigContext } from "../context/ConfigContext";
 
 export default function DeThi() {
   // ===== STATE =====
@@ -20,6 +25,8 @@ export default function DeThi() {
   const [pendingExam, setPendingExam] = useState(null);
   const [pendingSelectedExam, setPendingSelectedExam] = useState(null);
   const [selectedExamToDelete, setSelectedExamToDelete] = useState(null);
+  const { config } = useContext(ConfigContext); // lấy năm học từ context
+  const [selectedYear, setSelectedYear] = useState(config.namHoc || "2025-2026");
 
   const [snackbar, setSnackbar] = useState({
     open: false,
@@ -31,7 +38,7 @@ export default function DeThi() {
   useEffect(() => {
     const fetchExams = async () => {
       try {
-        const folder = "NGANHANG_DE"; // ✅ chỉ LVB
+        const folder = "NGANHANG_DE";
         const snap = await getDocs(collection(db, folder));
 
         const list = snap.docs.map((d) => ({
@@ -39,14 +46,18 @@ export default function DeThi() {
           ...d.data(),
         }));
 
-        setExamList(list);
+        // lọc theo selectedYear (ví dụ: "_25-26" hoặc "_26-27" trong tên file)
+        const yearSuffix = selectedYear.split("-")[0].slice(-2) + "-" + selectedYear.split("-")[1].slice(-2);
+        const filtered = list.filter(ex => ex.id.includes(yearSuffix));
+
+        setExamList(filtered);
       } catch (err) {
         console.error("Lỗi lấy đề:", err);
       }
     };
 
     fetchExams();
-  }, []);
+  }, [selectedYear]);
 
   // ===== LOAD ĐỀ ĐÃ CHỌN =====
   useEffect(() => {
@@ -60,14 +71,19 @@ export default function DeThi() {
           tenDe: d.data().name || d.id,
         }));
 
-        setSelectedExam(list);
+        // lọc theo selectedYear
+        const yearSuffix = selectedYear.split("-")[0].slice(-2) + "-" + selectedYear.split("-")[1].slice(-2);
+        const filtered = list.filter(ex => ex.tenDe.includes(yearSuffix));
+
+        setSelectedExam(filtered);
       } catch (err) {
         console.error("Lỗi lấy đề đã chọn:", err);
       }
     };
 
     fetchSelectedExams();
-  }, []);
+  }, [selectedYear]);
+
 
   // ===== ADD TO FIRESTORE =====
   const addExamToFirestore = async (ex) => {
@@ -138,21 +154,40 @@ export default function DeThi() {
     // 2. Tách các phần theo dấu "_"
     const parts = name.split("_");
 
-    // 3. Tìm lớp (ví dụ: "Lớp 4")
+    // 3. Tìm lớp
     const classPart = parts.find(p => p.toLowerCase().includes("lớp")) || "";
     const classNumber = classPart.match(/\d+/)?.[0] || "";
 
-    // 4. Tìm môn (giả sử môn là phần không phải "Lớp" và không phải CKI)
-    const subjectPart = parts.find(
-      p => !p.toLowerCase().includes("lớp") && !p.toLowerCase().includes("cki")
-    ) || "";
+    // 4. Tìm chỉ số lớp trong mảng để lấy môn
+    const classIndex = parts.indexOf(classPart);
 
-    // 5. Tìm ký hiệu đề (A, B, ...) trong ngoặc
+    // 5. Tìm môn: phần ngay sau lớp (hoặc phần đầu nếu lớp là đầu)
+    let subjectPart = "";
+    for (let i = classIndex + 1; i < parts.length; i++) {
+      // bỏ qua CKI, CKII, CN, năm học cuối, chỉ lấy môn
+      const p = parts[i];
+      if (!p.toLowerCase().includes("cki") && !p.toLowerCase().includes("cn") && !/\d{2}-\d{2}/.test(p)) {
+        subjectPart = p;
+        break;
+      }
+    }
+
+    // 6. Tìm phần mở rộng (CKI/CKII/CN) sau môn và lớp
+    let extraPart = "";
+    for (let i = classIndex + 1; i < parts.length; i++) {
+      const p = parts[i];
+      if (p.toLowerCase().includes("cki") || p.toLowerCase() === "cn") {
+        extraPart = p.toUpperCase();
+        break;
+      }
+    }
+
+    // 7. Tìm ký hiệu đề (A, B, ...) trong ngoặc
     const match = examName.match(/\(([^)]+)\)/);
     const examLetter = match ? match[1] : "";
 
-    // 6. Kết hợp lại: "Môn Lớp (Đề X)"
-    return `${subjectPart.trim()} ${classNumber} ${examLetter ? `(Đề ${examLetter})` : ""}`.trim();
+    // 8. Kết hợp lại
+    return `${subjectPart} ${classNumber}${extraPart ? ` - ${extraPart}` : ""} ${examLetter ? `(${examLetter})` : ""}`.trim();
   };
 
   return (
@@ -186,6 +221,26 @@ export default function DeThi() {
         >
           QUẢN LÝ ĐỀ KIỂM TRA
         </Typography>
+
+        <Box sx={{ display: "flex", justifyContent: "center", mb: 2 }}>
+          <FormControl size="small" sx={{ minWidth: 150 }}>
+            <InputLabel id="namHoc-label">Năm học</InputLabel>
+            <Select
+              labelId="namHoc-label"
+              value={selectedYear}
+              label="Năm học"
+              onChange={(e) => setSelectedYear(e.target.value)}
+            >
+              {Array.from({ length: 5 }, (_, i) => {
+                const start = 2025 + i;
+                const end = start + 1;
+                const value = `${start}-${end}`;
+                return <MenuItem key={value} value={value}>{value}</MenuItem>;
+              })}
+            </Select>
+          </FormControl>
+        </Box>
+
 
         <Stack direction={{ xs: "column", sm: "row" }} spacing={3}>
           {/* ===================== DANH SÁCH ĐỀ ===================== */}

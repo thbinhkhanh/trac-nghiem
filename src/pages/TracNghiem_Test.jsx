@@ -815,21 +815,40 @@ const formatExamTitle = (examName = "") => {
   // 2. Tách các phần theo dấu "_"
   const parts = name.split("_");
 
-  // 3. Tìm lớp (ví dụ: "Lớp 4")
+  // 3. Tìm lớp
   const classPart = parts.find(p => p.toLowerCase().includes("lớp")) || "";
   const classNumber = classPart.match(/\d+/)?.[0] || "";
 
-  // 4. Tìm môn (giả sử môn là phần không phải "Lớp" và không phải CKI)
-  const subjectPart = parts.find(
-    p => !p.toLowerCase().includes("lớp") && !p.toLowerCase().includes("cki")
-  ) || "";
+  // 4. Tìm chỉ số lớp trong mảng để lấy môn
+  const classIndex = parts.indexOf(classPart);
 
-  // 5. Tìm ký hiệu đề (A, B, ...) trong ngoặc
+  // 5. Tìm môn: phần ngay sau lớp (hoặc phần đầu nếu lớp là đầu)
+  let subjectPart = "";
+  for (let i = classIndex + 1; i < parts.length; i++) {
+    // bỏ qua CKI, CKII, CN, năm học cuối, chỉ lấy môn
+    const p = parts[i];
+    if (!p.toLowerCase().includes("cki") && !p.toLowerCase().includes("cn") && !/\d{2}-\d{2}/.test(p)) {
+      subjectPart = p;
+      break;
+    }
+  }
+
+  // 6. Tìm phần mở rộng (CKI/CKII/CN) sau môn và lớp
+  let extraPart = "";
+  for (let i = classIndex + 1; i < parts.length; i++) {
+    const p = parts[i];
+    if (p.toLowerCase().includes("cki") || p.toLowerCase() === "cn") {
+      extraPart = p.toUpperCase();
+      break;
+    }
+  }
+
+  // 7. Tìm ký hiệu đề (A, B, ...) trong ngoặc
   const match = examName.match(/\(([^)]+)\)/);
   const examLetter = match ? match[1] : "";
 
-  // 6. Kết hợp lại: "Môn Lớp (Đề X)"
-  return `${subjectPart.trim()} ${classNumber} ${examLetter ? `(Đề ${examLetter})` : ""}`.trim();
+  // 8. Kết hợp lại
+  return `${subjectPart} ${classNumber}${extraPart ? ` - ${extraPart}` : ""} ${examLetter ? `(${examLetter})` : ""}`.trim();
 };
 
 return (

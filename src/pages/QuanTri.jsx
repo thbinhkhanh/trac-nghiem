@@ -87,6 +87,7 @@ export default function QuanTri() {
     if (field === "lop") setSelectedClass(value);
     if (field === "hocKy") setSelectedSemester(value);
     if (field === "timeLimit") setTimeInput(value);
+    if (field === "namHoc") ;
   };
 
   // ===== Thêm / xóa lớp =====
@@ -157,6 +158,24 @@ export default function QuanTri() {
           </Box>
 
           <Stack spacing={2}>
+            {/* Năm học */}
+            <FormControl fullWidth size="small" variant="outlined">
+              <InputLabel id="namHoc-label">Năm học</InputLabel>
+              <Select
+                labelId="namHoc-label"
+                value={config.namHoc || "2025-2026"}
+                onChange={(e) => updateConfigField("namHoc", e.target.value)}
+                label="Năm học"
+              >
+                {Array.from({ length: 5 }, (_, i) => {
+                  const start = 2025 + i;
+                  const end = start + 1;
+                  const value = `${start}-${end}`;
+                  return <MenuItem key={value} value={value}>{value}</MenuItem>;
+                })}
+              </Select>
+            </FormControl>
+            
             {/* Học kỳ */}
             <FormControl fullWidth size="small" variant="outlined">
               <InputLabel id="hocKy-label">Học kỳ</InputLabel>
