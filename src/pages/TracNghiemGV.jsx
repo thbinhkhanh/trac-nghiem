@@ -1593,7 +1593,7 @@ useEffect(() => {
               boxShadow: 6,
               bgcolor: "#f9f9f9",
               overflow: "hidden", // để borderRadius và icon X hiển thị đúng
-              height: 480,
+              height: 500,
             },
           }}
         >
@@ -1636,53 +1636,76 @@ useEffect(() => {
               bgcolor: "#fff",
               display: "flex",
               flexDirection: "column",
-              height: 370, // cố định chiều cao dialogContent
+              height: { xs: "75vh", sm: 380 }
             }}
           >
             {/* Bộ lọc lớp / năm học */}
-            <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
-              <Typography variant="body2" sx={{ alignSelf: "center" }}>
-                Lọc theo lớp:
-              </Typography>
+            <Stack
+              direction="row"
+              spacing={2}
+              sx={{ mb: 2 }}
+            >
+              {/* Lọc theo lớp */}
+              <Box
+                sx={{
+                  display: "flex",
+                  flexDirection: "column",
+                  flex: 1, // 👈 để 2 ô chia đều hàng
+                }}
+              >
+                <Typography variant="body2" sx={{ mb: 0.5 }}>
+                  Lọc theo lớp:
+                </Typography>
 
-              <FormControl size="small" sx={{ minWidth: 120 }}>
-                <Select
-                  value={filterClass}
-                  onChange={(e) => setFilterClass(e.target.value)}
-                  displayEmpty
-                >
-                  <MenuItem value="Tất cả">Tất cả</MenuItem>
-                  {classes.map((lop) => (
-                    <MenuItem key={lop} value={lop}>
-                      {lop}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-
-              <Typography variant="body2" sx={{ alignSelf: "center" }}>
-                Năm học:
-              </Typography>
-
-              <FormControl size="small" sx={{ minWidth: 120 }}>
-                <Select
-                  value={selectedYear}
-                  onChange={(e) => setSelectedYear(e.target.value)}
-                  displayEmpty
-                >
-                  {Array.from({ length: 5 }, (_, i) => {
-                    const start = 2025 + i;
-                    const end = start + 1;
-                    const value = `${start}-${end}`;
-                    return (
-                      <MenuItem key={value} value={value}>
-                        {value}
+                <FormControl size="small" fullWidth>
+                  <Select
+                    value={filterClass}
+                    onChange={(e) => setFilterClass(e.target.value)}
+                    displayEmpty
+                  >
+                    <MenuItem value="Tất cả">Tất cả</MenuItem>
+                    {classes.map((lop) => (
+                      <MenuItem key={lop} value={lop}>
+                        {lop}
                       </MenuItem>
-                    );
-                  })}
-                </Select>
-              </FormControl>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Box>
+
+              {/* Năm học */}
+              <Box
+                sx={{
+                  display: "flex",
+                  flexDirection: "column",
+                  flex: 1,
+                }}
+              >
+                <Typography variant="body2" sx={{ mb: 0.5 }}>
+                  Năm học:
+                </Typography>
+
+                <FormControl size="small" fullWidth>
+                  <Select
+                    value={selectedYear}
+                    onChange={(e) => setSelectedYear(e.target.value)}
+                    displayEmpty
+                  >
+                    {Array.from({ length: 5 }, (_, i) => {
+                      const start = 2025 + i;
+                      const end = start + 1;
+                      const value = `${start}-${end}`;
+                      return (
+                        <MenuItem key={value} value={value}>
+                          {value}
+                        </MenuItem>
+                      );
+                    })}
+                  </Select>
+                </FormControl>
+              </Box>
             </Stack>
+
 
             {/* Danh sách đề scroll */}
             <Box
