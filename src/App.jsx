@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useEffect, useState, useContext } from "react";
 import {
   Routes,
   Route,
@@ -8,86 +8,90 @@ import {
   useNavigate,
 } from "react-router-dom";
 import { AppBar, Toolbar, Button, Typography, Box } from "@mui/material";
-import { doc, setDoc } from "firebase/firestore";
-import { db } from "./firebase";
 
-// 🔹 Import các trang còn sử dụng
-import HocSinh from "./pages/Info";
+// 🔹 Pages (CHỈ GIỮ 7 MENU)
+import Info from "./pages/Info";
 import Login from "./pages/Login";
-import QuanTri from "./pages/QuanTri";
-import TracNghiem from "./pages/TracNghiem";
-import TracNghiemGV from "./pages/TracNghiemGV";
-import TracNghiem_Test from "./pages/TracNghiem_Test";
 import TongHopKQ from "./pages/TongHopKQ";
+import TracNghiemGV from "./pages/TracNghiemGV";
+import TracNghiemTest from "./pages/TracNghiem_Test";
 import DeThi from "./pages/DeThi";
+import QuanTri from "./pages/QuanTri";
+import SystemLockedDialog from "./dialog/SystemLockedDialog";
+import TracNghiem from "./pages/TracNghiem";
 
-// 🔹 Import context
-import { StudentProvider } from "./context/StudentContext";
+
+// 🔹 Context (giữ nguyên)
 import { ConfigProvider, ConfigContext } from "./context/ConfigContext";
+import { AdminProvider } from "./context/AdminContext";
 import { TracNghiemProvider } from "./context/TracNghiemContext";
-//import { StudentDataProvider } from "./context/StudentDataContext";
-//import { StudentKTDKProvider } from "./context/StudentKTDKContext";
-
-// 🔹 Import icon
-import MenuBookIcon from "@mui/icons-material/MenuBook";
-import SchoolIcon from "@mui/icons-material/School";
-import SettingsIcon from "@mui/icons-material/Settings";
-import LoginIcon from "@mui/icons-material/Login";
-import LogoutIcon from "@mui/icons-material/Logout";
+import { StudentProvider } from "./context/StudentContext";
+import { StudentDataProvider } from "./context/StudentDataContext";
+import { StudentKTDKProvider } from "./context/StudentKTDKContext";
+import { SelectedClassProvider } from "./context/SelectedClassContext";
 
 function AppContent() {
   const location = useLocation();
   const navigate = useNavigate();
   const { config, setConfig } = useContext(ConfigContext);
+
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [openLockedDialog, setOpenLockedDialog] = useState(false);
 
-  // ✅ Lấy trạng thái login ban đầu
+
   useEffect(() => {
-    const loggedIn = localStorage.getItem("loggedIn") === "true";
-    setIsLoggedIn(loggedIn);
+    setIsLoggedIn(localStorage.getItem("loggedIn") === "true");
+    setLoading(false);
   }, []);
 
-  // ✅ Theo dõi thay đổi login giữa các tab
-  useEffect(() => {
-    const handleStorageChange = () => {
-      setIsLoggedIn(localStorage.getItem("loggedIn") === "true");
-    };
-    window.addEventListener("storage", handleStorageChange);
-    return () => window.removeEventListener("storage", handleStorageChange);
-  }, []);
-
-  // ✅ Hàm xử lý đăng xuất
   const handleLogout = () => {
     localStorage.removeItem("loggedIn");
     localStorage.removeItem("account");
     setIsLoggedIn(false);
     setConfig((prev) => ({ ...prev, login: false }));
     navigate("/login");
-
-    setTimeout(() => {
-      const docRef = doc(db, "CONFIG", "config");
-      setDoc(docRef, { login: false }, { merge: true }).catch(() => {});
-    }, 0);
   };
 
-  // ✅ Danh sách menu
+  const handleHocKyChange = (e) => {
+    const hocKy = e.target.value;
+    const newConfig = { ...config, hocKy };
+    setConfig(newConfig);
+    localStorage.setItem("appConfig", JSON.stringify(newConfig));
+  };
+
+  const handleHocSinhClick = (e) => {
+    if (config?.khoaHeThong) {
+      e.preventDefault();           // ❌ chặn chuyển trang
+      setOpenLockedDialog(true);    // 🔒 mở dialog
+    }
+  };
+
+  // ✅ CHỈ 7 MENU – GIỮ NGUYÊN CẤU TRÚC
   const navItems = [
-    { path: "/hocsinh", label: "Học sinh", icon: <MenuBookIcon fontSize="small" /> },
+    {
+      path: "/hocsinh",
+      label: "Học sinh",
+      onClick: handleHocSinhClick,
+    },
+
     ...(isLoggedIn
       ? [
-          //{ path: "/tracnghiem", label: "Trắc nghiệm", icon: <SchoolIcon fontSize="small" /> },
-          { path: "/tonghopkq", label: "Kết quả", icon: <MenuBookIcon fontSize="small" /> },
-          { path: "/tracnghiem-gv", label: "Soạn đề", icon: <MenuBookIcon fontSize="small" /> },   
-          { path: "/tracnghiem-test", label: "Test đề", icon: <MenuBookIcon fontSize="small" /> },  
-          { path: "/de-thi", label: "Đề thi", icon: <MenuBookIcon fontSize="small" /> },     
-          { path: "/quan-tri", label: "Hệ thống", icon: <SettingsIcon fontSize="small" /> },
-          { label: "Đăng xuất", onClick: handleLogout, icon: <LogoutIcon fontSize="small" /> },
+          { path: "/ketqua", label: "Kết quả" },
+          { path: "/tracnghiem-gv", label: "Soạn đề" },
+          { path: "/tracnghiem-test", label: "Test đề" },
+          { path: "/de-thi", label: "Đề thi" },
+          { path: "/quan-tri", label: "Hệ thống" },
+          { label: "Đăng xuất", onClick: handleLogout },
         ]
-      : [{ path: "/login", label: "Đăng nhập", icon: <LoginIcon fontSize="small" /> }]),
+      : [{ path: "/login", label: "Đăng nhập" }]),
   ];
+
+  if (loading) return null;
 
   return (
     <>
+      {/* ===== GIỮ NGUYÊN THANH MENU GỐC ===== */}
       <AppBar position="fixed" sx={{ background: "#1976d2" }}>
         <Toolbar
           sx={{
@@ -102,20 +106,25 @@ function AppContent() {
             whiteSpace: "nowrap",
           }}
         >
-          {/* 🔹 Logo + Menu */}
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
             <Box
               component="img"
               src="/Logo.png"
               alt="Logo"
-              sx={{ height: 34, flexShrink: 0, ml: { xs: -1, sm: -2 }, mr: 1 }}
+              sx={{
+                height: 34,
+                flexShrink: 0,
+                ml: { xs: -1, sm: -2 },
+                mr: 1,
+              }}
             />
+
             {navItems.map((item) => (
               <Button
                 key={item.path || item.label}
                 component={item.path ? Link : "button"}
                 to={item.path || undefined}
-                onClick={item.onClick || undefined}
+                onClick={item.onClick}
                 sx={{
                   color: "white",
                   textTransform: "none",
@@ -126,34 +135,98 @@ function AppContent() {
                   minHeight: "auto",
                   flexShrink: 0,
                   borderBottom:
-                    location.pathname === item.path ? "3px solid #fff" : "3px solid transparent",
-                  "&:hover": { backgroundColor: "rgba(255,255,255,0.1)" },
+                    location.pathname === item.path
+                      ? "3px solid #fff"
+                      : "3px solid transparent",
+                  "&:hover": {
+                    backgroundColor: "rgba(255,255,255,0.1)",
+                    opacity: 1,
+                  },
                 }}
               >
-                {item.icon}
-                <Typography variant="body2" sx={{ ml: 0.3 }}>
+                <Typography
+                  variant="body2"
+                  sx={{ ml: 0.3, color: "white", opacity: 1 }}
+                >
                   {item.label}
                 </Typography>
               </Button>
             ))}
           </Box>
+
+          {isLoggedIn && (
+            <Box sx={{ minWidth: 140, mr: 1 }}>
+              <select
+                value={config?.hocKy || "Giữa kỳ I"}
+                onChange={handleHocKyChange}
+                style={{
+                  backgroundColor: "transparent",
+                  color: "white",
+                  borderRadius: "4px",
+                  padding: "6px 12px",
+                  border: "2px solid white",
+                  outline: "none",
+                  fontSize: "0.95rem",
+                  width: "100%",
+                  appearance: "none",
+                  backgroundImage:
+                    "url(\"data:image/svg+xml;utf8,<svg fill='white' height='18' viewBox='0 0 24 24' width='18' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>\")",
+                  backgroundRepeat: "no-repeat",
+                  backgroundPositionX: "calc(100% - 10px)",
+                  backgroundPositionY: "center",
+                }}
+              >
+                <option value="Giữa kỳ I">Giữa kỳ I</option>
+                <option value="Cuối kỳ I">Cuối kỳ I</option>
+                <option value="Giữa kỳ II">Giữa kỳ II</option>
+                <option value="Cả năm">Cả năm</option>
+              </select>
+            </Box>
+          )}
         </Toolbar>
       </AppBar>
 
-      {/* 🔹 Nội dung các trang */}
+      {/* ===== ROUTES (CHỈ 7 MENU) ===== */}
       <Box sx={{ paddingTop: "44px" }}>
         <Routes>
           <Route path="/" element={<Navigate to="/hocsinh" replace />} />
-          <Route path="/hocsinh" element={<HocSinh />} />
-          <Route path="/tonghopkq" element={<TongHopKQ/>} />
-          <Route path="/tracnghiem" element={<TracNghiem />} />
-          <Route path="/tracnghiem-gv" element={<TracNghiemGV />} />
-          <Route path="/tracnghiem-test" element={<TracNghiem_Test />} />
-          <Route path="/de-thi" element={<DeThi />} />
-          <Route path="/quan-tri" element={<QuanTri />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/hocsinh" element={<Info />} />
+
+          <Route
+            path="/ketqua"
+            element={isLoggedIn ? <TongHopKQ /> : <Navigate to="/login" />}
+          />
+          <Route
+            path="/tracnghiem-gv"
+            element={isLoggedIn ? <TracNghiemGV /> : <Navigate to="/login" />}
+          />
+          <Route
+            path="/tracnghiem-test"
+            element={isLoggedIn ? <TracNghiemTest /> : <Navigate to="/login" />}
+          />
+          <Route
+            path="/de-thi"
+            element={isLoggedIn ? <DeThi /> : <Navigate to="/login" />}
+          />
+          <Route
+            path="/quan-tri"
+            element={isLoggedIn ? <QuanTri /> : <Navigate to="/login" />}
+          />
+
+          <Route
+            path="/tracnghiem"
+            element={<TracNghiem />}
+          />
+
         </Routes>
       </Box>
+
+      <SystemLockedDialog
+        open={openLockedDialog}
+        onClose={() => setOpenLockedDialog(false)}
+      />
+
     </>
   );
 }
@@ -161,15 +234,19 @@ function AppContent() {
 export default function App() {
   return (
     <ConfigProvider>
-      <TracNghiemProvider>
-        <StudentProvider>
-          
-            
-              <AppContent />
-            
-          
-        </StudentProvider>
-      </TracNghiemProvider>
+      <AdminProvider>
+        <TracNghiemProvider>
+          <StudentProvider>
+            <StudentDataProvider>
+              <StudentKTDKProvider>
+                <SelectedClassProvider>
+                  <AppContent />
+                </SelectedClassProvider>
+              </StudentKTDKProvider>
+            </StudentDataProvider>
+          </StudentProvider>
+        </TracNghiemProvider>
+      </AdminProvider>
     </ConfigProvider>
   );
 }

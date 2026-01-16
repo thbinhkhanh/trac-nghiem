@@ -1,5 +1,11 @@
-import { jsPDF } from "jspdf";
-import "../fonts/DejaVuSans-normal.js"; // font tiếng Việt
+//import { jsPDF } from "jspdf";
+//import "../fonts/DejaVuSans-normal.js";
+
+import jsPDF from "jspdf";
+import "../fonts/DejaVuSans-normal.js";
+
+
+// ================== UTILS ==================
 
 // Convert URL ảnh sang base64
 async function getBase64FromUrl(url) {
@@ -12,31 +18,59 @@ async function getBase64FromUrl(url) {
   });
 }
 
-// Hàm làm tròn điểm giống UI
-const convertPercentToScore = (percent) => {
-  if (percent === undefined || percent === null) return "?";
-  const raw = percent / 10;
-  const decimal = raw % 1;
-  if (decimal < 0.25) return Math.floor(raw);
-  if (decimal < 0.75) return Math.floor(raw) + 0.5;
-  return Math.ceil(raw);
-};
-
+// Chuẩn hoá tên
 const capitalizeName = (name) => {
   if (!name) return "";
   return name
     .trim()
     .toLowerCase()
     .split(/\s+/)
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1))
     .join(" ");
 };
 
-export const exportQuizPDF = async (studentInfo, quizClass, questions, answers, total, durationStr, quizTitle ) => {                  
+// Lấy text sạch từ HTML / option object
+const extractText = (val) => {
+  if (!val) return "";
+  const raw =
+    typeof val === "string"
+      ? val
+      : val.text || val.question || "";
+
+  return raw
+    .replace(/<[^>]*>/g, "")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+};
+
+// Lấy image đúng theo data mới
+const extractImage = (opt) => {
+  if (!opt) return null;
+
+  if (opt.formats?.image) return opt.formats.image;
+
+  if (typeof opt.text === "string" && opt.text.startsWith("http")) {
+    return opt.text;
+  }
+
+  return null;
+};
+
+// ================== MAIN ==================
+
+export const exportQuizPDF = async (
+  studentInfo,
+  className,
+  questions,
+  answers,
+  total,
+  durationStr,
+  quizTitle
+) => {
   const pdf = new jsPDF("p", "mm", "a4");
   const margin = 15;
   const lineHeight = 7;
-  const lineSpacing = lineHeight * 1.5;
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
   const pageBottom = pageHeight - margin;
@@ -44,350 +78,328 @@ export const exportQuizPDF = async (studentInfo, quizClass, questions, answers, 
 
   pdf.setFont("DejaVuSans", "normal");
 
-  // ===== HEADER =====
+  // ================== HEADER ==================
   pdf.setFontSize(12);
-  pdf.setDrawColor(0);
-  pdf.setLineWidth(0.5);
-
-  const boxHeight = lineSpacing * 4;
-  pdf.rect(margin, y, pageWidth - 2 * margin, boxHeight);
+  pdf.rect(margin, y, pageWidth - 2 * margin, 28);
 
   pdf.setTextColor(0, 0, 255);
-  if (studentInfo.school) pdf.text(`Trường: ${studentInfo.school}`, margin + 5, y + lineSpacing);
-  pdf.text(`Họ tên: ${capitalizeName(studentInfo.name)}`, margin + 5, y + lineSpacing * 2);
-  pdf.text(`Lớp: ${studentInfo.class}`, margin + 5, y + lineSpacing * 3);
+  pdf.text(`Trường: TH Lâm Văn Bền`, margin + 5, y + 8);
+  pdf.text(`Họ tên: ${capitalizeName(studentInfo.name)}`, margin + 5, y + 15);
+  pdf.text(`Lớp: ${className}`, margin + 5, y + 22);
 
-  const maxScore = questions.reduce((sum, q) => sum + (q.score ?? 1), 0);
-  const percent = maxScore > 0 ? (total / maxScore) * 100 : 0;
+  const now = new Date();
 
-  const currentDate = new Date();
-  const datePart = currentDate.toLocaleDateString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" });
-  const timePart = currentDate.toLocaleTimeString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh", hour: "2-digit", minute: "2-digit" });
-  const vnTime = `${datePart} ${timePart}`;
+  const datePart = now.toLocaleDateString("vi-VN", {
+    timeZone: "Asia/Ho_Chi_Minh",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric"
+  });
 
-  pdf.text(`Ngày: ${vnTime}`, pageWidth / 2 + 10, y + lineSpacing);
-  if (durationStr) pdf.text(`Thời gian: ${durationStr}`, pageWidth / 2 + 10, y + lineSpacing * 2);
+  const timePart = now.toLocaleTimeString("vi-VN", {
+    timeZone: "Asia/Ho_Chi_Minh",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+
+  pdf.text(`Ngày: ${datePart} (${timePart})`, pageWidth / 2 + 10, y + 8);
+
+  if (durationStr) {
+    pdf.text(`Thời gian: ${durationStr}`, pageWidth / 2 + 10, y + 15);
+  }
+
   pdf.setTextColor(255, 0, 0);
-  pdf.text(`Kết quả: ${total} điểm`, pageWidth / 2 + 10, y + lineSpacing * 3);
+  pdf.text(`Kết quả: ${total} điểm`, pageWidth / 2 + 10, y + 22);
 
   pdf.setFontSize(16);
   pdf.setTextColor(0, 0, 255);
-  pdf.text(quizTitle, pageWidth / 2, y + boxHeight + lineSpacing, { align: "center" });
+  pdf.text(quizTitle, pageWidth / 2, y + 40, { align: "center" });
 
-  pdf.setTextColor(0, 0, 0);
-  y += boxHeight + lineSpacing * 2;
-
-  // ===== NỘI DUNG CÂU HỎI =====
   pdf.setFontSize(12);
+  pdf.setTextColor(0, 0, 0);
+  y += 50;
 
-  for (let index = 0; index < questions.length; index++) {
-    const q = questions[index];
 
-    // Kiểm tra trước khi vẽ câu hỏi
-    let questionLines = pdf.splitTextToSize(`Câu ${index + 1}: ${q.question}`, pageWidth - 2 * margin);
-    if (y + questionLines.length * lineHeight > pageBottom) {
+  // ================== QUESTIONS ==================
+  for (let idx = 0; idx < questions.length; idx++) {
+    const q = questions[idx];
+
+    const qLines = pdf.splitTextToSize(
+      `Câu ${idx + 1}: ${extractText(q.question)}`,
+      pageWidth - 2 * margin
+    );
+
+    if (y + qLines.length * lineHeight > pageBottom) {
       pdf.addPage();
       y = margin;
     }
-    pdf.text(questionLines, margin, y);
-    y += questionLines.length * lineHeight;
 
-    // ===== Hình minh họa nếu có =====
+    pdf.text(qLines, margin, y);
+    y += qLines.length * lineHeight + 2;
+
+    // -------- IMAGE QUESTION --------
     if (q.questionImage) {
       try {
-        const imgBase64 = await getBase64FromUrl(q.questionImage);
-        const imgProps = pdf.getImageProperties(imgBase64);
-        const imgWidth = (pageWidth - 2 * margin) * 0.25; // 1/4 chiều rộng trang
-        const imgHeight = (imgProps.height / imgProps.width) * imgWidth;
-        const x = (pageWidth - imgWidth) / 2;
-
-        if (y + imgHeight > pageBottom) {
-          pdf.addPage();
-          y = margin;
-        }
-
-        pdf.addImage(imgBase64, "JPEG", x, y, imgWidth, imgHeight);
-        y += imgHeight + 2; // khoảng cách nhỏ sau hình
-      } catch (e) {
-        const errLine = pdf.splitTextToSize("(Không tải được hình minh họa)", pageWidth - 2 * margin);
-        if (y + errLine.length * lineHeight > pageBottom) {
-          pdf.addPage();
-          y = margin;
-        }
-        pdf.text(errLine, margin, y);
-        y += errLine.length * lineHeight;
-      }
+        const img64 = await getBase64FromUrl(q.questionImage);
+        pdf.addImage(img64, "PNG", margin + 40, y, 40, 40);
+        y += 45;
+      } catch {}
     }
 
-    // ===== Xử lý theo loại câu hỏi =====
-    switch(q.type) {
-      case "single":
+    // ================== TYPES ==================
+    switch (q.type) {
+      case "single": {
         q.options.forEach((opt, i) => {
-          const selected = answers[q.id] === i ? "(•)" : "( )";
-          const correctArray = Array.isArray(q.correct) ? q.correct : [q.correct];
-          const isCorrect = answers[q.id] === i && correctArray.includes(i);
+          const text = extractText(opt);
+          const selected = answers[q.id] === i ? "[x]" : "[ ]";
+          const correctArr = Array.isArray(q.correct) ? q.correct : [q.correct];
+          const isCorrect = answers[q.id] === i && correctArr.includes(i);
 
-          const optionLines = pdf.splitTextToSize(`${selected} ${opt}`, pageWidth - 2 * margin - 10);
-          const optionHeight = optionLines.length * lineHeight;
-          if (y + optionHeight > pageBottom) { pdf.addPage(); y = margin; }
-          pdf.text(optionLines, margin + 5, y);
+          const lines = pdf.splitTextToSize(
+            `${selected} ${text}`,
+            pageWidth - 2 * margin - 10
+          );
+
+          if (y + lines.length * lineHeight > pageBottom) {
+            pdf.addPage();
+            y = margin;
+          }
+
+          pdf.text(lines, margin + 5, y);
 
           if (answers[q.id] === i) {
-            if (isCorrect) {
-              pdf.setTextColor(0, 128, 0);
-              pdf.text("✓", margin + 150, y);
-            } else {
-              pdf.setTextColor(255, 0, 0);
-              pdf.text("✗", margin + 150, y);
-            }
-            pdf.setTextColor(0, 0, 0);
-          } else if (correctArray.includes(i)) {
-            // thiếu
-            pdf.setTextColor(255, 0, 0);
-            pdf.text("✓", margin + 150, y);
+            pdf.setTextColor(isCorrect ? 0 : 255, isCorrect ? 128 : 0, 0);
+            pdf.text(isCorrect ? "✓" : "✗", pageWidth - margin - 10, y);
             pdf.setTextColor(0, 0, 0);
           }
 
-          y += optionHeight;
-        });
-        break;
-
-      case "multiple":
-        q.options.forEach((opt, i) => {
-          const selected = (answers[q.id] || []).includes(i) ? "[x]" : "[ ]";
-          const correctArray = Array.isArray(q.correct) ? q.correct : [q.correct];
-          const isCorrect = (answers[q.id] || []).includes(i) && correctArray.includes(i);
-
-          const optionLines = pdf.splitTextToSize(`${selected} ${opt}`, pageWidth - 2 * margin - 10);
-          const optionHeight = optionLines.length * lineHeight;
-          if (y + optionHeight > pageBottom) { pdf.addPage(); y = margin; }
-          pdf.text(optionLines, margin + 5, y);
-
-          if ((answers[q.id] || []).includes(i)) {
-            if (isCorrect) {
-              pdf.setTextColor(0, 128, 0);
-              pdf.text("✓", margin + 150, y);
-            } else {
-              pdf.setTextColor(255, 0, 0);
-              pdf.text("✗", margin + 150, y);
-            }
-            pdf.setTextColor(0, 0, 0);
-          } else if (correctArray.includes(i)) {
-            // thiếu
-            pdf.setTextColor(255, 0, 0);
-            pdf.text("✓", margin + 150, y);
-            pdf.setTextColor(0, 0, 0);
-          }
-
-          y += optionHeight;
-        });
-        break;
-
-      case "truefalse": {
-        const userArray = answers[q.id] || [];
-        q.options.forEach((opt, i) => {
-          const selected = userArray[i] || "";
-          const originalIdx = Array.isArray(q.initialOrder) ? q.initialOrder[i] : i;
-          const correctArray = Array.isArray(q.correct) ? q.correct : [];
-          const correctVal = correctArray[originalIdx] ?? "";
-
-          const isCorrect = selected === correctVal;
-          const isWrong   = selected !== "" && selected !== correctVal;
-
-          const optionLines = pdf.splitTextToSize(`[${selected}] ${opt}`, pageWidth - 2 * margin - 10);
-          const optionHeight = optionLines.length * lineHeight;
-          if (y + optionHeight > pageBottom) { pdf.addPage(); y = margin; }
-          pdf.text(optionLines, margin + 5, y);
-
-          if (selected) {
-            if (isCorrect) {
-              pdf.setTextColor(0, 128, 0);
-              pdf.text("✓", margin + 150, y);
-            } else if (isWrong) {
-              pdf.setTextColor(255, 0, 0);
-              pdf.text("✗", margin + 150, y);
-            }
-            pdf.setTextColor(0, 0, 0);
-          } else if (correctVal !== "") {
-            // thiếu
-            pdf.setTextColor(255, 0, 0);
-            pdf.text("✓", margin + 150, y);
-            pdf.setTextColor(0, 0, 0);
-          }
-
-          y += optionHeight;
+          y += lines.length * lineHeight;
         });
         break;
       }
 
-      case "matching":
-        const ans = answers[q.id] || [];
-        q.leftOptions.forEach((left, i) => {
-          const rightIdx = ans[i];
-          const right = rightIdx !== undefined ? q.rightOptions[rightIdx] : "?";
-          const isCorrect = rightIdx === q.correct[i];
+      case "sort": {
+        const userOrder = Array.isArray(answers[q.id]) ? answers[q.id] : [];
+        const correctTexts = Array.isArray(q.correctTexts) ? q.correctTexts : [];
 
-          const line = pdf.splitTextToSize(`${left} → ${right}`, pageWidth - 2 * margin - 10);
-          const optionHeight = line.length * lineHeight;
-          if (y + optionHeight > pageBottom) { pdf.addPage(); y = margin; }
-          pdf.text(line, margin + 5, y);
+        // Nếu chưa làm → hiển thị theo thứ tự gốc
+        const displayOrder =
+          userOrder.length === q.options.length
+            ? userOrder
+            : q.options.map((_, i) => i);
 
-          if (rightIdx !== undefined) {
-            if (isCorrect) {
-              pdf.setTextColor(0, 128, 0);
-              pdf.text("✓", margin + 150, y);
-            } else {
-              pdf.setTextColor(255, 0, 0);
-              pdf.text("✗", margin + 150, y);
-            }
-            pdf.setTextColor(0, 0, 0);
-          } else if (q.correct[i] !== undefined) {
-            // thiếu
-            pdf.setTextColor(255, 0, 0);
-            pdf.text("✓", margin + 150, y);
-            pdf.setTextColor(0, 0, 0);
+        displayOrder.forEach((optIndex, i) => {
+          const text = extractText(q.options[optIndex]);
+
+          const lines = pdf.splitTextToSize(
+            `${i + 1}. ${text}`,
+            pageWidth - 2 * margin - 15
+          );
+
+          if (y + lines.length * lineHeight > pageBottom) {
+            pdf.addPage();
+            y = margin;
           }
 
-          y += optionHeight;
-        });
-        break;
+          pdf.text(lines, margin + 5, y);
 
-      case "sort":
-        // giữ nguyên như bạn yêu cầu
-        const userOrder = answers[q.id] || [];
-        const userTexts = userOrder.map((idx) => q.options[idx]);
-        const correctTexts = q.correctTexts || [];
-
-        userTexts.forEach((text, i) => {
-          const isCorrect =
-            correctTexts.length === userTexts.length &&
-            text === correctTexts[i];
-
-          const line = pdf.splitTextToSize(`${i + 1}. ${text}`, pageWidth - 2 * margin - 10);
-          const optionHeight = line.length * lineHeight;
-          if (y + optionHeight > pageBottom) { pdf.addPage(); y = margin; }
-          pdf.text(line, margin + 5, y);
-
-          if (userOrder.length > 0) {
-            if (isCorrect) {
-              pdf.setTextColor(0, 128, 0);
-              pdf.text("✓", margin + 150, y);
-            } else {
-              pdf.setTextColor(255, 0, 0);
-              pdf.text("✗", margin + 150, y);
-            }
-            pdf.setTextColor(0, 0, 0);
-          }
-
-          y += optionHeight;
-        });
-        break;
-
-
-      case "image":
-        let x = margin + 5;
-        const imgSize = 20;
-        for (let i = 0; i < q.options.length; i++) {
-          const imgUrl = q.options[i];
-          const selected = (answers[q.id] || []).includes(i) ? "[x]" : "[ ]";
-          const correctArray = Array.isArray(q.correct) ? q.correct : [q.correct];
-          const isCorrect = (answers[q.id] || []).includes(i) && correctArray.includes(i);
-
-          const line = pdf.splitTextToSize(`${selected} Hình ${i + 1}`, pageWidth - 2 * margin - 10);
-          const optionHeight = line.length * lineHeight + imgSize;
-          if (y + optionHeight > pageBottom) { pdf.addPage(); y = margin; }
-          pdf.text(line, x, y);
-
-          if ((answers[q.id] || []).includes(i)) {
-            if (isCorrect) {
-              pdf.setTextColor(0, 128, 0);
-              pdf.text("✓", x + imgSize, y);
-            } else {
-              pdf.setTextColor(255, 0, 0);
-              pdf.text("✗", x + imgSize, y);
-            }
-            pdf.setTextColor(0, 0, 0);
-          } else if (correctArray.includes(i)) {
-            // thiếu
-            pdf.setTextColor(255, 0, 0);
-            pdf.text("✓", x + imgSize, y);
-            pdf.setTextColor(0, 0, 0);
-          }
-
-          try {
-            const imgBase64 = await getBase64FromUrl(imgUrl);
-            pdf.addImage(imgBase64, "JPEG", x, y + 5, imgSize, imgSize);
-          } catch (e) {
-            pdf.text("(Không tải được ảnh)", x, y + 5);
-          }
-
-          x += imgSize + 20;
-        }
-        y += imgSize + 20;
-        break;
-
-      case "fillblank":
-        const parts = (q.option || "").split("[...]");
-        const userAnswers = Array.isArray(answers[q.id]) ? answers[q.id] : [];
-        const correctAnswers = Array.isArray(q.options) ? q.options : [];
-
-        const maxWidth = pageWidth - 2 * margin;
-        let xPos = margin;
-        let yLine = y;
-
-        for (let i = 0; i < parts.length; i++) {
-          const textBefore = parts[i];
-          const splitBefore = pdf.splitTextToSize(textBefore, maxWidth - (xPos - margin));
-          splitBefore.forEach((line, idx) => {
-            if (idx > 0) { yLine += lineHeight; xPos = margin; }
-            pdf.setTextColor(0, 0, 0);
-            pdf.text(line, xPos, yLine);
-            xPos += pdf.getTextWidth(line);
-          });
-
-          if (i < parts.length - 1) {
-            const answerWord = userAnswers[i] ? userAnswers[i] : "______";
-            const isCorrect =
-              userAnswers[i] &&
-              correctAnswers[i] &&
-              userAnswers[i].trim() === correctAnswers[i].trim();
+          // ===== SO SÁNH GIỐNG HỆT CHẤM ĐIỂM =====
+          if (
+            userOrder.length === correctTexts.length &&
+            correctTexts.length > 0
+          ) {
+            const isCorrect = text === extractText(correctTexts[i]);
 
             pdf.setTextColor(isCorrect ? 0 : 255, isCorrect ? 128 : 0, 0);
-            const wordToDraw = `[${answerWord}]`;
-
-            if (xPos + pdf.getTextWidth(wordToDraw) > pageWidth - margin) {
-              yLine += lineHeight;
-              xPos = margin;
-            }
-
-            pdf.text(wordToDraw, xPos, yLine);
-            xPos += pdf.getTextWidth(wordToDraw);
+            pdf.text(isCorrect ? "✓" : "✗", pageWidth - margin - 10, y);
             pdf.setTextColor(0, 0, 0);
           }
-        }
-        y = yLine + lineHeight;
+
+          y += lines.length * lineHeight;
+        });
+
         break;
+      }
+
+
+      case "image": {
+        const imgSize = 18;     // kích thước ảnh
+        const gap = 40;         // khoảng cách mỗi ảnh
+        const maxPerRow = 4;
+
+        const totalRowWidth = gap * maxPerRow;
+        const startX = (pageWidth - totalRowWidth) / 2; // ⭐ căn giữa
+
+        let x = startX;
+
+        for (let i = 0; i < q.options.length; i++) {
+          if (i > 0 && i % maxPerRow === 0) {
+            x = startX;
+            y += imgSize + 14;
+          }
+
+          const imgUrl = extractImage(q.options[i]);
+          const selected = (answers[q.id] || []).includes(i) ? "[x]" : "[ ]";
+
+          // checkbox
+          pdf.text(selected, x + imgSize / 2 - 4, y);
+
+          // image
+          if (imgUrl) {
+            try {
+              const img64 = await getBase64FromUrl(imgUrl);
+              pdf.addImage(img64, "PNG", x, y + 4, imgSize, imgSize);
+            } catch {}
+          }
+
+          x += gap;
+        }
+
+        y += imgSize + 20;
+        break;
+      }
+
+      case "multiple": {
+        const userAns = answers[q.id] || [];
+        q.options.forEach((opt, i) => {
+          const text = extractText(opt);
+          const checked = userAns.includes(i) ? "[x]" : "[ ]";
+          const isCorrect =
+            Array.isArray(q.correct) && q.correct.includes(i);
+
+          const lines = pdf.splitTextToSize(
+            `${checked} ${text}`,
+            pageWidth - 2 * margin - 10
+          );
+
+          if (y + lines.length * lineHeight > pageBottom) {
+            pdf.addPage();
+            y = margin;
+          }
+
+          pdf.text(lines, margin + 5, y);
+
+          if (userAns.includes(i)) {
+            pdf.setTextColor(isCorrect ? 0 : 255, isCorrect ? 128 : 0, 0);
+            pdf.text(isCorrect ? "✓" : "✗", pageWidth - margin - 10, y);
+            pdf.setTextColor(0, 0, 0);
+          }
+
+          y += lines.length * lineHeight;
+        });
+        break;
+      }
+
+      case "truefalse": {
+        const userAns = answers[q.id] || [];
+        q.options.forEach((opt, i) => {
+          const text = extractText(opt);
+          const val = userAns[i] || "";
+          const correctVal = q.correct?.[i] || "";
+
+          const mark = val ? `[${val}]` : "[ ]";
+          const isCorrect = val === correctVal;
+
+          const line = pdf.splitTextToSize(
+            `${mark} ${text}`,
+            pageWidth - 2 * margin
+          );
+
+          if (y + line.length * lineHeight > pageBottom) {
+            pdf.addPage();
+            y = margin;
+          }
+
+          pdf.text(line, margin + 5, y);
+
+          if (val) {
+            pdf.setTextColor(isCorrect ? 0 : 255, isCorrect ? 128 : 0, 0);
+            pdf.text(isCorrect ? "✓" : "✗", pageWidth - margin - 10, y);
+            pdf.setTextColor(0, 0, 0);
+          }
+
+          y += line.length * lineHeight;
+        });
+        break;
+      }
+
+      case "fillblank": {
+        const filled = Array.isArray(q.filled) ? q.filled : [];
+        const correctRaw = Array.isArray(q.options) ? q.options : [];
+
+        filled.forEach((word, i) => {
+          const userText = extractText(word);
+          const correctText = extractText(correctRaw[i]);
+
+          const isCorrect =
+            userText &&
+            correctText &&
+            userText.trim() === correctText.trim();
+
+          const line = `${i + 1}. ${userText || "______"}`;
+
+          if (y + lineHeight > pageBottom) {
+            pdf.addPage();
+            y = margin;
+          }
+
+          pdf.text(line, margin + 5, y);
+
+          if (userText) {
+            pdf.setTextColor(isCorrect ? 0 : 255, isCorrect ? 128 : 0, 0);
+            pdf.text(isCorrect ? "✓" : "✗", pageWidth - margin - 10, y);
+            pdf.setTextColor(0, 0, 0);
+          }
+
+          y += lineHeight;
+        });
+        break;
+      }
+
+
+      case "matching": {
+        const order = answers[q.id] || [];
+        q.pairs.forEach((pair, i) => {
+          const left = extractText(pair.left);
+          const rightIdx = order[i];
+          const right = extractText(q.rightOptions?.[rightIdx]);
+
+          const isCorrect = rightIdx === q.correct?.[i];
+
+          const line = `${left}  →  ${right || "_____"}`;
+
+          const lines = pdf.splitTextToSize(
+            line,
+            pageWidth - 2 * margin
+          );
+
+          if (y + lines.length * lineHeight > pageBottom) {
+            pdf.addPage();
+            y = margin;
+          }
+
+          pdf.text(lines, margin + 5, y);
+
+          pdf.setTextColor(isCorrect ? 0 : 255, isCorrect ? 128 : 0, 0);
+          pdf.text(isCorrect ? "✓" : "✗", pageWidth - margin - 10, y);
+          pdf.setTextColor(0, 0, 0);
+
+          y += lines.length * lineHeight;
+        });
+        break;
+      }
+
 
       default:
-        const defaultLine = pdf.splitTextToSize("Loại câu hỏi không hỗ trợ", pageWidth - 2 * margin - 10);
-        if (y + defaultLine.length * lineHeight > pageBottom) { pdf.addPage(); y = margin; }
-        pdf.text(defaultLine, margin + 5, y);
-        y += defaultLine.length * lineHeight;
+        pdf.text("(Loại câu hỏi chưa hỗ trợ)", margin + 5, y);
+        y += lineHeight;
     }
-    
-    y += 2;
+
+    y += 4;
   }
 
-  // ===== LƯU FILE =====
-  const now = new Date();
-  const hh = String(now.getHours()).padStart(2, "0");
-  const mm = String(now.getMinutes()).padStart(2, "0");
-  const ss = String(now.getSeconds()).padStart(2, "0");
-  const ms = String(now.getMilliseconds()).padStart(3, "0");
-  const code = `${hh}${mm}${ss}${ms}`;
-
+  // ================== SAVE ==================
+  const code = Date.now();
   const safeName = capitalizeName(studentInfo.name).replace(/\s+/g, "_");
-  const fileName = `${studentInfo.class}_${safeName}_${code}.pdf`;
-
-  pdf.save(fileName);
+  pdf.save(`${className}_${safeName}_${code}.pdf`);
 };

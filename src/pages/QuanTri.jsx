@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext } from "react";
 import {
   Box, Typography, Card, Stack, Select, MenuItem, FormControl, InputLabel,
-  Button, TextField, IconButton, Checkbox, Snackbar, Alert, Dialog, DialogContent
+  Button, TextField, IconButton, Checkbox, Snackbar, Alert, Dialog, DialogContent,Tooltip
 } from "@mui/material";
 import { Add, Delete } from "@mui/icons-material";
 import VpnKeyIcon from "@mui/icons-material/VpnKey";
@@ -62,6 +62,7 @@ export default function QuanTri() {
           hocKy: data.hocKy ?? "Cuối kỳ I",
           timeLimit: data.timeLimit ?? 20,
           xuatFileBaiLam: data.xuatFileBaiLam ?? true,
+          khoaHeThong: data.khoaHeThong ?? false,
         });
 
         setSelectedSemester(data.hocKy ?? "Cuối kỳ I");
@@ -92,16 +93,80 @@ export default function QuanTri() {
 
   // ===== Thêm / xóa lớp =====
   const handleAddClass = async () => {
-    const cls = newClass.trim().toUpperCase();
-    if (!cls || classes.includes(cls)) return alert("Lớp đã tồn tại!");
-    const updated = [...classes, cls].sort();
+    if (!newClass.trim()) return;
+
+    const input = newClass.toUpperCase().replace(/\s+/g, "");
+    let generatedClasses = [];
+
+    const parts = input.split(",");
+
+    for (let part of parts) {
+
+      // ===== CASE 1: Dãy chữ cái – ví dụ 3A->3K =====
+      let matchLetter = part.match(/^(\d+)([A-Z])->(\d+)?([A-Z])$/);
+      if (matchLetter) {
+        const grade = matchLetter[1];
+        const start = matchLetter[2].charCodeAt(0);
+        const end = matchLetter[4].charCodeAt(0);
+
+        if (start > end) continue;
+
+        for (let c = start; c <= end; c++) {
+          generatedClasses.push(`${grade}${String.fromCharCode(c)}`);
+        }
+        continue;
+      }
+
+      // ===== CASE 2: Dãy số – ví dụ 4.1->4.6 =====
+      let matchNumber = part.match(/^(\d+)\.(\d+)->(\d+)\.(\d+)$/);
+      if (matchNumber) {
+        const grade = matchNumber[1];
+        const start = Number(matchNumber[2]);
+        const end = Number(matchNumber[4]);
+
+        if (start > end) continue;
+
+        for (let i = start; i <= end; i++) {
+          generatedClasses.push(`${grade}.${i}`);
+        }
+        continue;
+      }
+
+      // ===== CASE 3: 1 lớp đơn =====
+      if (/^\d+(\.\d+|[A-Z])$/.test(part)) {
+        generatedClasses.push(part);
+      }
+    }
+
+    if (generatedClasses.length === 0) {
+      alert("❌ Định dạng không hợp lệ!");
+      return;
+    }
+
+    // Loại trùng
+    const uniqueNew = generatedClasses.filter(c => !classes.includes(c));
+
+    if (uniqueNew.length === 0) {
+      alert("⚠️ Các lớp đã tồn tại!");
+      return;
+    }
+
+    const updated = [...classes, ...uniqueNew].sort();
+
     setClasses(updated);
-    setSelectedClass(cls);
-    updateConfigField("lop", cls);
-    await setDoc(doc(db, "LAMVANBEN", "lop"), { list: updated }, { merge: true });
+    setSelectedClass(uniqueNew[0]);
+    updateConfigField("lop", uniqueNew[0]);
+
+    await setDoc(
+      doc(db, "LAMVANBEN", "lop"),
+      { list: updated },
+      { merge: true }
+    );
+
     setNewClass("");
     setAddingClass(false);
   };
+
 
   const handleDeleteClass = async () => {
     const updated = classes.filter((c) => c !== selectedClass).sort();
@@ -146,7 +211,7 @@ export default function QuanTri() {
     <Box sx={{ minHeight: "100vh", backgroundColor: "#e3f2fd", pt: 3, display: "flex", justifyContent: "center" }}>
       <Stack spacing={2} sx={{ width: { xs: "95%", sm: "350px" } }}>
         <Card elevation={6} sx={{ p: 3, borderRadius: 3 }}>
-          <Typography variant="h6" fontWeight="bold" color="primary" textAlign="center" mb={2}>
+          <Typography variant="h6" fontWeight="bold" color="primary" textAlign="center" mt= {2} mb={2}>
             CẤU HÌNH HỆ THỐNG
           </Typography>
 
@@ -213,9 +278,33 @@ export default function QuanTri() {
 
             {addingClass && (
               <Stack direction="row" spacing={1}>
-                <TextField size="small" label="Tên lớp" value={newClass} onChange={(e) => setNewClass(e.target.value)} fullWidth />
-                <Button variant="contained" size="small" sx={{ bgcolor: "green" }} onClick={handleAddClass}>Lưu</Button>
-                <Button size="small" onClick={() => setAddingClass(false)}>Hủy</Button>
+                <Tooltip
+                  title="Nhập 1 lớp hoặc dãy lớp liên tiếp, ví dụ: 4.1->4.6, 5A->5H, 3A"
+                  arrow
+                  placement="top"
+                >
+                  <TextField
+                    size="small"
+                    label="Tên lớp"
+                    placeholder="VD: 3A->3K"
+                    value={newClass}
+                    onChange={(e) => setNewClass(e.target.value)}
+                    fullWidth
+                  />
+                </Tooltip>
+
+                <Button
+                  variant="contained"
+                  size="small"
+                  sx={{ bgcolor: "green" }}
+                  onClick={handleAddClass}
+                >
+                  Lưu
+                </Button>
+
+                <Button size="small" onClick={() => setAddingClass(false)}>
+                  Hủy
+                </Button>
               </Stack>
             )}
 
@@ -232,17 +321,54 @@ export default function QuanTri() {
             </Box>
 
             {/* Checkboxes */}
-            <Box ml={4} mt={1}>
-              <Box display="flex" alignItems="center" gap={1} mb={1}>
-                <Checkbox checked={config.choXemDiem} onChange={(e) => updateConfigField("choXemDiem", e.target.checked)} />
+            <Box display="flex" alignItems="center" gap={0.5} mb={0.25}>
+              <Checkbox
+                checked={config.khoaHeThong || false}
+                onChange={(e) =>
+                  updateConfigField("khoaHeThong", e.target.checked)
+                }
+                sx={{
+                  p: 1, // ✅ ĐỒNG BỘ
+                  color: "#d32f2f",
+                  "&.Mui-checked": { color: "#d32f2f" },
+                }}
+              />
+              <Typography fontWeight={600} color="#d32f2f">
+                Khóa hệ thống
+              </Typography>
+            </Box>
+
+            <Box ml={4} mt={0.5}>
+              <Box display="flex" alignItems="center" gap={0.5} mb={0.25}>
+                <Checkbox
+                  sx={{ p: 1 }} // ✅ ĐỒNG BỘ
+                  checked={config.choXemDiem}
+                  onChange={(e) =>
+                    updateConfigField("choXemDiem", e.target.checked)
+                  }
+                />
                 <Typography>Cho xem điểm</Typography>
               </Box>
-              <Box display="flex" alignItems="center" gap={1} mb={1}>
-                <Checkbox checked={config.choXemDapAn} onChange={(e) => updateConfigField("choXemDapAn", e.target.checked)} />
+
+              <Box display="flex" alignItems="center" gap={0.5} mb={0.25}>
+                <Checkbox
+                  sx={{ p: 1 }} // ✅ ĐỒNG BỘ
+                  checked={config.choXemDapAn}
+                  onChange={(e) =>
+                    updateConfigField("choXemDapAn", e.target.checked)
+                  }
+                />
                 <Typography>Cho xem đáp án</Typography>
               </Box>
-              <Box display="flex" alignItems="center" gap={1}>
-                <Checkbox checked={config.xuatFileBaiLam} onChange={(e) => updateConfigField("xuatFileBaiLam", e.target.checked)} />
+
+              <Box display="flex" alignItems="center" gap={0.5}>
+                <Checkbox
+                  sx={{ p: 1 }} // ✅ ĐỒNG BỘ
+                  checked={config.xuatFileBaiLam}
+                  onChange={(e) =>
+                    updateConfigField("xuatFileBaiLam", e.target.checked)
+                  }
+                />
                 <Typography>Xuất file bài làm</Typography>
               </Box>
             </Box>

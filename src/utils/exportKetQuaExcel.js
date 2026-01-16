@@ -5,7 +5,7 @@ export const exportKetQuaExcel = async (
   results,
   className,
   mon,
-  hocKyFromConfig
+  hocKyFromConfig // 👈 NHẬN TRỰC TIẾP TỪ ConfigContext
 ) => {
   if (!results || results.length === 0) {
     alert("Không có dữ liệu để xuất Excel!");
@@ -14,17 +14,7 @@ export const exportKetQuaExcel = async (
 
   try {
     // ===============================
-    // 🔹 TÊN TRƯỜNG THEO ĐĂNG NHẬP
-    // ===============================
-    const username = localStorage.getItem("account") || "";
-
-    const schoolName =
-      username === "TH Lâm Văn Bền"
-        ? "TRƯỜNG TIỂU HỌC LÂM VĂN BỀN"
-        : "TRƯỜNG TIỂU HỌC BÌNH KHÁNH";
-
-    // ===============================
-    // 🔹 NĂM HỌC
+    // 🔹 NĂM HỌC (chuẩn theo tháng VN)
     // ===============================
     const getSchoolYear = () => {
       const now = new Date();
@@ -38,7 +28,7 @@ export const exportKetQuaExcel = async (
     const schoolYear = getSchoolYear();
 
     // ===============================
-    // 🔹 CHUẨN HOÁ HỌC KỲ
+    // 🔹 CHUẨN HOÁ HỌC KỲ (KHÔNG SAI)
     // ===============================
     const normalizeHocKy = (value = "") =>
       value
@@ -58,7 +48,7 @@ export const exportKetQuaExcel = async (
         : "TIN HỌC";
 
     // ===============================
-    // 🔹 WORKBOOK
+    // 🔹 TẠO WORKBOOK
     // ===============================
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet("Kết quả", {
@@ -68,7 +58,7 @@ export const exportKetQuaExcel = async (
     // ===============================
     // 🔹 TIÊU ĐỀ
     // ===============================
-    const row1 = sheet.addRow([schoolName]);
+    const row1 = sheet.addRow(["TRƯỜNG TIỂU HỌC BÌNH KHÁNH"]);
     row1.font = { size: 12, bold: true, color: { argb: "FF0D47A1" } };
     row1.alignment = { horizontal: "left", vertical: "middle" };
     row1.height = 20;
@@ -90,7 +80,7 @@ export const exportKetQuaExcel = async (
     sheet.addRow([]);
 
     // ===============================
-    // 🔹 HEADER (5 CỘT)
+    // 🔹 HEADER
     // ===============================
     const headerKeys = ["STT", "HỌ VÀ TÊN", "Điểm", "Thời gian", "Ngày"];
     const headerRow = sheet.addRow(headerKeys);
@@ -125,7 +115,7 @@ export const exportKetQuaExcel = async (
         r.hoVaTen || "",
         r.diem ?? "",
         r.thoiGianLamBai || "",
-        r.ngayHienThi || r.ngayKiemTra || "",
+        r.ngayHienThi || "",
       ]);
 
       row.height = 30;
@@ -148,14 +138,14 @@ export const exportKetQuaExcel = async (
     });
 
     // ===============================
-    // 🔹 ĐỘ RỘNG CỘT (GIỐNG MẪU)
+    // 🔹 ĐỘ RỘNG CỘT
     // ===============================
     sheet.columns = [
-      { width: 6 },   // STT
-      { width: 30 },  // HỌ VÀ TÊN
-      { width: 10 },  // Điểm
-      { width: 15 },  // Thời gian
-      { width: 15 },  // Ngày
+      { width: 6 },
+      { width: 30 },
+      { width: 10 },
+      { width: 15 },
+      { width: 15 },
     ];
 
     // ===============================
