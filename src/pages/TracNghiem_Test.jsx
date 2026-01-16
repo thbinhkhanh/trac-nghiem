@@ -151,75 +151,15 @@ export default function TracNghiem_Test() {
     });
   };
 
-  /*useEffect(() => {
-    const fetchExams = async () => {
-      try {
-        const colName = "NGANHANG_DE";
-        const colRef = collection(db, colName);
-        const snap = await getDocs(colRef);
-
-        // Lấy key năm học từ selectedYear
-        const yearKey = selectedYear.slice(2, 4) + "-" + selectedYear.slice(7, 9);
-
-        // Học kỳ: "Cuối kỳ I" -> "CKI", "Cả năm" -> "CN"
-        const hocKyKey = hocKi === "Cả năm" ? "CN" : "CKI";
-
-        // Lọc đề theo năm học + học kỳ
-        const exams = snap.docs
-          .map(d => d.id)
-          .filter(id => id.includes(yearKey) && id.includes(hocKyKey));
-
-        // ✅ Sắp xếp theo thứ tự mong muốn
-        const sortedExams = exams.sort((a, b) => {
-          const regex = /quiz_Lớp (\d+)_(Công nghệ|Tin học)_(CKI|CKII|CN)_(\d+-\d+) \(([A-Z])\)/i;
-
-          const matchA = a.match(regex);
-          const matchB = b.match(regex);
-          if (!matchA || !matchB) return 0;
-
-          const [_, classA, subjectA, hkA, yearA, letterA] = matchA;
-          const [__, classB, subjectB, hkB, yearB, letterB] = matchB;
-
-          // 1️⃣ Sắp môn: Công nghệ trước Tin học
-          const subjectOrder = ["Công nghệ", "Tin học"];
-          const indexA = subjectOrder.indexOf(subjectA);
-          const indexB = subjectOrder.indexOf(subjectB);
-          if (indexA !== indexB) return indexA - indexB;
-
-          // 2️⃣ Sắp lớp
-          if (parseInt(classA) !== parseInt(classB)) return parseInt(classA) - parseInt(classB);
-
-          // 3️⃣ Sắp học kỳ CKI < CKII < CN
-          const extraOrder = ["CKI", "CKII", "CN"];
-          const eA = extraOrder.indexOf(hkA) === -1 ? 99 : extraOrder.indexOf(hkA);
-          const eB = extraOrder.indexOf(hkB) === -1 ? 99 : extraOrder.indexOf(hkB);
-          if (eA !== eB) return eA - eB;
-
-          // 4️⃣ Sắp chữ cái đề
-          return (letterA || "").localeCompare(letterB || "");
-        });
-
-        setExamList(sortedExams);
-
-        // Chọn mặc định đề đầu tiên nếu selectedExam không hợp lệ
-        if (!selectedExam || !sortedExams.includes(selectedExam)) {
-          if (sortedExams.length > 0) setSelectedExam(sortedExams[0]);
-        }
-
-      } catch (err) {
-        console.error("Lỗi lấy danh sách đề:", err);
-        setExamList([]);
-        setSelectedExam("");
-      }
-    };
-
-    fetchExams();
-  }, [school, selectedYear, hocKi]);*/
-
   useEffect(() => {
     if (!examType) return;
     fetchQuizList(examType);
   }, [examType]);
+
+  useEffect(() => {
+    fetchQuizList();
+  }, []);
+
 
 
   // ⭐ RESET TOÀN BỘ SAU KHI CHỌN ĐỀ MỚI
@@ -272,56 +212,27 @@ export default function TracNghiem_Test() {
         let monHocFromConfig = "";
         let timeLimitMinutes = 0;
 
-        // ================= LẤY CONFIG =================
-        if (school === "TH Lâm Văn Bền") {
-          const studentClass = studentInfo?.class || "";
-          const classNumber = studentClass.match(/\d+/)?.[0];
+      
+        const configRef = doc(db, "CONFIG", "config");
+        const configSnap = await getDoc(configRef);
+        prog += 30;
+        setProgress(prog);
 
-          if (!classNumber) {
-            setLoading(false);
-            return;
-          }
-
-          const lvbConfigRef = doc(db, "LAMVANBEN", "config");
-          const lvbConfigSnap = await getDoc(lvbConfigRef);
-          prog += 30;
-          setProgress(prog);
-
-          if (!lvbConfigSnap.exists()) {
-            setLoading(false);
-            return;
-          }
-
-          const cfg = lvbConfigSnap.data();
-          hocKiFromConfig = cfg.hocKy || "";
-          monHocFromConfig = cfg.mon || "";
-          timeLimitMinutes = cfg.timeLimit ?? 0;
-
-          setTimeLimitMinutes(timeLimitMinutes);
-          setChoXemDiem(cfg.choXemDiem ?? false);
-          setChoXemDapAn(cfg.choXemDapAn ?? false);
-        } else {
-          const configRef = doc(db, "CONFIG", "config");
-          const configSnap = await getDoc(configRef);
-          prog += 30;
-          setProgress(prog);
-
-          if (!configSnap.exists()) {
-            setSnackbar({ open: true, message: "❌ Không tìm thấy config!", severity: "error" });
-            setLoading(false);
-            return;
-          }
-
-          const cfg = configSnap.data();
-          hocKiFromConfig = cfg.hocKy || "";
-          monHocFromConfig = cfg.mon || "";
-          timeLimitMinutes = cfg.timeLimit ?? 0;
-
-          setTimeLimitMinutes(timeLimitMinutes);
-          setChoXemDiem(cfg.choXemDiem ?? false);
-          setChoXemDapAn(cfg.choXemDapAn ?? false);
+        if (!configSnap.exists()) {
+          setSnackbar({ open: true, message: "❌ Không tìm thấy config!", severity: "error" });
+          setLoading(false);
+          return;
         }
 
+        const cfg = configSnap.data();
+        hocKiFromConfig = cfg.hocKy || "";
+        monHocFromConfig = cfg.mon || "";
+        timeLimitMinutes = cfg.timeLimit ?? 0;
+
+        setTimeLimitMinutes(timeLimitMinutes);
+        setChoXemDiem(cfg.choXemDiem ?? false);
+        setChoXemDapAn(cfg.choXemDapAn ?? false);
+    
         // ================= LẤY ĐỀ =================
         if (!selectedExam) {
           setLoading(false);
@@ -545,14 +456,13 @@ export default function TracNghiem_Test() {
     try {
       const colRef = collection(db, "NGANHANG_DE");
       const snap = await getDocs(colRef);
-
-      const exams = snap.docs.map((d) => d.id);
+      const exams = snap.docs.map(d => d.id);
 
       setExamList(exams);
 
-      if (exams.length > 0) {
-        setSelectedExam(exams[0]);
-      }
+      // ✅ CHỈ set khi CHƯA có selectedExam
+      setSelectedExam(prev => prev && exams.includes(prev) ? prev : exams[0] || "");
+
     } catch (err) {
       console.error("❌ Lỗi khi lấy danh sách đề:", err);
       setSnackbar({
@@ -562,6 +472,7 @@ export default function TracNghiem_Test() {
       });
     }
   };
+
 
 
  const formatQuizTitle = (examName = "") => {
