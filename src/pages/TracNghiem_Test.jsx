@@ -36,6 +36,7 @@ import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
 import CloseIcon from "@mui/icons-material/Close";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import ExitConfirmDialog from "../dialog/ExitConfirmDialog";
+import IncompleteAnswersDialog from "../dialog/IncompleteAnswersDialog";
 
 
 import Dialog from "@mui/material/Dialog";
@@ -2081,88 +2082,11 @@ return (
     </Paper>
 
     {/* Dialog cảnh báo chưa làm hết */}
-    <Dialog
+    <IncompleteAnswersDialog
       open={openAlertDialog}
       onClose={() => setOpenAlertDialog(false)}
-      maxWidth="xs"
-      fullWidth
-      PaperProps={{
-        sx: {
-          borderRadius: 3,
-          p: 0,
-          bgcolor: "#e3f2fd",
-          boxShadow: "0 4px 12px rgba(33, 150, 243, 0.15)",
-        },
-      }}
-    >
-      {/* Header với nền màu full width */}
-      <Box
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          p: 0.75, // chiều cao header
-          bgcolor: "#90caf9", // nền màu xanh nhạt
-          borderRadius: "12px 12px 0 0", // bo 2 góc trên
-          mb: 2,
-        }}
-      >
-        <Box
-          sx={{
-            bgcolor: "#42a5f5", // xanh đậm cho icon
-            color: "#fff",
-            borderRadius: "50%",
-            width: 36,
-            height: 36,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            mr: 1.5,
-            fontWeight: "bold",
-            fontSize: 18,
-          }}
-        >
-          ⚠️
-        </Box>
-
-        <DialogTitle
-          sx={{
-            p: 0,
-            fontWeight: "bold",
-            color: "#0d47a1", // màu xanh tiêu đề
-            fontSize: 20,
-          }}
-        >
-          Chưa hoàn thành
-        </DialogTitle>
-      </Box>
-
-      {/* Nội dung */}
-      <DialogContent sx={{ px: 3, pb: 3 }}>
-        <Typography sx={{ fontSize: 16, color: "#0d47a1" }}>
-          Bạn chưa chọn đáp án cho câu: {unansweredQuestions.join(", ")}.<br />
-          Vui lòng trả lời tất cả câu hỏi trước khi nộp.
-        </Typography>
-      </DialogContent>
-
-      {/* Nút OK */}
-      <DialogActions sx={{ justifyContent: "center", pb: 2 }}>
-        <Button
-          variant="contained"
-          onClick={() => setOpenAlertDialog(false)}
-          sx={{
-            px: 4,
-            borderRadius: 2,
-            bgcolor: "#42a5f5", // xanh đậm giống mẫu
-            color: "#fff",
-            "&:hover": { bgcolor: "#1e88e5" },
-            fontWeight: "bold",
-            mb:2,
-          }}
-        >
-          OK
-        </Button>
-      </DialogActions>
-    </Dialog>
+      unansweredQuestions={unansweredQuestions}
+    />
 
     {/* Dialog xác nhận thoát */}
     <ExitConfirmDialog
