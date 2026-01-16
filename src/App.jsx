@@ -9,7 +9,7 @@ import {
 } from "react-router-dom";
 import { AppBar, Toolbar, Button, Typography, Box } from "@mui/material";
 
-// 🔹 Pages (CHỈ GIỮ 7 MENU)
+// 🔹 Pages
 import Info from "./pages/Info";
 import Login from "./pages/Login";
 import TongHopKQ from "./pages/TongHopKQ";
@@ -17,11 +17,12 @@ import TracNghiemGV from "./pages/TracNghiemGV";
 import TracNghiemTest from "./pages/TracNghiem_Test";
 import DeThi from "./pages/DeThi";
 import QuanTri from "./pages/QuanTri";
-import SystemLockedDialog from "./dialog/SystemLockedDialog";
 import TracNghiem from "./pages/TracNghiem";
 
+// 🔹 Dialog
+import SystemLockedDialog from "./dialog/SystemLockedDialog";
 
-// 🔹 Context (giữ nguyên)
+// 🔹 Context (GIỮ NGUYÊN)
 import { ConfigProvider, ConfigContext } from "./context/ConfigContext";
 import { AdminProvider } from "./context/AdminContext";
 import { TracNghiemProvider } from "./context/TracNghiemContext";
@@ -35,24 +36,28 @@ function AppContent() {
   const navigate = useNavigate();
   const { config, setConfig } = useContext(ConfigContext);
 
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  // ✅ LOGIN STATE – LẤY NGAY TỪ localStorage
+  const [isLoggedIn, setIsLoggedIn] = useState(
+    localStorage.getItem("loggedIn") === "true"
+  );
+
   const [loading, setLoading] = useState(true);
   const [openLockedDialog, setOpenLockedDialog] = useState(false);
 
-
+  // ✅ CHỈ DÙNG ĐỂ KẾT THÚC LOADING
   useEffect(() => {
-    setIsLoggedIn(localStorage.getItem("loggedIn") === "true");
     setLoading(false);
   }, []);
 
+  // ===== LOGOUT =====
   const handleLogout = () => {
-    localStorage.removeItem("loggedIn");
-    localStorage.removeItem("account");
+    localStorage.clear();
     setIsLoggedIn(false);
     setConfig((prev) => ({ ...prev, login: false }));
-    navigate("/login");
+    navigate("/login", { replace: true });
   };
 
+  // ===== HỌC KỲ =====
   const handleHocKyChange = (e) => {
     const hocKy = e.target.value;
     const newConfig = { ...config, hocKy };
@@ -60,14 +65,15 @@ function AppContent() {
     localStorage.setItem("appConfig", JSON.stringify(newConfig));
   };
 
+  // ===== KHÓA HỆ THỐNG =====
   const handleHocSinhClick = (e) => {
     if (config?.khoaHeThong) {
-      e.preventDefault();           // ❌ chặn chuyển trang
-      setOpenLockedDialog(true);    // 🔒 mở dialog
+      e.preventDefault();
+      setOpenLockedDialog(true);
     }
   };
 
-  // ✅ CHỈ 7 MENU – GIỮ NGUYÊN CẤU TRÚC
+  // ===== MENU (7 MENU) =====
   const navItems = [
     {
       path: "/hocsinh",
@@ -91,7 +97,7 @@ function AppContent() {
 
   return (
     <>
-      {/* ===== GIỮ NGUYÊN THANH MENU GỐC ===== */}
+      {/* ===== APP BAR ===== */}
       <AppBar position="fixed" sx={{ background: "#1976d2" }}>
         <Toolbar
           sx={{
@@ -129,25 +135,17 @@ function AppContent() {
                   color: "white",
                   textTransform: "none",
                   padding: "4px 10px",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 0.8,
                   minHeight: "auto",
-                  flexShrink: 0,
                   borderBottom:
                     location.pathname === item.path
                       ? "3px solid #fff"
                       : "3px solid transparent",
                   "&:hover": {
                     backgroundColor: "rgba(255,255,255,0.1)",
-                    opacity: 1,
                   },
                 }}
               >
-                <Typography
-                  variant="body2"
-                  sx={{ ml: 0.3, color: "white", opacity: 1 }}
-                >
+                <Typography variant="body2" sx={{ color: "white" }}>
                   {item.label}
                 </Typography>
               </Button>
@@ -186,39 +184,50 @@ function AppContent() {
         </Toolbar>
       </AppBar>
 
-      {/* ===== ROUTES (CHỈ 7 MENU) ===== */}
+      {/* ===== ROUTES ===== */}
       <Box sx={{ paddingTop: "44px" }}>
         <Routes>
           <Route path="/" element={<Navigate to="/hocsinh" replace />} />
-          <Route path="/login" element={<Login />} />
+
+          <Route
+            path="/login"
+            element={<Login setIsLoggedIn={setIsLoggedIn} />}
+          />
+
           <Route path="/hocsinh" element={<Info />} />
 
           <Route
             path="/ketqua"
             element={isLoggedIn ? <TongHopKQ /> : <Navigate to="/login" />}
           />
+
           <Route
             path="/tracnghiem-gv"
-            element={isLoggedIn ? <TracNghiemGV /> : <Navigate to="/login" />}
+            element={
+              isLoggedIn ? (
+                <TracNghiemGV setIsLoggedIn={setIsLoggedIn} />
+              ) : (
+                <Navigate to="/login" />
+              )
+            }
           />
+
           <Route
             path="/tracnghiem-test"
             element={isLoggedIn ? <TracNghiemTest /> : <Navigate to="/login" />}
           />
+
           <Route
             path="/de-thi"
             element={isLoggedIn ? <DeThi /> : <Navigate to="/login" />}
           />
+
           <Route
             path="/quan-tri"
             element={isLoggedIn ? <QuanTri /> : <Navigate to="/login" />}
           />
 
-          <Route
-            path="/tracnghiem"
-            element={<TracNghiem />}
-          />
-
+          <Route path="/tracnghiem" element={<TracNghiem />} />
         </Routes>
       </Box>
 
@@ -226,7 +235,6 @@ function AppContent() {
         open={openLockedDialog}
         onClose={() => setOpenLockedDialog(false)}
       />
-
     </>
   );
 }

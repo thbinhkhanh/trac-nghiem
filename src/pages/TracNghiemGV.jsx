@@ -611,19 +611,32 @@ useEffect(() => {
   };
 
   const handleSaveAll = () => {
-  saveAllQuestions({
-    questions,
-    db,
-    selectedClass,
-    semester,
-    schoolYear,
-    examLetter,
-    quizConfig,
-    updateQuizConfig,
-    setSnackbar,
-    setIsEditingNewDoc,
-  });
-};
+    saveAllQuestions({
+      questions,
+      db,
+      selectedClass,
+      semester,
+      schoolYear,
+      examLetter,
+      quizConfig,
+      updateQuizConfig,
+      setSnackbar,
+      setIsEditingNewDoc,
+    });
+  };
+
+  const deTracNghiem =
+    quizConfig.deTracNghiem || localStorage.getItem("deTracNghiemId");
+
+  let displayTitle = "🆕 Đang soạn đề mới";
+
+  if (deTracNghiem) {
+    const parts = deTracNghiem.split("_");
+    const mon = parts[2] || ""; // Tin học
+    const lop = selectedClass || ""; // Lấy từ Select
+
+    displayTitle = `📝 Đề: ${mon} - ${lop}`;
+  }
 
 
   return (
