@@ -225,7 +225,7 @@ export default function TracNghiem_Test() {
   // ⭐ RESET TOÀN BỘ SAU KHI CHỌN ĐỀ MỚI
   useEffect(() => {
     if (!selectedExam) return;
-
+    console.log("✅ selectedExam đã thay đổi:", selectedExam);
     // Reset các state liên quan
     setAnswers({});
     setCurrentIndex(0);
