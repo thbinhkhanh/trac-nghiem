@@ -1,261 +1,239 @@
-import { doc, setDoc, getDoc, updateDoc } from "firebase/firestore";
+import { doc, setDoc } from "firebase/firestore";
 
 export const autoSubmitQuiz = async ({
   studentName,
   studentClass,
-  studentId,
   studentInfo,
+  setStudentResult,
+  setSnackbar,
+  setSaving,
+  setSubmitted,
+  setOpenAlertDialog,
+  setUnansweredQuestions,
+  setOpenResultDialog,
   questions,
   answers,
   startTime,
   db,
-  config,
-  configData,
-  selectedWeek,
-  getQuestionMax,
-
-  // --- các state setter từ component ---
-  setSnackbar,
-  setSaving,
-  setSubmitted,
-  setOpenResultDialog,
-  setStudentResult,
-
-  // --- hàm utils từ component chính ---
   capitalizeName,
-  mapHocKyToDocKey,
   formatTime,
+  xuatFileBaiLam,
   exportQuizPDF,
 }) => {
-  if (studentName === "Test") {
-    setSnackbar({
-      open: true,
-      message: "Đây là trang test",
-      severity: "info",
-    });
-    return;
-  }
-
-  const kiemTraDinhKi = config?.kiemTraDinhKi === true;
-  const hocKiConfig = configData.hocKy || "UNKNOWN";
-  const hocKiKey = mapHocKyToDocKey(hocKiConfig);
-
-  if (!studentClass || !studentName) {
-    setSnackbar({
-      open: true,
-      message: "Thiếu thông tin học sinh",
-      severity: "info",
-    });
-    return;
-  }
-
   try {
-    setSaving(true);
+    /* ===== KIỂM TRA THÔNG TIN ===== */
+    if (!studentName || !studentClass) {
+      setSnackbar({ open: true, message: "Thiếu thông tin học sinh", severity: "error" });
+      return;
+    }
 
-    // --- Tính điểm thô ---
+    const hocKi = window.currentHocKi || "Giữa kỳ I";
+    const monHoc = "Tin học";
+
+    /* ===== KIỂM TRA CÂU CHƯA LÀM ===== */
+    /*const unanswered = questions.filter(q => {
+      const a = answers[q.id];
+      if (q.type === "single") return a === undefined || a === null || a === "";
+      if (q.type === "multiple") return !Array.isArray(a) || a.length === 0;
+      if (q.type === "image") {
+        const isSingle = Array.isArray(q.correct) && q.correct.length === 1;
+        if (isSingle) return a === undefined || a === null || a.length === 0;
+        return !Array.isArray(a) || a.length === 0;
+      }
+      if (q.type === "truefalse")
+        return !Array.isArray(a) || a.length !== q.options.length;
+      if (q.type === "fillblank")
+        return !Array.isArray(a) || a.some(v => !v);
+      // 👉 sort và matching không coi là unanswered
+      return false;
+    });
+
+    if (unanswered.length > 0) {
+      setUnansweredQuestions(
+        unanswered.map(q => questions.findIndex(i => i.id === q.id) + 1)
+      );
+      setOpenAlertDialog(true);
+      return;
+    }*/
+
+    /* ===== TÍNH ĐIỂM ===== */
     setSaving(true);
     let total = 0;
+
     questions.forEach(q => {
       const rawAnswer = answers[q.id];
 
       if (q.type === "single") {
         const ua = Number(rawAnswer);
-        if (Array.isArray(q.correct) ? q.correct.includes(ua) : q.correct === ua)
-          total += q.score ?? 1;
+        const correctArr = Array.isArray(q.correct) ? q.correct : [q.correct];
+        if (correctArr.includes(ua)) total += q.score ?? 1;
+      }
 
-      } else if (q.type === "multiple" || q.type === "image") {
+      else if (q.type === "multiple") {
         const userSet = new Set(Array.isArray(rawAnswer) ? rawAnswer : []);
-        const correctSet = new Set(
-          Array.isArray(q.correct) ? q.correct : [q.correct]
-        );
+        const correctSet = new Set(Array.isArray(q.correct) ? q.correct : []);
         if (
           userSet.size === correctSet.size &&
           [...correctSet].every(x => userSet.has(x))
-        )
+        ) {
           total += q.score ?? 1;
+        }
+      }
 
-      } else if (q.type === "sort") {
-        const userOrder = Array.isArray(rawAnswer) ? rawAnswer : [];
-        const userTexts = userOrder.map(idx => q.options[idx]);
+      else if (q.type === "image") {
+        const correctIndexes = Array.isArray(q.correct) ? q.correct : [];
+        const userIndexes = (Array.isArray(rawAnswer) ? rawAnswer : [rawAnswer])
+          .map(val => Number(val))
+          .filter(v => !Number.isNaN(v));
+
+        const userSet = new Set(userIndexes);
+        const correctSet = new Set(correctIndexes);
+
+        if (
+          userSet.size === correctSet.size &&
+          [...correctSet].every(i => userSet.has(i))
+        ) {
+          total += q.score ?? 1;
+        }
+      }
+
+      else if (q.type === "sort") {
+        let userOrder = Array.isArray(rawAnswer) ? rawAnswer : [];
+        const options = Array.isArray(q.options) ? q.options : [];
         const correctTexts = Array.isArray(q.correctTexts) ? q.correctTexts : [];
 
-        const isCorrect =
-          userTexts.length === correctTexts.length &&
-          userTexts.every((t, i) => t === correctTexts[i]);
-
-        if (isCorrect) total += q.score ?? 1;
-
-      } else if (q.type === "matching") {
-        const userArray = Array.isArray(rawAnswer) ? rawAnswer : [];
-        const correctArray = Array.isArray(q.correct) ? q.correct : [];
-
-        let isCorrect = false;
-
-        if (userArray.length > 0) {
-          // Người dùng có sắp xếp → so sánh trực tiếp
-          isCorrect =
-            userArray.length === correctArray.length &&
-            userArray.every((val, i) => val === correctArray[i]);
+        // Nếu học sinh không trả lời → coi như giữ nguyên thứ tự ban đầu
+        if (userOrder.length === 0) {
+          userOrder = options.map((_, idx) => idx);
         }
-        // Nếu userArray.length === 0 → không tương tác → không cộng điểm
+
+        const normalize = s =>
+          String(typeof s === "object" && s !== null ? s.text ?? "" : s ?? "")
+            .replace(/<[^>]*>/g, "")
+            .trim()
+            .toLowerCase();
+
+        const userTexts = userOrder.map(idx => normalize(options[idx]));
+        const correctNorm = correctTexts.map(normalize);
+
+        const isCorrect =
+          userTexts.length === correctNorm.length &&
+          userTexts.every((t, i) => t === correctNorm[i]);
 
         if (isCorrect) total += q.score ?? 1;
-      } else if (q.type === "truefalse") {
+      }
+
+      else if (q.type === "matching") {
+        let userAnswer = Array.isArray(rawAnswer) ? rawAnswer : [];
+        const correct = Array.isArray(q.correct) ? q.correct : [];
+
+        // Nếu học sinh không trả lời → coi như giữ nguyên thứ tự ban đầu
+        if (userAnswer.length === 0) {
+          userAnswer = correct.map((_, i) => i);
+        }
+
+        if (
+          userAnswer.length === correct.length &&
+          userAnswer.every((v, i) => v === correct[i])
+        ) {
+          total += q.score ?? 1;
+        }
+      }
+
+      else if (q.type === "truefalse") {
         const userArray = Array.isArray(rawAnswer) ? rawAnswer : [];
         const correctArray = Array.isArray(q.correct) ? q.correct : [];
 
         if (userArray.length === correctArray.length) {
-          const isAllCorrect = userArray.every((val, i) => {
-            const originalIdx = Array.isArray(q.initialOrder)
-              ? q.initialOrder[i]
-              : i;
-            return val === correctArray[originalIdx];
+          const ok = userArray.every((val, i) => {
+            const idx = q.initialOrder?.[i] ?? i;
+            return val === correctArray[idx];
           });
-          if (isAllCorrect) total += q.score ?? 1;
+          if (ok) total += q.score ?? 1;
         }
+      }
 
-      } else if (q.type === "fillblank") {
-        const userAnswers = Array.isArray(rawAnswer) ? rawAnswer : [];
-        const correctAnswers = Array.isArray(q.options) ? q.options : [];
+      else if (q.type === "fillblank") {
+        const user = Array.isArray(rawAnswer) ? rawAnswer : [];
+        const correct = Array.isArray(q.correct) ? q.correct : [];
 
-        if (userAnswers.length === correctAnswers.length) {
-          const isAllCorrect = correctAnswers.every(
-            (correct, i) =>
-              userAnswers[i] &&
-              userAnswers[i].trim() === correct.trim()
-          );
-          if (isAllCorrect) total += q.score ?? 1;
+        if (
+          user.length === correct.length &&
+          user.every((v, i) => String(v ?? "").trim() === String(correct[i] ?? "").trim())
+        ) {
+          total += q.score ?? 1;
         }
       }
     });
 
     setSubmitted(true);
 
-    // --- Tính thời gian ---
-    const durationSec = startTime ? Math.floor((Date.now() - startTime) / 1000) : 0;
+    /* ===== THỜI GIAN ===== */
+    const durationSec = startTime
+      ? Math.floor((Date.now() - startTime) / 1000)
+      : 0;
     const durationStr = formatTime(durationSec);
 
-    // --- PDF cho KTDK ---
-    const hocKi = window.currentHocKi || "GKI";
-    const monHoc = window.currentMonHoc || "Không rõ";
-    if (configData?.kiemTraDinhKi === true) {
-      const quizTitle = `KTĐK${hocKi ? ` ${hocKi.toUpperCase()}` : ""}${monHoc ? ` - ${monHoc.toUpperCase()}` : ""}`;
-      exportQuizPDF(studentInfo, studentInfo.className, questions, answers, total, durationStr, quizTitle);
+    /* ===== XUẤT PDF (NẾU CÓ) ===== */
+    if (xuatFileBaiLam) {
+      const quizTitle = `KTĐK ${hocKi.toUpperCase()} - ${monHoc.toUpperCase()}`;
+      exportQuizPDF(
+        studentInfo,
+        studentClass,
+        questions,
+        answers,
+        total,
+        durationStr,
+        quizTitle
+      );
     }
 
-    const ngayKiemTra = new Date().toLocaleDateString("vi-VN");
-    const maxScore = questions.reduce((sum, q) => sum + getQuestionMax(q), 0);
-    const phanTram = Math.round((total / maxScore) * 100);
-
-    const normalizeName = (name) =>
-      name.normalize("NFD")
-          .replace(/[\u0300-\u036f]/g, "")
-          .replace(/đ/g, "d").replace(/Đ/g, "D")
-          .toLowerCase().trim()
-          .replace(/\s+/g, "_")
-          .replace(/[^a-z0-9_]/g, "");
-
+    /* ===== KẾT QUẢ ===== */
     setStudentResult({
       hoVaTen: capitalizeName(studentName),
       lop: studentClass,
       diem: total,
-      diemTN: phanTram,
     });
     setOpenResultDialog(true);
 
-    // --- Lưu Firestore ---
-    if (!configData) return;
-    const hocKiKey = mapHocKyToDocKey(configData.hocKy || "UNKNOWN");
+    /* ===== LƯU FIRESTORE ===== */
+    const normalizeName = name =>
+      name
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/đ/g, "d")
+        .replace(/Đ/g, "D")
+        .toLowerCase()
+        .replace(/\s+/g, "_");
+
+    const collectionRoot = "LAMVANBEN";
     const lop = studentClass;
-    const docId = studentInfo.id;
+    const docId = normalizeName(studentName);
 
-    if (kiemTraDinhKi) {
-      const classKey = studentClass.replace(".", "_");
-      const subjectKey = config?.mon === "Công nghệ" ? "CongNghe" : "TinHoc";
+    const docRef = doc(
+      db,
+      `${collectionRoot}/${hocKi}/${lop}/${docId}`
+    );
 
-      const termDoc = mapHocKyToDocKey(configData?.hocKy || "Giữa kỳ I");
-
-      const hsRef = doc(
-        db,
-        "DATA",
-        classKey,
-        "HOCSINH",
-        studentId
-      );
-
-      await updateDoc(hsRef, {
-        [`${subjectKey}.ktdk.${termDoc}.lyThuyet`]: total,
-        [`${subjectKey}.ktdk.${termDoc}.lyThuyetPhanTram`]: phanTram,
-      }).catch(async (err) => {
-        if (err.code === "not-found") {
-          await setDoc(
-            hsRef,
-            {
-              [subjectKey]: {
-                ktdk: {
-                  [termDoc]: {
-                    lyThuyet: total,
-                    lyThuyetPhanTram: phanTram,
-                  },
-                },
-              },
-            },
-            { merge: true }
-          );
-        } else {
-          throw err;
-        }
-      });
-    } else {
-        const classKey = (studentClass || "").replace(".", "_");
-        const monKey = config?.mon === "Công nghệ" ? "CongNghe" : "TinHoc";
-
-        const weekNumber = Number(selectedWeek);
-        if (!weekNumber) return;
-
-        const hsRef = doc(
-          db,
-          "DATA",
-          classKey,
-          "HOCSINH",
-          studentId
-        );
-
-        const percent = phanTram;
-        const resultText =
-          percent >= 75
-            ? "Hoàn thành tốt"
-            : percent >= 50
-            ? "Hoàn thành"
-            : "Chưa hoàn thành";
-
-        // ⚠️ phân biệt ĐÁNH GIÁ TUẦN hay BÀI TẬP TUẦN
-        const isDanhGiaTuan = config?.danhGiaTuan === true;
-
-        const weekData = isDanhGiaTuan
-          ? {
-              status: resultText,
-            }
-          : {
-              TN_diem: percent,
-              TN_status: resultText,
-            };
-
-        await setDoc(
-          hsRef,
-          {
-            [monKey]: {
-              dgtx: {
-                [`tuan_${weekNumber}`]: weekData,
-              },
-            },
-          },
-          { merge: true }
-        );
-      }
-
+    await setDoc(
+      docRef,
+      {
+        hoVaTen: capitalizeName(studentName),
+        lop: studentClass,
+        mon: monHoc,
+        diem: total,
+        thoiGianLamBai: durationStr,
+        ngayKiemTra: new Date().toLocaleDateString("vi-VN"),
+      },
+      { merge: true }
+    );
   } catch (err) {
-    console.error("❌ Lỗi khi auto submit:", err);
+    console.error("❌ Lỗi khi lưu điểm:", err);
+    setSnackbar({
+      open: true,
+      message: "❌ Lỗi khi lưu bài làm",
+      severity: "error",
+    });
   } finally {
     setSaving(false);
   }

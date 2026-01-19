@@ -22,6 +22,7 @@ import {
 import { collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc } from "firebase/firestore";
 
 import { db } from "../firebase"; // Firestore instance
+import { useLocation } from "react-router-dom";
 
 import DeleteIcon from "@mui/icons-material/Delete";
 import { useConfig } from "../context/ConfigContext";
@@ -48,6 +49,7 @@ export default function TracNghiemGV() {
   const [loadingList, setLoadingList] = useState(false);
   const [selectedDoc, setSelectedDoc] = useState(null);
   const [isEditingNewDoc, setIsEditingNewDoc] = useState(true);
+  const location = useLocation();
 
   // ⚙️ Bộ lọc lớp
   const [filterClass, setFilterClass] = useState("Tất cả");
@@ -763,7 +765,7 @@ useEffect(() => {
               updateQuestionAt={updateQuestionAt}
               handleDeleteQuestion={handleDeleteQuestion}
               handleImageChange={handleImageChange}
-              saveAllQuestions={() =>
+              handleSaveAll={() =>
                 saveAllQuestions({
                   questions,
                   db,

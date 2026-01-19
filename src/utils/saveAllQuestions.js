@@ -9,6 +9,7 @@ export const saveAllQuestions = async ({
   examLetter,
   quizConfig,
   updateQuizConfig,
+  setQuizCache,
   setSnackbar,
   setIsEditingNewDoc,
 }) => {

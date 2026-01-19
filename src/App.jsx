@@ -19,6 +19,10 @@ import DeThi from "./pages/DeThi";
 import QuanTri from "./pages/QuanTri";
 import TracNghiem from "./pages/TracNghiem";
 
+import { QuizProvider } from "./context/QuizContext";
+import { StudentQuizProvider } from "./context/StudentQuizContext";
+import { TeacherQuizProvider } from "./context/TeacherQuizContext";
+
 // 🔹 Dialog
 import SystemLockedDialog from "./dialog/SystemLockedDialog";
 
@@ -241,20 +245,26 @@ function AppContent() {
 
 export default function App() {
   return (
-    <ConfigProvider>
-      <AdminProvider>
-        <TracNghiemProvider>
-          <StudentProvider>
-            <StudentDataProvider>
-              <StudentKTDKProvider>
-                <SelectedClassProvider>
-                  <AppContent />
-                </SelectedClassProvider>
-              </StudentKTDKProvider>
-            </StudentDataProvider>
-          </StudentProvider>
-        </TracNghiemProvider>
-      </AdminProvider>
-    </ConfigProvider>
+    <TeacherQuizProvider>
+      <StudentQuizProvider>
+        <QuizProvider>
+          <ConfigProvider>
+            <AdminProvider>
+              <TracNghiemProvider>
+                <StudentProvider>
+                  <StudentDataProvider>
+                    <StudentKTDKProvider>
+                      <SelectedClassProvider>
+                        <AppContent />
+                      </SelectedClassProvider>
+                    </StudentKTDKProvider>
+                  </StudentDataProvider>
+                </StudentProvider>
+              </TracNghiemProvider>
+            </AdminProvider>
+          </ConfigProvider>
+          </QuizProvider>
+    </StudentQuizProvider>
+  </TeacherQuizProvider>
   );
 }
