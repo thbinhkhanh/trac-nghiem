@@ -2043,97 +2043,83 @@ return (
               gap={2}
               flexWrap="wrap"
               justifyContent="center"
-              alignItems="center"
-              width="100%"
             >
               {currentQuestion.displayOrder.map((optIdx) => {
+                const option = currentQuestion.options[optIdx];
+
+                // ✅ ẢNH = option.text
+                const imageUrl =
+                  typeof option === "string"
+                    ? option
+                    : option?.text ?? "";
+
+                if (!imageUrl) return null;
+
                 const userAns = answers[currentQuestion.id] || [];
                 const checked = userAns.includes(optIdx);
 
-                const isCorrect = submitted && currentQuestion.correct.includes(optIdx);
-                const isWrong = submitted && checked && !currentQuestion.correct.includes(optIdx);
-
-                // ký hiệu đáp án đúng/sai
-                const bullet = submitted
-                  ? isCorrect
-                    ? "[●]" // hình đúng
-                    : "( )" // hình sai
-                  : "( )"; // chưa nộp thì tất cả là ( )
+                const isCorrect =
+                  submitted && currentQuestion.correct.includes(optIdx);
+                const isWrong =
+                  submitted && checked && !currentQuestion.correct.includes(optIdx);
 
                 return (
                   <Paper
                     key={optIdx}
+                    onClick={() => {
+                      if (submitted || !started) return;
+                      handleMultipleSelect(
+                        currentQuestion.id,
+                        optIdx,
+                        !checked
+                      );
+                    }}
                     sx={{
+                      width: 150,
+                      height: 180,
                       display: "flex",
                       flexDirection: "column",
                       alignItems: "center",
                       justifyContent: "center",
                       borderRadius: 1,
-                      p: 1,
                       border: "1px solid #90caf9",
                       cursor: submitted || !started ? "default" : "pointer",
-
-                      width: { xs: "100%", sm: 150 },
-                      height: { xs: "auto", sm: 180 },
-                      boxSizing: "border-box",
-                    }}
-                    onClick={() => {
-                      if (submitted || !started) return;
-                      handleMultipleSelect(currentQuestion.id, optIdx, !checked);
+                      bgcolor:
+                        submitted && choXemDapAn
+                          ? isCorrect
+                            ? "#c8e6c9"
+                            : isWrong
+                            ? "#ffcdd2"
+                            : "transparent"
+                          : "transparent",
                     }}
                   >
-                    {/* bullet + số thứ tự */}
-                    {/*<div style={{ marginBottom: 4, fontSize: 14 }}>
-                      {bullet} Hình {optIdx + 1}
-                    </div>*/}
-
-                    {/* hình ảnh */}
+                    {/* ✅ IMAGE */}
                     <img
-                      src={currentQuestion.options[optIdx]}
-                      alt={`option ${optIdx + 1}`}
+                      src={imageUrl}
+                      alt={`option-${optIdx}`}
                       style={{
-                        maxHeight: 80,
+                        maxHeight: 100,
                         maxWidth: "100%",
                         objectFit: "contain",
                         marginBottom: 8,
                       }}
                       onError={(e) => {
-                        e.target.src = "";
-                        e.target.alt = "(Không tải được ảnh)";
+                        e.currentTarget.style.display = "none";
                       }}
                     />
 
-                    {/* checkbox để chọn */}
+                    {/* ✅ CHECKBOX */}
                     <Checkbox
                       checked={checked}
                       disabled={submitted || !started}
-                      onChange={() =>
-                        handleMultipleSelect(currentQuestion.id, optIdx, !checked)
-                      }
-                      sx={{
-                        color: !submitted
-                          ? undefined
-                          : isCorrect
-                          ? "#388e3c"
-                          : isWrong
-                          ? "#d32f2f"
-                          : undefined,
-                        "&.Mui-checked": {
-                          color: !submitted
-                            ? undefined
-                            : isCorrect
-                            ? "#388e3c"
-                            : isWrong
-                            ? "#d32f2f"
-                            : undefined,
-                        },
-                      }}
                     />
                   </Paper>
                 );
               })}
             </Stack>
           )}
+
 
           {/* FILLBLANK */}
           {currentQuestion.type === "fillblank" && (

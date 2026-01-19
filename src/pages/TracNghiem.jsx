@@ -1480,101 +1480,89 @@ return (
           )}
 
           {/* IMAGE MULTIPLE */}
-          {currentQuestion.type === "image" && Array.isArray(currentQuestion?.displayOrder) && (
+          {currentQuestion.type === "image" && (
             <Stack
               direction={{ xs: "column", sm: "row" }}
               gap={2}
               flexWrap="wrap"
               justifyContent="center"
-              alignItems="center"
-              width="100%"
             >
               {currentQuestion.displayOrder.map((optIdx) => {
+                const option = currentQuestion.options[optIdx];
+
+                // ✅ ẢNH = option.text
+                const imageUrl =
+                  typeof option === "string"
+                    ? option
+                    : option?.text ?? "";
+
+                if (!imageUrl) return null;
+
                 const userAns = answers[currentQuestion.id] || [];
                 const checked = userAns.includes(optIdx);
 
                 const isCorrect =
-                  submitted &&
-                  Array.isArray(currentQuestion.correct) &&
-                  currentQuestion.correct.includes(optIdx);
-
+                  submitted && currentQuestion.correct.includes(optIdx);
                 const isWrong =
-                  submitted &&
-                  checked &&
-                  Array.isArray(currentQuestion.correct) &&
-                  !currentQuestion.correct.includes(optIdx);
-
-                const optionData = currentQuestion.options?.[optIdx] ?? {};
-                const optionVal = optionData.image || optionData.text || ""; // 👈 lấy ảnh từ text nếu image rỗng
+                  submitted && checked && !currentQuestion.correct.includes(optIdx);
 
                 return (
                   <Paper
                     key={optIdx}
+                    onClick={() => {
+                      if (submitted || !started) return;
+                      handleMultipleSelect(
+                        currentQuestion.id,
+                        optIdx,
+                        !checked
+                      );
+                    }}
                     sx={{
+                      width: 150,
+                      height: 180,
                       display: "flex",
                       flexDirection: "column",
                       alignItems: "center",
                       justifyContent: "center",
                       borderRadius: 1,
-                      p: 1,
                       border: "1px solid #90caf9",
                       cursor: submitted || !started ? "default" : "pointer",
-                      width: { xs: "100%", sm: 150 },
-                      height: { xs: "auto", sm: 180 },
-                      boxSizing: "border-box",
-                    }}
-                    onClick={() => {
-                      if (submitted || !started) return;
-                      handleMultipleSelect(currentQuestion.id, optIdx, !checked);
+                      bgcolor:
+                        submitted && choXemDapAn
+                          ? isCorrect
+                            ? "#c8e6c9"
+                            : isWrong
+                            ? "#ffcdd2"
+                            : "transparent"
+                          : "transparent",
                     }}
                   >
-                    {/* hình ảnh */}
+                    {/* ✅ IMAGE */}
                     <img
-                      src={optionVal}
-                      alt={`option ${optIdx + 1}`}
+                      src={imageUrl}
+                      alt={`option-${optIdx}`}
                       style={{
-                        maxHeight: 80,
+                        maxHeight: 100,
                         maxWidth: "100%",
                         objectFit: "contain",
                         marginBottom: 8,
                       }}
                       onError={(e) => {
-                        e.target.onerror = null;
-                        e.target.src = "https://via.placeholder.com/80?text=Ảnh+lỗi";
+                        e.currentTarget.style.display = "none";
                       }}
                     />
 
-                    {/* checkbox để chọn */}
+                    {/* ✅ CHECKBOX */}
                     <Checkbox
                       checked={checked}
                       disabled={submitted || !started}
-                      onChange={() =>
-                        handleMultipleSelect(currentQuestion.id, optIdx, !checked)
-                      }
-                      sx={{
-                        color: !submitted
-                          ? undefined
-                          : isCorrect
-                          ? "#388e3c"
-                          : isWrong
-                          ? "#d32f2f"
-                          : undefined,
-                        "&.Mui-checked": {
-                          color: !submitted
-                            ? undefined
-                            : isCorrect
-                            ? "#388e3c"
-                            : isWrong
-                            ? "#d32f2f"
-                            : undefined,
-                        },
-                      }}
                     />
                   </Paper>
                 );
               })}
             </Stack>
           )}
+          
 
           {/* FILLBLANK */}
           {currentQuestion.type === "fillblank" &&
