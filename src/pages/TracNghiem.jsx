@@ -1537,15 +1537,15 @@ return (
                           : "transparent",
                     }}
                   >
-                    {/* ✅ IMAGE */}
+                    {/* ✅ IMAGE (ĐÃ GIẢM KÍCH THƯỚC) */}
                     <img
                       src={imageUrl}
                       alt={`option-${optIdx}`}
                       style={{
-                        maxHeight: 100,
-                        maxWidth: "100%",
+                        maxWidth: "75%",     // 🔥 giảm chiều ngang
+                        maxHeight: 80,       // 🔥 giảm chiều cao
                         objectFit: "contain",
-                        marginBottom: 8,
+                        marginBottom: 6,
                       }}
                       onError={(e) => {
                         e.currentTarget.style.display = "none";
@@ -1558,6 +1558,7 @@ return (
                       disabled={submitted || !started}
                     />
                   </Paper>
+
                 );
               })}
             </Stack>
