@@ -377,19 +377,41 @@ useEffect(() => {
             };
           }
 
+          // Tạo câu hỏi (image)
           if (type === "image") {
-            const options = Array.isArray(q.options) && q.options.length > 0 ? q.options : ["", "", "", ""];
-            const correct = Array.isArray(q.correct) ? q.correct : [];
-            return { 
-              ...q, 
-              id: questionId, 
-              type, 
-              question: questionText, 
-              image: q.image ?? null,          // ✅ Thêm image
-              options, 
-              displayOrder: shuffleArray(options.map((_, idx) => idx)), 
-              correct, 
-              score: q.score ?? 1 
+            const options = Array.isArray(q.options) && q.options.length > 0
+              ? q.options
+              : ["", "", "", ""];
+
+            const indexed = options.map((opt, idx) => ({ opt, idx }));
+
+            const shouldShuffle = q.sortType === "shuffle" || q.shuffleOptions === true;
+            const shuffled = shouldShuffle ? shuffleArray(indexed) : indexed;
+
+            // Chuẩn hóa correct về index gốc (0-based, number[])
+            const correct = Array.isArray(q.correct)
+              ? q.correct.map(Number).filter(n => Number.isInteger(n))
+              : typeof q.correct === "number"
+                ? [Number(q.correct)]
+                : [];
+
+            return {
+              ...q,
+              id: questionId,
+              type,
+              question: questionText,
+              image: q.image ?? null,
+
+              // UI
+              options: shuffled.map(i => i.opt),
+
+              // mapping UI → index gốc
+              displayOrder: shuffled.map(i => i.idx),
+
+              // correct luôn là index gốc (đã chuẩn hóa)
+              correct,
+
+              score: q.score ?? 1,
             };
           }
 
@@ -575,6 +597,7 @@ const autoSubmit = () => {
     capitalizeName,
     mapHocKyToDocKey,
     formatTime,
+    xuatFileBaiLam: true,
     exportQuizPDF,
   });
 };

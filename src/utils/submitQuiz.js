@@ -80,19 +80,38 @@ export const handleSubmitQuiz = async ({
         }
       }
 
+      // Chấm điểm (image)
       else if (q.type === "image") {
-        const correctIndexes = Array.isArray(q.correct) ? q.correct : [];
-        const userIndexes = (Array.isArray(rawAnswer) ? rawAnswer : [rawAnswer])
-          .map(val => Number(val))
-          .filter(v => !Number.isNaN(v));
+        // Chuẩn hóa correct (index gốc)
+        const correctIndexes = Array.isArray(q.correct)
+          ? q.correct.map(Number).filter(n => Number.isInteger(n))
+          : [];
 
+        // Bảo toàn displayOrder (UI index → index gốc)
+        const displayOrder = Array.isArray(q.displayOrder) && q.displayOrder.length === q.options.length
+          ? q.displayOrder.map(Number)
+          : q.options.map((_, i) => i);
+
+        // Chuẩn hóa rawAnswer về mảng UI index (0-based)
+        const rawArray = Array.isArray(rawAnswer) ? rawAnswer : [rawAnswer];
+        const uiIndexes = rawArray
+          .map(i => Number(i))
+          .filter(n => Number.isInteger(n) && n >= 0 && n < displayOrder.length);
+
+        // Map UI index → index gốc
+        const userIndexes = uiIndexes
+          .map(i => displayOrder[i])
+          .filter(v => Number.isInteger(v));
+
+        // So sánh tập hợp
         const userSet = new Set(userIndexes);
         const correctSet = new Set(correctIndexes);
 
-        if (
+        const isCorrect =
           userSet.size === correctSet.size &&
-          [...correctSet].every(i => userSet.has(i))
-        ) {
+          [...correctSet].every(i => userSet.has(i));
+
+        if (isCorrect) {
           total += q.score ?? 1;
         }
       }

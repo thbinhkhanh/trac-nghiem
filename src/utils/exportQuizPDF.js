@@ -221,7 +221,6 @@ export const exportQuizPDF = async (
         break;
       }
 
-
       case "image": {
         const imgSize = 18;     // kích thước ảnh
         const gap = 40;         // khoảng cách mỗi ảnh
@@ -232,6 +231,23 @@ export const exportQuizPDF = async (
 
         let x = startX;
 
+        // ===== Chuẩn hoá đáp án =====
+        const rawAns = answers[q.id];
+        const userAnsUI = Array.isArray(rawAns)
+          ? rawAns.map(Number)
+          : rawAns !== undefined && rawAns !== null
+          ? [Number(rawAns)]
+          : [];
+
+        const correctArr = (
+          Array.isArray(q.correct) ? q.correct : [q.correct]
+        ).map(Number);
+
+        // mapping UI → index gốc
+        const displayOrder = Array.isArray(q.displayOrder)
+          ? q.displayOrder.map(Number)
+          : q.options.map((_, i) => i);
+
         for (let i = 0; i < q.options.length; i++) {
           if (i > 0 && i % maxPerRow === 0) {
             x = startX;
@@ -239,10 +255,26 @@ export const exportQuizPDF = async (
           }
 
           const imgUrl = extractImage(q.options[i]);
-          const selected = (answers[q.id] || []).includes(i) ? "[x]" : "[ ]";
+          const isChosenUI = userAnsUI.includes(i);
+          const selected = isChosenUI ? "[x]" : "[ ]";
 
           // checkbox
           pdf.text(selected, x + imgSize / 2 - 4, y);
+
+          // ===== ✓ / ✗ =====
+          if (isChosenUI) {
+            const mappedIndex = displayOrder[i]; // UI → gốc
+            const isCorrect = correctArr.includes(mappedIndex);
+
+            pdf.setTextColor(isCorrect ? 0 : 255, isCorrect ? 128 : 0, 0);
+            // vẽ ✓ / ✗ ngay dưới ảnh
+            pdf.text(
+              isCorrect ? "✓" : "✗",
+              x + imgSize / 2 - 4,
+              y + imgSize + 12
+            );
+            pdf.setTextColor(0, 0, 0);
+          }
 
           // image
           if (imgUrl) {
@@ -255,9 +287,10 @@ export const exportQuizPDF = async (
           x += gap;
         }
 
-        y += imgSize + 20;
+        y += imgSize + 15;
         break;
       }
+
 
       case "multiple": {
         const userAns = answers[q.id] || [];

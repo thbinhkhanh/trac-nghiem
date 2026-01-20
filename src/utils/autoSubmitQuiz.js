@@ -30,32 +30,6 @@ export const autoSubmitQuiz = async ({
     const hocKi = window.currentHocKi || "Giữa kỳ I";
     const monHoc = "Tin học";
 
-    /* ===== KIỂM TRA CÂU CHƯA LÀM ===== */
-    /*const unanswered = questions.filter(q => {
-      const a = answers[q.id];
-      if (q.type === "single") return a === undefined || a === null || a === "";
-      if (q.type === "multiple") return !Array.isArray(a) || a.length === 0;
-      if (q.type === "image") {
-        const isSingle = Array.isArray(q.correct) && q.correct.length === 1;
-        if (isSingle) return a === undefined || a === null || a.length === 0;
-        return !Array.isArray(a) || a.length === 0;
-      }
-      if (q.type === "truefalse")
-        return !Array.isArray(a) || a.length !== q.options.length;
-      if (q.type === "fillblank")
-        return !Array.isArray(a) || a.some(v => !v);
-      // 👉 sort và matching không coi là unanswered
-      return false;
-    });
-
-    if (unanswered.length > 0) {
-      setUnansweredQuestions(
-        unanswered.map(q => questions.findIndex(i => i.id === q.id) + 1)
-      );
-      setOpenAlertDialog(true);
-      return;
-    }*/
-
     /* ===== TÍNH ĐIỂM ===== */
     setSaving(true);
     let total = 0;
@@ -80,19 +54,38 @@ export const autoSubmitQuiz = async ({
         }
       }
 
+      // Chấm điểm (image)
       else if (q.type === "image") {
-        const correctIndexes = Array.isArray(q.correct) ? q.correct : [];
-        const userIndexes = (Array.isArray(rawAnswer) ? rawAnswer : [rawAnswer])
-          .map(val => Number(val))
-          .filter(v => !Number.isNaN(v));
+        // Chuẩn hóa correct (index gốc)
+        const correctIndexes = Array.isArray(q.correct)
+          ? q.correct.map(Number).filter(n => Number.isInteger(n))
+          : [];
 
+        // Bảo toàn displayOrder (UI index → index gốc)
+        const displayOrder = Array.isArray(q.displayOrder) && q.displayOrder.length === q.options.length
+          ? q.displayOrder.map(Number)
+          : q.options.map((_, i) => i);
+
+        // Chuẩn hóa rawAnswer về mảng UI index (0-based)
+        const rawArray = Array.isArray(rawAnswer) ? rawAnswer : [rawAnswer];
+        const uiIndexes = rawArray
+          .map(i => Number(i))
+          .filter(n => Number.isInteger(n) && n >= 0 && n < displayOrder.length);
+
+        // Map UI index → index gốc
+        const userIndexes = uiIndexes
+          .map(i => displayOrder[i])
+          .filter(v => Number.isInteger(v));
+
+        // So sánh tập hợp
         const userSet = new Set(userIndexes);
         const correctSet = new Set(correctIndexes);
 
-        if (
+        const isCorrect =
           userSet.size === correctSet.size &&
-          [...correctSet].every(i => userSet.has(i))
-        ) {
+          [...correctSet].every(i => userSet.has(i));
+
+        if (isCorrect) {
           total += q.score ?? 1;
         }
       }
