@@ -222,31 +222,26 @@ export const exportQuizPDF = async (
       }
 
       case "image": {
-        const imgSize = 18;     // kích thước ảnh
-        const gap = 40;         // khoảng cách mỗi ảnh
+        const imgSize = 18;
+        const gap = 40;
         const maxPerRow = 4;
 
         const totalRowWidth = gap * maxPerRow;
-        const startX = (pageWidth - totalRowWidth) / 2; // ⭐ căn giữa
+        const startX = (pageWidth - totalRowWidth) / 2;
 
         let x = startX;
 
-        // ===== Chuẩn hoá đáp án =====
+        /* ===== Chuẩn hoá đáp án (INDEX GỐC) ===== */
         const rawAns = answers[q.id];
-        const userAnsUI = Array.isArray(rawAns)
+        const userIndexes = Array.isArray(rawAns)
           ? rawAns.map(Number)
           : rawAns !== undefined && rawAns !== null
           ? [Number(rawAns)]
           : [];
 
-        const correctArr = (
+        const correctIndexes = (
           Array.isArray(q.correct) ? q.correct : [q.correct]
         ).map(Number);
-
-        // mapping UI → index gốc
-        const displayOrder = Array.isArray(q.displayOrder)
-          ? q.displayOrder.map(Number)
-          : q.options.map((_, i) => i);
 
         for (let i = 0; i < q.options.length; i++) {
           if (i > 0 && i % maxPerRow === 0) {
@@ -255,19 +250,17 @@ export const exportQuizPDF = async (
           }
 
           const imgUrl = extractImage(q.options[i]);
-          const isChosenUI = userAnsUI.includes(i);
-          const selected = isChosenUI ? "[x]" : "[ ]";
+
+          // 🔑 i chính là index GỐC
+          const isChosen = userIndexes.includes(i);
+          const isCorrect = correctIndexes.includes(i);
 
           // checkbox
-          pdf.text(selected, x + imgSize / 2 - 4, y);
+          pdf.text(isChosen ? "[x]" : "[ ]", x + imgSize / 2 - 4, y);
 
           // ===== ✓ / ✗ =====
-          if (isChosenUI) {
-            const mappedIndex = displayOrder[i]; // UI → gốc
-            const isCorrect = correctArr.includes(mappedIndex);
-
+          if (isChosen) {
             pdf.setTextColor(isCorrect ? 0 : 255, isCorrect ? 128 : 0, 0);
-            // vẽ ✓ / ✗ ngay dưới ảnh
             pdf.text(
               isCorrect ? "✓" : "✗",
               x + imgSize / 2 - 4,
@@ -290,6 +283,7 @@ export const exportQuizPDF = async (
         y += imgSize + 15;
         break;
       }
+
 
 
       case "multiple": {

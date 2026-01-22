@@ -82,30 +82,17 @@ export const handleSubmitQuiz = async ({
 
       // Chấm điểm (image)
       else if (q.type === "image") {
-        // Chuẩn hóa correct (index gốc)
+        // rawAnswer đã là index GỐC (theo options)
+        const userIndexes = Array.isArray(rawAnswer)
+          ? rawAnswer.map(Number)
+          : [Number(rawAnswer)];
+
         const correctIndexes = Array.isArray(q.correct)
-          ? q.correct.map(Number).filter(n => Number.isInteger(n))
+          ? q.correct.map(Number)
           : [];
 
-        // Bảo toàn displayOrder (UI index → index gốc)
-        const displayOrder = Array.isArray(q.displayOrder) && q.displayOrder.length === q.options.length
-          ? q.displayOrder.map(Number)
-          : q.options.map((_, i) => i);
-
-        // Chuẩn hóa rawAnswer về mảng UI index (0-based)
-        const rawArray = Array.isArray(rawAnswer) ? rawAnswer : [rawAnswer];
-        const uiIndexes = rawArray
-          .map(i => Number(i))
-          .filter(n => Number.isInteger(n) && n >= 0 && n < displayOrder.length);
-
-        // Map UI index → index gốc
-        const userIndexes = uiIndexes
-          .map(i => displayOrder[i])
-          .filter(v => Number.isInteger(v));
-
-        // So sánh tập hợp
-        const userSet = new Set(userIndexes);
-        const correctSet = new Set(correctIndexes);
+        const userSet = new Set(userIndexes.filter(Number.isInteger));
+        const correctSet = new Set(correctIndexes.filter(Number.isInteger));
 
         const isCorrect =
           userSet.size === correctSet.size &&
@@ -116,6 +103,7 @@ export const handleSubmitQuiz = async ({
         }
       }
 
+
       else if (q.type === "sort") {
         let userOrder = Array.isArray(rawAnswer) ? rawAnswer : [];
         const options = Array.isArray(q.options) ? q.options : [];
@@ -123,9 +111,11 @@ export const handleSubmitQuiz = async ({
 
         // Nếu học sinh không trả lời → coi như giữ nguyên thứ tự ban đầu
         if (userOrder.length === 0) {
-          userOrder = options.map((_, idx) => idx);
+          userOrder = Array.isArray(q.initialSortOrder)
+            ? q.initialSortOrder
+            : options.map((_, idx) => idx);
         }
-
+        
         const normalize = s =>
           String(typeof s === "object" && s !== null ? s.text ?? "" : s ?? "")
             .replace(/<[^>]*>/g, "")

@@ -28,17 +28,16 @@ import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { db } from "../firebase";
 import { useContext } from "react";
 import { ConfigContext } from "../context/ConfigContext";
-import { useQuizContext } from "../context/QuizContext";
-
 import { exportQuizPDF } from "../utils/exportQuizPDF"; 
 import QuestionOption from "../utils/QuestionOption";
 
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
 import CloseIcon from "@mui/icons-material/Close";
+//import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+//import HighlightOffIcon from '@mui/icons-material/HighlightOff';
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import ExitConfirmDialog from "../dialog/ExitConfirmDialog";
-import IncompleteAnswersDialog from "../dialog/IncompleteAnswersDialog";
 import ImageZoomDialog from "../dialog/ImageZoomDialog";
 
 
@@ -71,8 +70,6 @@ export default function TracNghiem_Test() {
   const [quizClass, setQuizClass] = useState("");
   const [score, setScore] = useState(0);
 
-  const { quizCache, setQuizCache } = useQuizContext();
-
   const [openAlertDialog, setOpenAlertDialog] = useState(false);
   const [unansweredQuestions, setUnansweredQuestions] = useState([]);
 
@@ -83,7 +80,10 @@ export default function TracNghiem_Test() {
   const [saving, setSaving] = useState(false);
   const [openExitConfirm, setOpenExitConfirm] = useState(false);
 
+  const [zoomImage, setZoomImage] = useState(null);
+
   const location = useLocation();
+  //const { studentId, studentName, studentClass, selectedWeek, mon } = location.state || {};
   const navigate = useNavigate();
   const [started, setStarted] = useState(false);
   const [timeLeft, setTimeLeft] = useState(0);
@@ -104,8 +104,6 @@ export default function TracNghiem_Test() {
   const [selectedExam, setSelectedExam] = useState("");
   const [complete, setComplete] = useState(false); // thêm dòng này
   const [examType, setExamType] = useState("kt"); // "bt" | "kt"
-
-  const [zoomImage, setZoomImage] = useState(null);
   
   // Lấy trường từ tài khoản đăng nhập
   const account = localStorage.getItem("account") || "";
@@ -159,21 +157,10 @@ export default function TracNghiem_Test() {
     });
   };
 
-  useEffect(() => {
-    if (!examType) return;
-    fetchQuizList(examType);
-  }, [examType]);
-
-  useEffect(() => {
-    fetchQuizList();
-  }, []);
-
-
-
-  // ⭐ RESET TOÀN BỘ SAU KHI CHỌN ĐỀ MỚI
+    // ⭐ RESET TOÀN BỘ SAU KHI CHỌN ĐỀ MỚI
   useEffect(() => {
     if (!selectedExam) return;
-    //console.log("✅ selectedExam đã thay đổi:", selectedExam);
+
     // Reset các state liên quan
     setAnswers({});
     setCurrentIndex(0);
@@ -206,307 +193,348 @@ export default function TracNghiem_Test() {
     );
     return shuffled;
   }
+
+  function buildRuntimeQuestions(rawQuestions = []) {
+    // 🔥 1. SHUFFLE THỨ TỰ CÂU HỎI
+    let saved = shuffleArray([...rawQuestions]);
+
+    const loadedQuestions = saved.map((q, index) => {
+      const questionId = q.id ?? `q_${index}`;
+      const questionText =
+        typeof q.question === "string" ? q.question.trim() : "";
+
+      const rawType = (q.type || "").toString().trim().toLowerCase();
+      const type = [
+        "sort",
+        "matching",
+        "single",
+        "multiple",
+        "image",
+        "truefalse",
+        "fillblank",
+      ].includes(rawType)
+        ? rawType
+        : null;
+
+      if (!type) return null;
+
+      // ================= MATCHING =================
+      if (type === "matching") {
+        const pairs = Array.isArray(q.pairs) ? q.pairs : [];
+        if (pairs.length === 0) return null;
+
+        const leftOptions = pairs.map((p, idx) => {
+          if (p.leftImage && p.leftImage.url) {
+            return {
+              type: "image",
+              url: p.leftImage.url,
+              name: p.leftImage.name || `img-${idx}`,
+            };
+          }
+
+          if (
+            typeof p.left === "string" &&
+            /^https?:\/\//i.test(p.left.trim())
+          ) {
+            return {
+              type: "image",
+              url: p.left.trim(),
+              name: `img-${idx}`,
+            };
+          }
+
+          return p.left ?? "";
+        });
+
+        const rightOriginal = pairs.map((p, idx) => ({
+          opt: p.right,
+          idx,
+        }));
+
+        const processedRight =
+          q.sortType === "shuffle"
+            ? shuffleUntilDifferent(rightOriginal)
+            : rightOriginal;
+
+        const indexMap = {};
+        processedRight.forEach((item, newIndex) => {
+          indexMap[item.idx] = newIndex;
+        });
+
+        const correct = leftOptions.map((_, i) => indexMap[i]);
+
+        return {
+          ...q,
+          id: questionId,
+          type,
+          question: questionText,
+          image: q.image ?? null,
+          leftOptions,
+          rightOptions: processedRight.map(i => i.opt),
+          correct,
+          score: q.score ?? 1,
+        };
+      }
+
+      // ================= SORT =================
+      if (type === "sort") {
+        const options =
+          Array.isArray(q.options) && q.options.length > 0
+            ? [...q.options]
+            : ["", "", "", ""];
+
+        const indexed = options.map((opt, idx) => ({ opt, idx }));
+
+        const processed =
+          q.sortType === "shuffle"
+            ? shuffleUntilDifferent(indexed)
+            : indexed;
+
+        return {
+          ...q,
+          id: questionId,
+          type,
+          question: questionText,
+          image: q.image ?? null,
+          options: processed.map(i => i.opt),
+          initialSortOrder: processed.map(i => i.idx),
+          correctTexts: options,
+          score: q.score ?? 1,
+        };
+      }
+
+      // ================= SINGLE / MULTIPLE =================
+      if (type === "single" || type === "multiple") {
+        const options =
+          Array.isArray(q.options) && q.options.length > 0
+            ? q.options.map(opt => {
+                if (typeof opt === "string") {
+                  if (/^https?:\/\/.*\.(png|jpg|jpeg|gif)$/i.test(opt)) {
+                    return { text: "", image: opt };
+                  }
+                  return { text: opt, image: null };
+                }
+                if (typeof opt === "object") {
+                  return {
+                    text: opt.text ?? "",
+                    image: opt.image ?? null,
+                  };
+                }
+                return { text: "", image: null };
+              })
+            : [
+                { text: "", image: null },
+                { text: "", image: null },
+                { text: "", image: null },
+                { text: "", image: null },
+              ];
+
+        const indexed = options.map((opt, idx) => ({ opt, idx }));
+        const shouldShuffle =
+          q.sortType === "shuffle" || q.shuffleOptions === true;
+
+        const processed = shouldShuffle
+          ? shuffleArray(indexed)
+          : indexed;
+
+        return {
+          ...q,
+          id: questionId,
+          type,
+          question: questionText,
+          image: q.image ?? null,
+          options,
+          displayOrder: processed.map(i => i.idx),
+          correct: Array.isArray(q.correct)
+            ? q.correct.map(Number)
+            : typeof q.correct === "number"
+            ? [q.correct]
+            : [],
+          score: q.score ?? 1,
+        };
+      }
+
+      // ================= IMAGE =================
+      if (type === "image") {
+        const options =
+          Array.isArray(q.options) && q.options.length > 0
+            ? q.options
+            : ["", "", "", ""];
+
+        return {
+          ...q,
+          id: questionId,
+          type,
+          question: questionText,
+          image: q.image ?? null,
+          options,
+          displayOrder: shuffleArray(options.map((_, idx) => idx)),
+          correct: Array.isArray(q.correct) ? q.correct : [],
+          score: q.score ?? 1,
+        };
+      }
+
+      // ================= TRUE / FALSE =================
+      if (type === "truefalse") {
+        const options =
+          Array.isArray(q.options) && q.options.length >= 2
+            ? [...q.options]
+            : ["Đúng", "Sai"];
+
+        const indexed = options.map((opt, idx) => ({ opt, idx }));
+        const processed =
+          q.sortType === "shuffle" ? shuffleArray(indexed) : indexed;
+
+        return {
+          ...q,
+          id: questionId,
+          type,
+          question: questionText,
+          image: q.image ?? null,
+          options: processed.map(i => i.opt),
+          initialOrder: processed.map(i => i.idx),
+          correct:
+            Array.isArray(q.correct) && q.correct.length === options.length
+              ? q.correct
+              : options.map(() => ""),
+          score: q.score ?? 1,
+        };
+      }
+
+      // ================= FILL BLANK =================
+      if (type === "fillblank") {
+        const options = Array.isArray(q.options) ? q.options : [];
+
+        return {
+          ...q,
+          id: questionId,
+          type,
+          question: questionText,
+          image: q.image ?? null,
+          option: q.option,
+          options,
+          shuffledOptions: shuffleArray([...options]),
+          score: q.score ?? 1,
+        };
+      }
+
+      return null;
+    }).filter(Boolean);
+
+    // ================= VALIDATE =================
+    return loadedQuestions.filter(q => {
+      if (q.type === "matching")
+        return q.question.trim() && q.leftOptions.length && q.rightOptions.length;
+      if (q.type === "sort")
+        return q.question.trim() && q.options.length;
+      if (["single", "multiple", "image"].includes(q.type))
+        return q.question.trim() && q.options.length;
+      if (q.type === "truefalse")
+        return q.question.trim() && q.options.length >= 2;
+      if (q.type === "fillblank")
+        return q.question.trim() && q.options.length;
+      return false;
+    });
+  }
   
   useEffect(() => {
     const fetchQuestions = async () => {
-      try {
+        try {
         setLoading(true);
         let prog = 0;
 
-        const collectionName = "NGANHANG_DE";
         let docId = null;
+        const collectionName = "NGANHANG_DE";
 
         let hocKiFromConfig = "";
         let monHocFromConfig = "";
-        let timeLimitMinutes = 0;
+        let timeLimitMinutes = 0; // ⬅ để lưu thời gian
 
-        // ================= CONFIG =================
-        const configRef = doc(db, "CONFIG", "config");
-        const configSnap = await getDoc(configRef);
-        prog += 30;
-        setProgress(prog);
+        // 🔹 Lấy config dựa vào trường
+        
+            // 🔹 Trường khác, lấy config từ CONFIG/config
+            const configRef = doc(db, "CONFIG", "config");
+            const configSnap = await getDoc(configRef);
+            prog += 30;
+            setProgress(prog);
 
-        if (!configSnap.exists()) {
-          setSnackbar({ open: true, message: "❌ Không tìm thấy config!", severity: "error" });
-          setLoading(false);
-          return;
-        }
+            if (!configSnap.exists()) {
+            setSnackbar({ open: true, message: "❌ Không tìm thấy config!", severity: "error" });
+            setLoading(false);
+            return;
+            }
 
-        const cfg = configSnap.data();
-        hocKiFromConfig = cfg.hocKy || "";
-        monHocFromConfig = cfg.mon || "";
-        timeLimitMinutes = cfg.timeLimit ?? 0;
+            const configData = configSnap.data();
+            hocKiFromConfig = configData.hocKy || "";
+            monHocFromConfig = configData.mon || "";
+            timeLimitMinutes = configData.timeLimit ?? 0;   // ⬅ lấy timeLimit
+            setTimeLimitMinutes(timeLimitMinutes);
+            setChoXemDiem(configData.choXemDiem ?? false);
+            setChoXemDapAn(configData.choXemDapAn ?? false);
+            
+        
 
-        setTimeLimitMinutes(timeLimitMinutes);
-        setChoXemDiem(cfg.choXemDiem ?? false);
-        setChoXemDapAn(cfg.choXemDapAn ?? false);
+        // 🔹 Lấy docId theo đề được chọn từ dropdown (áp dụng cho mọi trường)
+            if (!selectedExam) {
+                //setSnackbar({ open: true, message: "Vui lòng chọn đề!", severity: "warning" });
+                setLoading(false);
+            return;
+            }
 
-        // ================= LẤY ĐỀ =================
-        if (!selectedExam) {
-          setLoading(false);
-          return;
-        }
+            docId = selectedExam;
 
-        docId = selectedExam;
-        const CACHE_KEY = `exam_${docId}`;
-        //setTimeLeft(timeLimitMinutes * 60);
+        // 🔹 Set thời gian làm bài (giây)
+        setTimeLeft(timeLimitMinutes * 60);
 
+        // 🔹 Lấy dữ liệu đề
         const docRef = doc(db, collectionName, docId);
         const docSnap = await getDoc(docRef);
         prog += 30;
         setProgress(prog);
 
         if (!docSnap.exists()) {
-          setSnackbar({ open: true, message: "❌ Không tìm thấy đề trắc nghiệm!", severity: "error" });
-          setLoading(false);
-          return;
+            setSnackbar({ open: true, message: "❌ Không tìm thấy đề trắc nghiệm!", severity: "error" });
+            setLoading(false);
+            return;
         }
-
-        setTimeLeft(timeLimitMinutes * 60);
 
         const data = docSnap.data();
         setQuizClass(data.class || "");
 
-        const hocKi = data.semester || hocKiFromConfig;
-        const monHoc = data.subject || monHocFromConfig;
+        // 🔹 Lấy học kỳ và môn học từ đề nếu có, ưu tiên config
+        const hocKiFromDoc = data.semester || hocKiFromConfig;
+        const monHocFromDoc = data.subject || monHocFromConfig;
 
-        setHocKi(hocKi);
-        setMonHoc(monHoc);
+        setHocKi(hocKiFromDoc);
+        setMonHoc(monHocFromDoc);
 
-        window.currentHocKi = hocKi;
-        window.currentMonHoc = monHoc;
-
-        // ================= UPDATED AT =================
-        const serverUpdatedAt =
-          typeof data.updatedAt === "number"
-            ? data.updatedAt
-            : data.updatedAt?.toMillis?.() ?? 0;
-
-        // ================= CONTEXT CACHE =================
-        const cacheFromContext = quizCache?.[CACHE_KEY];
-        if (
-          cacheFromContext &&
-          cacheFromContext.updatedAt === serverUpdatedAt &&
-          Array.isArray(cacheFromContext.questions)
-        ) {
-          setQuestions(cacheFromContext.questions);
-          setProgress(100);
-          setStarted(true);
-          setLoading(false);
-          return;
-        }
-
-        // ================= LOCALSTORAGE CACHE =================
-        const cachedLocal = localStorage.getItem(CACHE_KEY);
-        if (cachedLocal) {
-          const parsed = JSON.parse(cachedLocal);
-          if (parsed.updatedAt === serverUpdatedAt) {
-            setQuestions(parsed.questions);
-            setProgress(100);
-            setStarted(true);
-
-            // sync lại context
-            setQuizCache(prev => ({
-              ...prev,
-              [CACHE_KEY]: parsed,
-            }));
-
-            setLoading(false);
-            return;
-          } else {
-            localStorage.removeItem(CACHE_KEY);
-          }
-        }
+        // 🔹 Lưu tạm để submit + xuất PDF
+        window.currentHocKi = hocKiFromDoc;
+        window.currentMonHoc = monHocFromDoc;
 
         // --- Xử lý câu hỏi ---
-        let saved = Array.isArray(data.questions) ? data.questions : [];
-        saved = shuffleArray(saved);
-
-        const loadedQuestions = saved.map((q, index) => {
-            const questionId = q.id ?? `q_${index}`;
-            const questionText = typeof q.question === "string" ? q.question.trim() : "";
-            const rawType = (q.type || "").toString().trim().toLowerCase();
-            const type = ["sort", "matching", "single", "multiple", "image", "truefalse", "fillblank"].includes(rawType)
-            ? rawType
-            : null;
-            if (!type) return null;
-
-            if (type === "matching") {
-              const pairs = Array.isArray(q.pairs) ? q.pairs : [];
-              if (pairs.length === 0) return null;
-
-              //console.log("🔥 RAW MATCHING PAIRS:", pairs);
-
-              const leftOptions = pairs.map((p, idx) => {
-                // --- CASE 1: editor lưu { leftImage: { url, name } } ---
-                if (p.leftImage && p.leftImage.url) {
-                  //console.log(`🔥 left[${idx}] = leftImage`, p.leftImage.url);
-                  return { type: "image", url: p.leftImage.url, name: p.leftImage.name || `img-${idx}` };
-                }
-
-                // --- CASE 2: left là chuỗi URL ---
-                if (typeof p.left === "string" && /^https?:\/\//i.test(p.left.trim())) {
-                  //console.log(`🔥 left[${idx}] = URL`, p.left);
-                  return { type: "image", url: p.left.trim(), name: `img-${idx}` };
-                }
-
-                // --- CASE 3: để nguyên dạng text ---
-                //console.log(`🔥 left[${idx}] = text`, p.left);
-                return p.left ?? "";
-              });
-
-              // cột phải: đảo cho đến khi khác ít nhất 1 phần tử
-              const rightOptionsOriginal = pairs.map((p, idx) => ({ opt: p.right, idx }));
-              const processedRightOptions =
-                q.sortType === "shuffle"
-                  ? shuffleUntilDifferent(rightOptionsOriginal)
-                  : rightOptionsOriginal;
-
-              const originalRightIndexMap = {};
-              processedRightOptions.forEach((item, newIndex) => {
-                originalRightIndexMap[item.idx] = newIndex;
-              });
-
-              const newCorrect = leftOptions.map((_, i) => originalRightIndexMap[i]);
-
-              return {
-                ...q,
-                id: questionId,
-                type,
-                question: questionText,
-                image: q.image ?? null,
-                leftOptions,
-                rightOptions: processedRightOptions.map(i => i.opt),
-                correct: newCorrect,
-                score: q.score ?? 1,
-              };
-            }
-
-            if (type === "sort") {
-            const options = Array.isArray(q.options) && q.options.length > 0
-                ? [...q.options]
-                : ["", "", "", ""];
-
-            const indexed = options.map((opt, idx) => ({ opt, idx }));
-            const processed = q.sortType === "shuffle" ? shuffleArray(indexed) : indexed;
-            const shuffledOptions = processed.map(i => i.opt);
-
-            return {
-                ...q,
-                id: questionId,
-                type,
-                question: questionText,
-                image: q.image ?? null,
-                options: shuffledOptions,                    // hiển thị theo shuffle
-                initialSortOrder: processed.map(i => i.idx), // thứ tự index sau shuffle
-                correctTexts: options,                       // đáp án đúng: text gốc Firestore
-                score: q.score ?? 1
-            };
-            }
-
-            if (type === "single" || type === "multiple") {
-            const options = Array.isArray(q.options) && q.options.length > 0 ? q.options : ["", "", "", ""];
-            const indexed = options.map((opt, idx) => ({ opt, idx }));
-            const shouldShuffle = q.sortType === "shuffle" || q.shuffleOptions === true;
-            const shuffled = shouldShuffle ? shuffleArray(indexed) : indexed;
-            return { 
-                ...q, 
-                id: questionId, 
-                type, 
-                question: questionText, 
-                image: q.image ?? null,          // ✅ Thêm image
-                options, 
-                displayOrder: shuffled.map(i => i.idx), 
-                correct: Array.isArray(q.correct) ? q.correct.map(Number) : typeof q.correct === "number" ? [q.correct] : [], 
-                score: q.score ?? 1 
-            };
-            }
-
-            if (type === "image") {
-            const options = Array.isArray(q.options) && q.options.length > 0 ? q.options : ["", "", "", ""];
-            const correct = Array.isArray(q.correct) ? q.correct : [];
-            return { 
-                ...q, 
-                id: questionId, 
-                type, 
-                question: questionText, 
-                image: q.image ?? null,          // ✅ Thêm image
-                options, 
-                displayOrder: shuffleArray(options.map((_, idx) => idx)), 
-                correct, 
-                score: q.score ?? 1 
-            };
-            }
-
-            if (type === "truefalse") {
-            const options = Array.isArray(q.options) && q.options.length >= 2
-                ? [...q.options]
-                : ["Đúng", "Sai"];
-
-            const indexed = options.map((opt, idx) => ({ opt, idx }));
-            const processed = q.sortType === "shuffle" ? shuffleArray(indexed) : indexed;
-
-            return {
-                ...q,
-                id: questionId,
-                type,
-                question: questionText,
-                image: q.image ?? null,
-                options: processed.map(i => i.opt),        // hiển thị theo shuffle
-                initialOrder: processed.map(i => i.idx),   // mapping: vị trí hiển thị -> index gốc
-                correct: Array.isArray(q.correct) && q.correct.length === options.length
-                ? q.correct                               // theo thứ tự gốc Firestore
-                : options.map(() => ""),
-                score: q.score ?? 1
-            };
-            }
-
-            if (type === "fillblank") {
-            const options = Array.isArray(q.options) ? q.options : []; // các đáp án đúng
-            const questionText = q.question || "";                     // câu có chỗ trống
-            return {
-                ...q,
-                id: questionId,
-                type,
-                question: questionText,
-                image: q.image ?? null,
-                option: q.option,               // giữ câu có dấu [...]
-                options,                        // đáp án đúng, giữ nguyên thứ tự gốc
-                shuffledOptions: shuffleArray([...options]), // shuffle một lần nếu cần
-                score: q.score ?? 1
-            };
-            }
-
-            return null;
-        }).filter(Boolean);
-
-        // --- Lọc câu hợp lệ bao gồm fillblank ---
-        const validQuestions = loadedQuestions.filter(q => {
-            if (q.type === "matching") return q.question.trim() !== "" && q.leftOptions.length > 0 && q.rightOptions.length > 0;
-            if (q.type === "sort") return q.question.trim() !== "" && q.options.length > 0;
-            if (["single", "multiple", "image"].includes(q.type)) return q.question.trim() !== "" && q.options.length > 0 && Array.isArray(q.correct);
-            if (q.type === "truefalse") return q.question.trim() !== "" && q.options.length >= 2 && Array.isArray(q.correct);
-            if (q.type === "fillblank") return q.question.trim() !== "" && q.options.length > 0;
-            return false;
-        });
-
-        setQuestions(validQuestions);
+        // --- Xử lý câu hỏi ---
+        const runtimeQuestions = buildRuntimeQuestions(data.questions);
+        setQuestions(runtimeQuestions);
+        
         setProgress(100);
         setStarted(true);
 
-        // ================= SAVE CONTEXT + LOCAL CACHE =================
-        const cachePayload = {
-          questions: validQuestions,
-          updatedAt: serverUpdatedAt,
-        };
+        //============================
+        //Chấm Sort không tương tác
+        setAnswers(prev => {
+          const next = { ...prev };
 
-        setQuizCache(prev => ({
-          ...prev,
-          [CACHE_KEY]: cachePayload,
-        }));
+          runtimeQuestions.forEach(q => {
+            if (q.type === "sort" && Array.isArray(q.initialSortOrder)) {
+              if (!Array.isArray(next[q.id])) {
+                next[q.id] = [...q.initialSortOrder]; // ✅ clone mảng
+              }
+            }
+          });
 
-        localStorage.setItem(CACHE_KEY, JSON.stringify(cachePayload));
-
+          return next;
+        });
 
         } catch (err) {
         console.error("❌ Lỗi khi load câu hỏi:", err);
@@ -523,12 +551,15 @@ export default function TracNghiem_Test() {
     try {
       const colRef = collection(db, "NGANHANG_DE");
       const snap = await getDocs(colRef);
+
       const exams = snap.docs.map(d => d.id);
 
       setExamList(exams);
 
-      // ✅ CHỈ set khi CHƯA có selectedExam
-      setSelectedExam(prev => prev && exams.includes(prev) ? prev : exams[0] || "");
+      // Chỉ set selectedExam khi CHƯA có hoặc đề cũ không còn tồn tại
+      setSelectedExam(prev =>
+        prev && exams.includes(prev) ? prev : exams[0] || ""
+      );
 
     } catch (err) {
       console.error("❌ Lỗi khi lấy danh sách đề:", err);
@@ -540,50 +571,58 @@ export default function TracNghiem_Test() {
     }
   };
 
+  useEffect(() => {
+    fetchQuizList();
+  }, []);
 
+  const formatQuizTitle = (examName = "") => {
+    if (!examName) return "";
 
- const formatQuizTitle = (examName = "") => {
-  if (!examName) return "";
+    // Bỏ prefix quiz_
+    let name = examName.startsWith("quiz_") ? examName.slice(5) : examName;
+    const parts = name.split("_");
 
-  // Bỏ prefix quiz_
-  let name = examName.startsWith("quiz_") ? examName.slice(5) : examName;
-  const parts = name.split("_");
+    // ===== LỚP =====
+    const classPart = parts.find(p => p.toLowerCase().includes("lớp")) || "";
+    const classNumber = classPart.match(/\d+/)?.[0] || "";
 
-  // ===== LỚP =====
-  const classPart = parts.find(p => p.toLowerCase().includes("lớp")) || "";
-  const classNumber = classPart.match(/\d+/)?.[0] || "";
-
-  // ===== MÔN =====
-  let subjectPart = "";
-  for (let i = parts.indexOf(classPart) + 1; i < parts.length; i++) {
-    const p = parts[i];
-    if (
-      !p.toLowerCase().includes("cki") &&
-      !p.toLowerCase().includes("cn") &&
-      !/\d{2}-\d{2}/.test(p)
-    ) {
-      subjectPart = p;
-      break;
+    // ===== MÔN =====
+    let subjectPart = "";
+    for (let i = parts.indexOf(classPart) + 1; i < parts.length; i++) {
+      const p = parts[i];
+      if (
+        !p.toLowerCase().includes("cki") &&
+        !p.toLowerCase().includes("cn") &&
+        !/\d{2}-\d{2}/.test(p)
+      ) {
+        subjectPart = p;
+        break;
+      }
     }
-  }
 
-  // ===== LOẠI KIỂM TRA (CKI / CN) =====
-  let extraPart = "";
-  for (let i = parts.indexOf(classPart) + 1; i < parts.length; i++) {
-    const p = parts[i];
-    if (p.toLowerCase().includes("cki") || p.toLowerCase() === "cn") {
-      extraPart = p.toUpperCase();
-      break;
+    // ===== PHÂN BIỆT BT / KT =====
+    const lastPart = parts[parts.length - 1];
+
+    // 👉 BÀI TẬP TUẦN (kết thúc bằng số)
+    if (/^\d+$/.test(lastPart)) {
+      return `${subjectPart} ${classNumber} – Tuần ${lastPart}`.trim();
     }
-  }
 
-  // ===== MÃ ĐỀ (A, B, C...) =====
-  const match = examName.match(/\(([^)]+)\)/);
-  const examLetter = match ? match[1] : "";
+    // 👉 KIỂM TRA ĐỊNH KỲ
+    let extraPart = "";
+    for (let i = parts.indexOf(classPart) + 1; i < parts.length; i++) {
+      const p = parts[i];
+      if (p.toLowerCase().includes("cki") || p.toLowerCase() === "cn") {
+        extraPart = p.toUpperCase();
+        break;
+      }
+    }
 
-  return `${subjectPart} ${classNumber}${extraPart ? ` - ${extraPart}` : ""}${examLetter ? ` (${examLetter})` : ""}`.trim();
-};
+    const match = examName.match(/\(([^)]+)\)/);
+    const examLetter = match ? match[1] : "";
 
+    return `${subjectPart} ${classNumber}${extraPart ? ` - ${extraPart}` : ""}${examLetter ? ` (${examLetter})` : ""}`.trim();
+  };
   
   const studentClass = studentInfo.class;
   const studentName = studentInfo.name;
@@ -650,57 +689,51 @@ export default function TracNghiem_Test() {
           if (Array.isArray(q.correct) ? q.correct.includes(ua) : q.correct === ua) total += q.score ?? 1;
 
         } else if (q.type === "multiple" || q.type === "image") {
-          const userSet = new Set(Array.isArray(rawAnswer) ? rawAnswer : []);
-          const correctSet = new Set(Array.isArray(q.correct) ? q.correct : [q.correct]);
-          if (userSet.size === correctSet.size && [...correctSet].every(x => userSet.has(x))) total += q.score ?? 1;
+          const userSet = new Set(
+            (Array.isArray(rawAnswer) ? rawAnswer : []).map(Number)
+          );
 
-        } else if (q.type === "sort") {
-        // ✅ nếu không kéo → dùng thứ tự ban đầu
-        const userOrder = Array.isArray(rawAnswer)
-          ? rawAnswer
-          : Array.isArray(q.initialSortOrder)
-          ? q.initialSortOrder
-          : [];
+          const correctSet = new Set(
+            (Array.isArray(q.correct) ? q.correct : [q.correct]).map(Number)
+          );
 
-        const options = Array.isArray(q.options) ? q.options : [];
-        const correctTexts = Array.isArray(q.correctTexts) ? q.correctTexts : [];
-
-        // ✅ chuẩn hoá giá trị để so sánh
-        const normalize = (val) =>
-          String(
-            typeof val === "object" && val !== null
-              ? val.text ?? val.image ?? ""
-              : val ?? ""
-          )
-            .replace(/<[^>]*>/g, "")
-            .trim()
-            .toLowerCase();
-
-        const userTexts = userOrder.map(idx => normalize(options[idx]));
-        const correctNorm = correctTexts.map(normalize);
-
-        const isCorrect =
-          userTexts.length === correctNorm.length &&
-          userTexts.every((t, i) => t === correctNorm[i]);
-
-        if (isCorrect) {
-          total += q.score ?? 1;
+          if (
+            userSet.size === correctSet.size &&
+            [...correctSet].every(x => userSet.has(x))
+          ) {
+            total += q.score ?? 1;
+          }
         }
-      } else if (q.type === "matching") {
-        const userArray = Array.isArray(rawAnswer)
-          ? rawAnswer
-          : q.pairs.map((_, i) => i); // coi như nối mặc định
+        else if (q.type === "sort") {
+          // 👉 nếu không kéo, dùng thứ tự ban đầu
+          const order =
+            Array.isArray(rawAnswer) && rawAnswer.length > 0
+              ? rawAnswer
+              : q.initialOrder ?? q.options.map((_, i) => i);
 
-        const correctArray = Array.isArray(q.correct) ? q.correct : [];
+          const userTexts = order.map(idx => q.options[idx]);
+          const correctTexts = Array.isArray(q.correctTexts) ? q.correctTexts : [];
 
-        const isCorrect =
-          userArray.length === correctArray.length &&
-          userArray.every((val, i) => val === correctArray[i]);
+          const isCorrect =
+            userTexts.length === correctTexts.length &&
+            userTexts.every((t, i) => t === correctTexts[i]);
 
-        if (isCorrect) {
-          total += q.score ?? 1;
-        }
-      } else if (q.type === "truefalse") {
+          if (isCorrect) total += q.score ?? 1;
+
+        } else if (q.type === "matching") {
+          const userArray =
+            Array.isArray(rawAnswer) && rawAnswer.length > 0
+              ? rawAnswer
+              : q.initialOrder ?? q.correct?.map((_, i) => i);
+
+          const correctArray = Array.isArray(q.correct) ? q.correct : [];
+
+          const isCorrect =
+            userArray.length === correctArray.length &&
+            userArray.every((val, i) => val === correctArray[i]);
+
+          if (isCorrect) total += q.score ?? 1;
+        } else if (q.type === "truefalse") {
           const userArray = Array.isArray(rawAnswer) ? rawAnswer : [];
           const correctArray = Array.isArray(q.correct) ? q.correct : [];
 
@@ -718,32 +751,21 @@ export default function TracNghiem_Test() {
           const userAnswers = Array.isArray(rawAnswer) ? rawAnswer : [];
           const correctAnswers = Array.isArray(q.options) ? q.options : [];
 
-          if (correctAnswers.length > 0 && userAnswers.length === correctAnswers.length) {
+          if (userAnswers.length === correctAnswers.length) {
             const isAllCorrect = correctAnswers.every((correct, i) => {
-              // ép user answer về string
-              const userText =
-                typeof userAnswers[i] === "string" ? userAnswers[i].trim() : "";
+              if (!userAnswers[i] || !correct || typeof correct.text !== "string")
+                return false;
 
-              // ép correct về string (object | string đều OK)
-              const correctText =
-                typeof correct === "string"
-                  ? correct.trim()
-                  : typeof correct === "object" && correct !== null
-                  ? (correct.text ?? "").trim()
-                  : "";
-
-              return userText === correctText;
+              return (
+                String(userAnswers[i]).trim().toLowerCase() ===
+                correct.text.trim().toLowerCase()
+              );
             });
 
-            if (isAllCorrect) {
-              total += q.score ?? 1;
-            }
+            if (isAllCorrect) total += q.score ?? 1;
           }
         }
-
-
       });
-
 
       setScore(total);
       setSubmitted(true);
@@ -810,57 +832,51 @@ export default function TracNghiem_Test() {
           if (Array.isArray(q.correct) ? q.correct.includes(ua) : q.correct === ua) total += q.score ?? 1;
 
         } else if (q.type === "multiple" || q.type === "image") {
-          const userSet = new Set(Array.isArray(rawAnswer) ? rawAnswer : []);
-          const correctSet = new Set(Array.isArray(q.correct) ? q.correct : [q.correct]);
-          if (userSet.size === correctSet.size && [...correctSet].every(x => userSet.has(x))) total += q.score ?? 1;
+          const userSet = new Set(
+            (Array.isArray(rawAnswer) ? rawAnswer : []).map(Number)
+          );
 
-        } else if (q.type === "sort") {
-        // ✅ nếu không kéo → dùng thứ tự ban đầu
-        const userOrder = Array.isArray(rawAnswer)
-          ? rawAnswer
-          : Array.isArray(q.initialSortOrder)
-          ? q.initialSortOrder
-          : [];
+          const correctSet = new Set(
+            (Array.isArray(q.correct) ? q.correct : [q.correct]).map(Number)
+          );
 
-        const options = Array.isArray(q.options) ? q.options : [];
-        const correctTexts = Array.isArray(q.correctTexts) ? q.correctTexts : [];
-
-        // ✅ chuẩn hoá giá trị để so sánh
-        const normalize = (val) =>
-          String(
-            typeof val === "object" && val !== null
-              ? val.text ?? val.image ?? ""
-              : val ?? ""
-          )
-            .replace(/<[^>]*>/g, "")
-            .trim()
-            .toLowerCase();
-
-        const userTexts = userOrder.map(idx => normalize(options[idx]));
-        const correctNorm = correctTexts.map(normalize);
-
-        const isCorrect =
-          userTexts.length === correctNorm.length &&
-          userTexts.every((t, i) => t === correctNorm[i]);
-
-        if (isCorrect) {
-          total += q.score ?? 1;
+          if (
+            userSet.size === correctSet.size &&
+            [...correctSet].every(x => userSet.has(x))
+          ) {
+            total += q.score ?? 1;
+          }
         }
-      } else if (q.type === "matching") {
-        const userArray = Array.isArray(rawAnswer)
-          ? rawAnswer
-          : q.pairs.map((_, i) => i); // coi như nối mặc định
+        else if (q.type === "sort") {
+          // 👉 nếu không kéo, dùng thứ tự ban đầu
+          const order =
+            Array.isArray(rawAnswer) && rawAnswer.length > 0
+              ? rawAnswer
+              : q.initialOrder ?? q.options.map((_, i) => i);
 
-        const correctArray = Array.isArray(q.correct) ? q.correct : [];
+          const userTexts = order.map(idx => q.options[idx]);
+          const correctTexts = Array.isArray(q.correctTexts) ? q.correctTexts : [];
 
-        const isCorrect =
-          userArray.length === correctArray.length &&
-          userArray.every((val, i) => val === correctArray[i]);
+          const isCorrect =
+            userTexts.length === correctTexts.length &&
+            userTexts.every((t, i) => t === correctTexts[i]);
 
-        if (isCorrect) {
-          total += q.score ?? 1;
-        }
-      } else if (q.type === "truefalse") {
+          if (isCorrect) total += q.score ?? 1;
+
+        } else if (q.type === "matching") {
+          const userArray =
+            Array.isArray(rawAnswer) && rawAnswer.length > 0
+              ? rawAnswer
+              : q.initialOrder ?? q.correct?.map((_, i) => i);
+
+          const correctArray = Array.isArray(q.correct) ? q.correct : [];
+
+          const isCorrect =
+            userArray.length === correctArray.length &&
+            userArray.every((val, i) => val === correctArray[i]);
+
+          if (isCorrect) total += q.score ?? 1;
+        } else if (q.type === "truefalse") {
           const userArray = Array.isArray(rawAnswer) ? rawAnswer : [];
           const correctArray = Array.isArray(q.correct) ? q.correct : [];
 
@@ -878,32 +894,21 @@ export default function TracNghiem_Test() {
           const userAnswers = Array.isArray(rawAnswer) ? rawAnswer : [];
           const correctAnswers = Array.isArray(q.options) ? q.options : [];
 
-          if (correctAnswers.length > 0 && userAnswers.length === correctAnswers.length) {
+          if (userAnswers.length === correctAnswers.length) {
             const isAllCorrect = correctAnswers.every((correct, i) => {
-              // ép user answer về string
-              const userText =
-                typeof userAnswers[i] === "string" ? userAnswers[i].trim() : "";
+              if (!userAnswers[i] || !correct || typeof correct.text !== "string")
+                return false;
 
-              // ép correct về string (object | string đều OK)
-              const correctText =
-                typeof correct === "string"
-                  ? correct.trim()
-                  : typeof correct === "object" && correct !== null
-                  ? (correct.text ?? "").trim()
-                  : "";
-
-              return userText === correctText;
+              return (
+                String(userAnswers[i]).trim().toLowerCase() ===
+                correct.text.trim().toLowerCase()
+              );
             });
 
-            if (isAllCorrect) {
-              total += q.score ?? 1;
-            }
+            if (isAllCorrect) total += q.score ?? 1;
           }
         }
-
-
       });
-
 
       setScore(total);
       setSubmitted(true);
@@ -996,7 +1001,7 @@ const handleMultipleSelect = (questionId, optionIndex, checked) => {
 };
 
 const handleDragEnd = (result) => {
-  const { source, destination } = result;
+  const { source, destination, draggableId } = result;
   if (!destination) return;
 
   setQuestions((prev) => {
@@ -1004,42 +1009,32 @@ const handleDragEnd = (result) => {
     const q = updated[currentIndex];
 
     let filled = q.filled ? [...q.filled] : [];
-    let available = q.availableWords ? [...q.availableWords] : [...(q.shuffledOptions || q.options)];
 
-    /* ===== KÉO TỪ WORDS → BLANK ===== */
-    if (source.droppableId === "words" && destination.droppableId.startsWith("blank-")) {
+    // Kéo từ words vào blank
+    if (destination.droppableId.startsWith("blank-") && source.droppableId === "words") {
       const blankIndex = Number(destination.droppableId.split("-")[1]);
-      const optionObj = available[source.index];
-      const wordText = typeof optionObj === "string" ? optionObj : optionObj?.text ?? "";
-
+      const word = draggableId.replace("word-", "");
       while (filled.length <= blankIndex) filled.push("");
-      filled[blankIndex] = wordText;
-
-      // xoá từ khỏi availableWords
-      available.splice(source.index, 1);
+      filled[blankIndex] = word;
     }
 
-    /* ===== KÉO TỪ BLANK → WORDS ===== */
+    // Kéo từ blank ra words
     if (destination.droppableId === "words" && source.droppableId.startsWith("blank-")) {
       const blankIndex = Number(source.droppableId.split("-")[1]);
-      const wordText = filled[blankIndex];
-      filled[blankIndex] = "";
-
-      // thêm lại từ vào availableWords
-      if (wordText) available.push(wordText);
+      filled[blankIndex] = ""; // ô blank trở về rỗng
     }
 
-    updated[currentIndex] = { ...q, filled, availableWords: available };
+    updated[currentIndex] = { ...q, filled };
 
+    // ✅ Cập nhật luôn answers để chấm điểm
     setAnswers((prevAns) => ({
       ...prevAns,
-      [q.id]: filled,
+      [q.id]: filled
     }));
 
     return updated;
   });
 };
-
 
 const normalizeValue = (val) => {
   if (typeof val === "object") {
@@ -1143,7 +1138,7 @@ return (
               value={selectedExam}
               label="Chọn đề"
               onChange={(e) => {
-                setSelectedExam(e.target.value);
+                setSelectedExam(e.target.value); // 👈 đổi đề → useEffect tự chạy
               }}
             >
               {examList.map((exam) => (
@@ -1152,8 +1147,10 @@ return (
                 </MenuItem>
               ))}
             </Select>
+
           </FormControl>
-      </Stack>
+        </Stack>
+
 
       </Box>
 
@@ -1904,11 +1901,11 @@ return (
             <>
               {/* 🖼️ ẢNH MINH HỌA CÂU HỎI */}
               {currentQuestion.questionImage && (
-                <Box sx={{ display: "flex", justifyContent: "center", mb: 2 }}>
+                <Box sx={{ display: "flex", justifyContent: "center", mb: 1 }}>
                   <Box
                     sx={{
-                      maxHeight: 150,
-                      maxWidth: "100%",
+                      maxHeight: 100,           // 🔥 GIẢM NHỎ HƠN
+                      maxWidth: "85%",         // 🔥 gọn thêm
                       overflow: "hidden",
                       borderRadius: 1,
                       border: "1px solid #ddd",
@@ -1922,8 +1919,10 @@ return (
                       src={currentQuestion.questionImage}
                       alt="Hình minh họa"
                       style={{
-                        maxHeight: 150,
+                        maxHeight: "100px",     // 🔥 khớp khung
                         maxWidth: "100%",
+                        width: "auto",
+                        height: "auto",
                         objectFit: "contain",
                         cursor: "zoom-in",
                       }}
@@ -1932,6 +1931,7 @@ return (
                   </Box>
                 </Box>
               )}
+
 
               {/* ✅ OPTIONS – GIỮ NGUYÊN CHIỀU CAO GỐC */}
               {currentQuestion.options.map((opt, i) => {
@@ -2094,13 +2094,14 @@ return (
                           : "transparent",
                     }}
                   >
-                    {/* ✅ IMAGE (ĐÃ GIẢM KÍCH THƯỚC) */}
+                    {/* ✅ IMAGE */}
                     <img
                       src={imageUrl}
                       alt={`option-${optIdx}`}
                       style={{
-                        maxWidth: "80%",     // 🔥 QUAN TRỌNG
-                        maxHeight: 80,       // 🔥 NHỎ LẠI
+                        width: "50%",          // 🔥 chiếm 75% chiều rộng khung
+                        height: "auto",        // 🔥 giữ tỉ lệ ảnh
+                        maxHeight: "100%",     // không tràn khung
                         objectFit: "contain",
                         marginBottom: 6,
                       }}
@@ -2115,18 +2116,15 @@ return (
                       disabled={submitted || !started}
                     />
                   </Paper>
-
                 );
               })}
             </Stack>
           )}
 
-
           {/* FILLBLANK */}
           {currentQuestion.type === "fillblank" && (
             <DragDropContext onDragEnd={handleDragEnd}>
               <Stack spacing={2}>
-
                 {/* ======================= HÌNH MINH HỌA ======================= */}
                 {currentQuestion.questionImage && (
                   <Box sx={{ display: "flex", justifyContent: "center", mb: 2 }}>
@@ -2187,15 +2185,20 @@ return (
                         <Droppable droppableId={`blank-${idx}`} direction="horizontal">
                           {(provided) => {
                             const userWord = currentQuestion.filled?.[idx] ?? "";
-                            const correctWord = currentQuestion.correct?.[idx] ?? "";
+                            // ✅ đáp án đúng nằm trong options[idx].text
+                            const correctObj = currentQuestion.options?.[idx];
+                            const correctWord =
+                              typeof correctObj === "string"
+                                ? correctObj
+                                : correctObj?.text ?? "";
 
                             const color =
                               submitted && userWord
-                                ? userWord.trim() === correctWord.trim()
+                                ? userWord.trim().toLowerCase() ===
+                                  correctWord.trim().toLowerCase()
                                   ? "green"
                                   : "red"
                                 : "#000";
-
                             return (
                               <Box
                                 component="span"
@@ -2378,11 +2381,88 @@ return (
     </Paper>
 
     {/* Dialog cảnh báo chưa làm hết */}
-    <IncompleteAnswersDialog
+    <Dialog
       open={openAlertDialog}
       onClose={() => setOpenAlertDialog(false)}
-      unansweredQuestions={unansweredQuestions}
-    />
+      maxWidth="xs"
+      fullWidth
+      PaperProps={{
+        sx: {
+          borderRadius: 3,
+          p: 0,
+          bgcolor: "#e3f2fd",
+          boxShadow: "0 4px 12px rgba(33, 150, 243, 0.15)",
+        },
+      }}
+    >
+      {/* Header với nền màu full width */}
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          p: 0.75, // chiều cao header
+          bgcolor: "#90caf9", // nền màu xanh nhạt
+          borderRadius: "12px 12px 0 0", // bo 2 góc trên
+          mb: 2,
+        }}
+      >
+        <Box
+          sx={{
+            bgcolor: "#42a5f5", // xanh đậm cho icon
+            color: "#fff",
+            borderRadius: "50%",
+            width: 36,
+            height: 36,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            mr: 1.5,
+            fontWeight: "bold",
+            fontSize: 18,
+          }}
+        >
+          ⚠️
+        </Box>
+
+        <DialogTitle
+          sx={{
+            p: 0,
+            fontWeight: "bold",
+            color: "#0d47a1", // màu xanh tiêu đề
+            fontSize: 20,
+          }}
+        >
+          Chưa hoàn thành
+        </DialogTitle>
+      </Box>
+
+      {/* Nội dung */}
+      <DialogContent sx={{ px: 3, pb: 3 }}>
+        <Typography sx={{ fontSize: 16, color: "#0d47a1" }}>
+          Bạn chưa chọn đáp án cho câu: {unansweredQuestions.join(", ")}.<br />
+          Vui lòng trả lời tất cả câu hỏi trước khi nộp.
+        </Typography>
+      </DialogContent>
+
+      {/* Nút OK */}
+      <DialogActions sx={{ justifyContent: "center", pb: 2 }}>
+        <Button
+          variant="contained"
+          onClick={() => setOpenAlertDialog(false)}
+          sx={{
+            px: 4,
+            borderRadius: 2,
+            bgcolor: "#42a5f5", // xanh đậm giống mẫu
+            color: "#fff",
+            "&:hover": { bgcolor: "#1e88e5" },
+            fontWeight: "bold",
+            mb:2,
+          }}
+        >
+          OK
+        </Button>
+      </DialogActions>
+    </Dialog>
 
     {/* Dialog xác nhận thoát */}
     <ExitConfirmDialog
