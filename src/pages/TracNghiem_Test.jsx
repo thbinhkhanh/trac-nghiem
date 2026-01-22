@@ -2253,9 +2253,16 @@ return (
                   ))}
                 </Box>
 
-                {/* ======================= WORD POOL ======================= */}
-                <Box sx={{ mt: 2 }}>
-                  <Typography sx={{ mb: 1, fontWeight: "bold", fontSize: "1.1rem" }}>
+                {/* ======================= KHU VỰC THẺ TỪ ======================= */}
+                <Box sx={{ mt: 2, textAlign: "left" }}>
+                  <Typography
+                    sx={{
+                      mb: 1,
+                      fontWeight: "bold",
+                      fontSize: "1.1rem",
+                      fontFamily: "Roboto, Arial, sans-serif",
+                    }}
+                  >
                     Các từ cần điền:
                   </Typography>
 
@@ -2268,11 +2275,13 @@ return (
                           display: "flex",
                           flexWrap: "wrap",
                           gap: 1,
-                          p: 1,
                           minHeight: 50,
+                          maxHeight: 80,
+                          p: 1,
                           border: "1px solid #90caf9",
                           borderRadius: 2,
-                          bgcolor: "#fff",
+                          bgcolor: "white",
+                          overflowY: "auto",
                         }}
                       >
                         {(currentQuestion.shuffledOptions || currentQuestion.options)
@@ -2289,14 +2298,23 @@ return (
                                   ref={prov.innerRef}
                                   {...prov.draggableProps}
                                   {...prov.dragHandleProps}
+                                  elevation={0}
                                   sx={{
                                     px: 2,
                                     py: 0.5,
                                     bgcolor: "#e3f2fd",
                                     cursor: "grab",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
                                     minHeight: 30,
+                                    fontFamily: "Roboto, Arial, sans-serif",
+                                    fontSize: "1.1rem",
                                     border: "1px solid #90caf9",
                                     boxShadow: "none",
+                                    "&:hover": {
+                                      bgcolor: "#bbdefb",
+                                    },
                                   }}
                                 >
                                   {word.text}
@@ -2304,11 +2322,13 @@ return (
                               )}
                             </Draggable>
                           ))}
+
                         {provided.placeholder}
                       </Box>
                     )}
                   </Droppable>
                 </Box>
+
 
               </Stack>
             </DragDropContext>
