@@ -186,249 +186,6 @@ useEffect(() => {
     return shuffled;
   }
 
-  function buildRuntimeQuestions(rawQuestions = []) {
-    // 🔥 1. SHUFFLE THỨ TỰ CÂU HỎI
-    let saved = shuffleArray([...rawQuestions]);
-
-    const loadedQuestions = saved.map((q, index) => {
-      const questionId = q.id ?? `q_${index}`;
-      const questionText =
-        typeof q.question === "string" ? q.question.trim() : "";
-
-      const rawType = (q.type || "").toString().trim().toLowerCase();
-      const type = [
-        "sort",
-        "matching",
-        "single",
-        "multiple",
-        "image",
-        "truefalse",
-        "fillblank",
-      ].includes(rawType)
-        ? rawType
-        : null;
-
-      if (!type) return null;
-
-      // ================= MATCHING =================
-      if (type === "matching") {
-        const pairs = Array.isArray(q.pairs) ? q.pairs : [];
-        if (pairs.length === 0) return null;
-
-        const leftOptions = pairs.map((p, idx) => {
-          if (p.leftImage && p.leftImage.url) {
-            return {
-              type: "image",
-              url: p.leftImage.url,
-              name: p.leftImage.name || `img-${idx}`,
-            };
-          }
-
-          if (
-            typeof p.left === "string" &&
-            /^https?:\/\//i.test(p.left.trim())
-          ) {
-            return {
-              type: "image",
-              url: p.left.trim(),
-              name: `img-${idx}`,
-            };
-          }
-
-          return p.left ?? "";
-        });
-
-        const rightOriginal = pairs.map((p, idx) => ({
-          opt: p.right,
-          idx,
-        }));
-
-        const processedRight =
-          q.sortType === "shuffle"
-            ? shuffleUntilDifferent(rightOriginal)
-            : rightOriginal;
-
-        const indexMap = {};
-        processedRight.forEach((item, newIndex) => {
-          indexMap[item.idx] = newIndex;
-        });
-
-        const correct = leftOptions.map((_, i) => indexMap[i]);
-
-        return {
-          ...q,
-          id: questionId,
-          type,
-          question: questionText,
-          image: q.image ?? null,
-          leftOptions,
-          rightOptions: processedRight.map(i => i.opt),
-          correct,
-          score: q.score ?? 1,
-        };
-      }
-
-      // ================= SORT =================
-      if (type === "sort") {
-        const options =
-          Array.isArray(q.options) && q.options.length > 0
-            ? [...q.options]
-            : ["", "", "", ""];
-
-        const indexed = options.map((opt, idx) => ({ opt, idx }));
-
-        const processed =
-          q.sortType === "shuffle"
-            ? shuffleUntilDifferent(indexed)
-            : indexed;
-
-        return {
-          ...q,
-          id: questionId,
-          type,
-          question: questionText,
-          image: q.image ?? null,
-          options: processed.map(i => i.opt),
-          initialSortOrder: processed.map(i => i.idx),
-          correctTexts: options,
-          score: q.score ?? 1,
-        };
-      }
-
-      // ================= SINGLE / MULTIPLE =================
-      if (type === "single" || type === "multiple") {
-        const options =
-          Array.isArray(q.options) && q.options.length > 0
-            ? q.options.map(opt => {
-                if (typeof opt === "string") {
-                  if (/^https?:\/\/.*\.(png|jpg|jpeg|gif)$/i.test(opt)) {
-                    return { text: "", image: opt };
-                  }
-                  return { text: opt, image: null };
-                }
-                if (typeof opt === "object") {
-                  return {
-                    text: opt.text ?? "",
-                    image: opt.image ?? null,
-                  };
-                }
-                return { text: "", image: null };
-              })
-            : [
-                { text: "", image: null },
-                { text: "", image: null },
-                { text: "", image: null },
-                { text: "", image: null },
-              ];
-
-        const indexed = options.map((opt, idx) => ({ opt, idx }));
-        const shouldShuffle =
-          q.sortType === "shuffle" || q.shuffleOptions === true;
-
-        const processed = shouldShuffle
-          ? shuffleArray(indexed)
-          : indexed;
-
-        return {
-          ...q,
-          id: questionId,
-          type,
-          question: questionText,
-          image: q.image ?? null,
-          options,
-          displayOrder: processed.map(i => i.idx),
-          correct: Array.isArray(q.correct)
-            ? q.correct.map(Number)
-            : typeof q.correct === "number"
-            ? [q.correct]
-            : [],
-          score: q.score ?? 1,
-        };
-      }
-
-      // ================= IMAGE =================
-      if (type === "image") {
-        const options =
-          Array.isArray(q.options) && q.options.length > 0
-            ? q.options
-            : ["", "", "", ""];
-
-        return {
-          ...q,
-          id: questionId,
-          type,
-          question: questionText,
-          image: q.image ?? null,
-          options,
-          displayOrder: shuffleArray(options.map((_, idx) => idx)),
-          correct: Array.isArray(q.correct) ? q.correct : [],
-          score: q.score ?? 1,
-        };
-      }
-
-      // ================= TRUE / FALSE =================
-      if (type === "truefalse") {
-        const options =
-          Array.isArray(q.options) && q.options.length >= 2
-            ? [...q.options]
-            : ["Đúng", "Sai"];
-
-        const indexed = options.map((opt, idx) => ({ opt, idx }));
-        const processed =
-          q.sortType === "shuffle" ? shuffleArray(indexed) : indexed;
-
-        return {
-          ...q,
-          id: questionId,
-          type,
-          question: questionText,
-          image: q.image ?? null,
-          options: processed.map(i => i.opt),
-          initialOrder: processed.map(i => i.idx),
-          correct:
-            Array.isArray(q.correct) && q.correct.length === options.length
-              ? q.correct
-              : options.map(() => ""),
-          score: q.score ?? 1,
-        };
-      }
-
-      // ================= FILL BLANK =================
-      if (type === "fillblank") {
-        const options = Array.isArray(q.options) ? q.options : [];
-
-        return {
-          ...q,
-          id: questionId,
-          type,
-          question: questionText,
-          image: q.image ?? null,
-          option: q.option,
-          options,
-          shuffledOptions: shuffleArray([...options]),
-          score: q.score ?? 1,
-        };
-      }
-
-      return null;
-    }).filter(Boolean);
-
-    // ================= VALIDATE =================
-    return loadedQuestions.filter(q => {
-      if (q.type === "matching")
-        return q.question.trim() && q.leftOptions.length && q.rightOptions.length;
-      if (q.type === "sort")
-        return q.question.trim() && q.options.length;
-      if (["single", "multiple", "image"].includes(q.type))
-        return q.question.trim() && q.options.length;
-      if (q.type === "truefalse")
-        return q.question.trim() && q.options.length >= 2;
-      if (q.type === "fillblank")
-        return q.question.trim() && q.options.length;
-      return false;
-    });
-  }
-
   useEffect(() => {
     const fetchQuestions = async () => {
       try {
@@ -486,17 +243,14 @@ useEffect(() => {
         const cacheFromContext = quizCache?.[CACHE_KEY];
 
         if (cacheFromContext && Array.isArray(cacheFromContext.questions)) {
-          const runtimeQuestions = buildRuntimeQuestions(
-            cacheFromContext.questions // RAW
-          );
+          //console.log("⚡ CONTEXT CACHE EARLY HIT → dùng ngay", CACHE_KEY);
 
-          setQuestions(runtimeQuestions);
+          setQuestions(cacheFromContext.questions);
           setProgress(100);
           setStarted(true);
           setLoading(false);
-          return;
+          return; // ⛔ DỪNG TOÀN BỘ FETCH
         }
-
 
         //console.log("🧠 CONTEXT CACHE MISS → tiếp tục fetch", CACHE_KEY);
 
@@ -538,17 +292,191 @@ useEffect(() => {
             ? data.updatedAt
             : data.updatedAt?.toMillis?.() ?? 0;
 
-        // --- Xử lý câu hỏi ---
-        const runtimeQuestions = buildRuntimeQuestions(data.questions);
-        setQuestions(runtimeQuestions);
+        
 
+
+        // --- Xử lý câu hỏi ---
+        let saved = Array.isArray(data.questions) ? data.questions : [];
+        saved = shuffleArray(saved);
+
+        const loadedQuestions = saved.map((q, index) => {
+          const questionId = q.id ?? `q_${index}`;
+          const questionText = typeof q.question === "string" ? q.question.trim() : "";
+          const rawType = (q.type || "").toString().trim().toLowerCase();
+          const type = ["sort", "matching", "single", "multiple", "image", "truefalse", "fillblank"].includes(rawType)
+            ? rawType
+            : null;
+          if (!type) return null;
+
+          if (type === "matching") {
+            const pairs = Array.isArray(q.pairs) ? q.pairs : [];
+            if (pairs.length === 0) return null;
+            const leftOptions = pairs.map(p => p.left);
+            const rightOptionsOriginal = pairs.map((p, idx) => ({ opt: p.right, idx }));
+            const processedRightOptions = shuffleArray(rightOptionsOriginal);
+            const originalRightIndexMap = {};
+            processedRightOptions.forEach((item, newIndex) => {
+              originalRightIndexMap[item.idx] = newIndex;
+            });
+            const newCorrect = leftOptions.map((_, i) => originalRightIndexMap[i]);
+            return { 
+              ...q, 
+              id: questionId, 
+              type, 
+              question: questionText, 
+              image: q.image ?? null,          // ✅ Thêm image
+              leftOptions, 
+              rightOptions: processedRightOptions.map(i => i.opt), 
+              correct: newCorrect, 
+              score: q.score ?? 1 
+            };
+          }
+
+          if (type === "sort") {
+            const options = Array.isArray(q.options) ? [...q.options] : [];
+
+            const indexed = options.map((opt, idx) => ({
+              text: typeof opt === "string" ? opt : opt.text,
+              idx,
+            }));
+
+            const processed =
+              q.sortType === "shuffle" ? shuffleArray(indexed) : indexed;
+
+            return {
+              ...q,
+              id: questionId,
+              type,
+              question: questionText,
+
+              // UI
+              options: processed.map(i => i.text),
+
+              // ⭐ ĐÁP ÁN ĐÚNG THEO TEXT (KHÔNG PHỤ THUỘC INDEX)
+              correctTexts: q.correct.map(i => indexed[i]?.text),
+
+              score: q.score ?? 1,
+            };
+          }
+
+          if (type === "single" || type === "multiple") {
+            const options = Array.isArray(q.options) && q.options.length > 0 ? q.options : ["", "", "", ""];
+            const indexed = options.map((opt, idx) => ({ opt, idx }));
+            const shouldShuffle = q.sortType === "shuffle" || q.shuffleOptions === true;
+            const shuffled = shouldShuffle ? shuffleArray(indexed) : indexed;
+            return { 
+              ...q, 
+              id: questionId, 
+              type, 
+              question: questionText, 
+              image: q.image ?? null,          // ✅ Thêm image
+              options, 
+              displayOrder: shuffled.map(i => i.idx), 
+              correct: Array.isArray(q.correct) ? q.correct.map(Number) : typeof q.correct === "number" ? [q.correct] : [], 
+              score: q.score ?? 1 
+            };
+          }
+
+          // Tạo câu hỏi (image)
+          if (type === "image") {
+            const options = Array.isArray(q.options) && q.options.length > 0
+              ? q.options
+              : ["", "", "", ""];
+
+            const indexed = options.map((opt, idx) => ({ opt, idx }));
+
+            const shouldShuffle = q.sortType === "shuffle" || q.shuffleOptions === true;
+            const shuffled = shouldShuffle ? shuffleArray(indexed) : indexed;
+
+            // Chuẩn hóa correct về index gốc (0-based, number[])
+            const correct = Array.isArray(q.correct)
+              ? q.correct.map(Number).filter(n => Number.isInteger(n))
+              : typeof q.correct === "number"
+                ? [Number(q.correct)]
+                : [];
+
+            return {
+              ...q,
+              id: questionId,
+              type,
+              question: questionText,
+              image: q.image ?? null,
+
+              // UI
+              options: shuffled.map(i => i.opt),
+
+              // mapping UI → index gốc
+              displayOrder: shuffled.map(i => i.idx),
+
+              // correct luôn là index gốc (đã chuẩn hóa)
+              correct,
+
+              score: q.score ?? 1,
+            };
+          }
+
+          if (type === "truefalse") {
+            const options = Array.isArray(q.options) && q.options.length >= 2
+              ? [...q.options]
+              : ["Đúng", "Sai"];
+
+            const indexed = options.map((opt, idx) => ({ opt, idx }));
+            const processed = q.sortType === "shuffle" ? shuffleArray(indexed) : indexed;
+
+            return {
+              ...q,
+              id: questionId,
+              type,
+              question: questionText,
+              image: q.image ?? null,
+              options: processed.map(i => i.opt),        // hiển thị theo shuffle
+              initialOrder: processed.map(i => i.idx),   // mapping: vị trí hiển thị -> index gốc
+              correct: Array.isArray(q.correct) && q.correct.length === options.length
+                ? q.correct                               // theo thứ tự gốc Firestore
+                : options.map(() => ""),
+              score: q.score ?? 1
+            };
+          }
+
+          if (type === "fillblank") {
+            const options = Array.isArray(q.options) ? q.options : []; // các đáp án đúng
+            const questionText = q.question || "";                     // câu có chỗ trống
+            return {
+              ...q,
+              id: questionId,
+              type,
+              question: questionText,
+              image: q.image ?? null,
+              option: q.option,               // giữ câu có dấu [...]
+              options,                        // đáp án đúng, giữ nguyên thứ tự gốc
+              shuffledOptions: shuffleArray([...options]), // shuffle một lần nếu cần
+              score: q.score ?? 1
+            };
+          }
+
+          return null;
+        }).filter(Boolean);
+
+
+        // --- Lọc câu hợp lệ bao gồm fillblank ---
+        const validQuestions = loadedQuestions.filter(q => {
+          if (q.type === "matching") return q.question.trim() !== "" && q.leftOptions.length > 0 && q.rightOptions.length > 0;
+          if (q.type === "sort") return q.question.trim() !== "" && q.options.length > 0;
+          if (["single", "multiple", "image"].includes(q.type)) return q.question.trim() !== "" && q.options.length > 0 && Array.isArray(q.correct);
+          if (q.type === "truefalse") return q.question.trim() !== "" && q.options.length >= 2 && Array.isArray(q.correct);
+          if (q.type === "fillblank") return q.question.trim() !== "" && q.options.length > 0;
+          return false;
+        });
+
+
+        setQuestions(validQuestions);
         setProgress(100);
         setStarted(true);
 
         setQuizCache(prev => ({
           ...prev,
           [CACHE_KEY]: {
-            questions: data.questions, // 🔥 RAW
+            questions: validQuestions,
             updatedAt: serverUpdatedAt,
           },
         }));
