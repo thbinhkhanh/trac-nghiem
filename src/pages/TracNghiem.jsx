@@ -1581,6 +1581,7 @@ return (
               gap={2}
               flexWrap="wrap"
               justifyContent="center"
+              alignItems="center"
             >
               {currentQuestion.displayOrder.map((optIdx) => {
                 const option = currentQuestion.options[optIdx];
