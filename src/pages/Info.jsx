@@ -82,11 +82,11 @@ export default function Info() {
             <SchoolIcon sx={{ fontSize: 60, color: "#1976d2" }} />
 
             <Typography variant="h5" fontWeight="bold" color="primary">
-              THÔNG TIN
+              THÔNG TIN HỌC SINH
             </Typography>
 
             {/* ✅ Trường (KHÔNG disable) */}
-            <FormControl fullWidth size="small">
+            {/*<FormControl fullWidth size="small">
               <InputLabel>Trường</InputLabel>
               <Select
                 value={school}
@@ -99,10 +99,17 @@ export default function Info() {
                   </MenuItem>
                 ))}
               </Select>
-            </FormControl>
+            </FormControl>*/}
 
             {/* Khối + Lớp */}
-            <Box sx={{ display: "flex", gap: 2, width: "100%" }}>
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 2,
+                width: "100%",
+              }}
+            >
               <FormControl fullWidth size="small">
                 <InputLabel>Khối</InputLabel>
                 <Select
@@ -146,7 +153,7 @@ export default function Info() {
               sx={{ textTransform: "none", fontSize: "1rem" }}
               onClick={handleStart}
             >
-              BẮT ĐẦU
+              BẮT ĐẦU LÀM BÀI
             </Button>
 
             {errorMsg && (
