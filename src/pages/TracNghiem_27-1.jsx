@@ -1461,141 +1461,118 @@ return (
           )}
 
           {/* TRUE / FALSE */}
-          {currentQuestion.type === "truefalse" &&
-            Array.isArray(currentQuestion?.options) && (
-              <Stack spacing={2}>
-                {/* Hiển thị hình minh họa nếu có */}
-                {currentQuestion.questionImage && (
-                  <Box sx={{ display: "flex", justifyContent: "center", mb: 2 }}>
-                    <img
-                      src={currentQuestion.questionImage}
-                      alt="Hình minh họa"
-                      style={{
-                        maxWidth: "100%",
-                        height: "auto",
-                        borderRadius: 4,
-                        marginTop: "-12px",
-                      }}
-                    />
-                  </Box>
-                )}
+          {currentQuestion.type === "truefalse" && Array.isArray(currentQuestion?.options) && (
+            <Stack spacing={2}>
+              {/* Hiển thị hình minh họa nếu có, căn giữa */}
+              {currentQuestion.questionImage && (
+                <Box sx={{ display: "flex", justifyContent: "center", mb: 2 }}>
+                  <img
+                    src={currentQuestion.questionImage}
+                    alt="Hình minh họa"
+                    style={{
+                      maxWidth: "100%",
+                      height: "auto",
+                      borderRadius: 4,
+                      marginTop: "-12px",
+                    }}
+                  />
+                </Box>
+              )}
 
-                {currentQuestion.options.map((opt, i) => {
-                  const userAns = answers[currentQuestion.id] || [];
-                  const selected = userAns[i] ?? "";
+              {currentQuestion.options.map((opt, i) => {
+                const userAns = answers[currentQuestion.id] || [];
+                const selected = userAns[i] ?? "";
 
-                  const originalIdx = Array.isArray(currentQuestion.initialOrder)
-                    ? currentQuestion.initialOrder[i]
-                    : i;
+                const originalIdx = Array.isArray(currentQuestion.initialOrder)
+                  ? currentQuestion.initialOrder[i]
+                  : i;
 
-                  const correctArray = Array.isArray(currentQuestion.correct)
-                    ? currentQuestion.correct
-                    : [];
+                const correctArray = Array.isArray(currentQuestion.correct)
+                  ? currentQuestion.correct
+                  : [];
 
-                  const correctVal = correctArray[originalIdx] ?? "";
+                const correctVal = correctArray[originalIdx] ?? "";
 
-                  const showResult = submitted && choXemDapAn;
-                  const isCorrect = showResult && selected === correctVal;
-                  const isWrong =
-                    showResult && selected !== "" && selected !== correctVal;
+                const showResult = submitted && choXemDapAn;
+                const isCorrect = showResult && selected === correctVal;
+                const isWrong = showResult && selected !== "" && selected !== correctVal;
 
-                  // ⭐⭐ FIX DỨT ĐIỂM OBJECT OBJECT
-                  let optionText = "";
-                  let optionImage = null;
-
-                  if (typeof opt === "string") {
-                    optionText = opt;
-                  } else if (opt && typeof opt === "object") {
-                    optionText = opt.text ?? "";
-                    optionImage = opt.image ?? null;
-                  }
-
-                  return (
-                    <Paper
-                      key={i}
+                return (
+                  <Paper
+                    key={i}
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1,
+                      borderRadius: 1,
+                      minHeight: 40, // 👈 giống single choice
+                      py: 0.5,
+                      px: 1,
+                      bgcolor: isCorrect
+                        ? "#c8e6c9"
+                        : isWrong
+                        ? "#ffcdd2"
+                        : "transparent",
+                      border: "1px solid #90caf9",
+                      boxShadow: "none",
+                      transition: "background-color 0.2s ease, border-color 0.2s ease",
+                      "&:hover": {
+                        borderColor: "#1976d2",
+                        bgcolor: "#f5f5f5",
+                      },
+                    }}
+                  >
+                    {/* Text option */}
+                    <Typography
+                      variant="body1"
+                      component="div"
                       sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 1,
-                        borderRadius: 1,
-                        minHeight: 40,
-                        py: 0.5,
-                        px: 1,
-                        bgcolor: isCorrect
-                          ? "#c8e6c9"
-                          : isWrong
-                          ? "#ffcdd2"
-                          : "transparent",
-                        border: "1px solid #90caf9",
-                        boxShadow: "none",
-                        transition:
-                          "background-color 0.2s ease, border-color 0.2s ease",
-                        "&:hover": {
-                          borderColor: "#1976d2",
-                          bgcolor: "#f5f5f5",
-                        },
+                        userSelect: "none",
+                        fontSize: "1.1rem",
+                        lineHeight: 1.5,
+                        flex: 1,
+                        whiteSpace: "pre-wrap",
+                        "& p": { margin: 0 },
                       }}
-                    >
-                      {/* Ảnh option nếu có */}
-                      {optionImage && (
-                        <Box
-                          component="img"
-                          src={optionImage}
-                          alt={`truefalse-${i}`}
-                          sx={{
-                            maxHeight: 40,
-                            objectFit: "contain",
-                            borderRadius: 1,
-                            flexShrink: 0,
-                          }}
-                        />
-                      )}
+                      dangerouslySetInnerHTML={{ __html: opt ?? "" }}
+                    />
 
-                      {/* Text option */}
-                      <Typography
-                        component="div"
-                        sx={{
-                          userSelect: "none",
-                          fontSize: "1.1rem",
-                          lineHeight: 1.5,
-                          flex: 1,
-                          whiteSpace: "pre-wrap",
-                          "& p": { margin: 0 },
+                    {/* Dropdown nhỏ gọn */}
+                    <FormControl size="small" sx={{ width: 90 }}>
+                      <Select
+                        value={selected}
+                        onChange={(e) => {
+                          if (submitted || !started) return;
+                          const val = e.target.value; // "Đ" | "S"
+                          setAnswers((prev) => {
+                            const arr = Array.isArray(prev[currentQuestion.id])
+                              ? [...prev[currentQuestion.id]]
+                              : Array(currentQuestion.options.length).fill("");
+                            arr[i] = val;
+                            return { ...prev, [currentQuestion.id]: arr };
+                          });
                         }}
-                        dangerouslySetInnerHTML={{ __html: optionText }}
-                      />
-
-                      {/* Dropdown Đúng / Sai */}
-                      <FormControl size="small" sx={{ width: 90 }}>
-                        <Select
-                          value={selected}
-                          onChange={(e) => {
-                            if (submitted || !started) return;
-                            const val = e.target.value;
-                            setAnswers((prev) => {
-                              const arr = Array.isArray(prev[currentQuestion.id])
-                                ? [...prev[currentQuestion.id]]
-                                : Array(currentQuestion.options.length).fill("");
-                              arr[i] = val;
-                              return { ...prev, [currentQuestion.id]: arr };
-                            });
-                          }}
-                          sx={{
-                            height: 32,
-                            fontSize: "0.95rem",
-                            "& .MuiSelect-select": { py: 0.5 },
-                          }}
-                        >
-                          <MenuItem value="Đ">Đúng</MenuItem>
-                          <MenuItem value="S">Sai</MenuItem>
-                        </Select>
-                      </FormControl>
-                    </Paper>
-                  );
-                })}
-              </Stack>
-            )}
-
+                        sx={{
+                          height: 32, // 👈 giảm chiều cao dropdown
+                          fontSize: "0.95rem",
+                          "& .MuiSelect-select": {
+                            py: 0.5,
+                          },
+                        }}
+                      >
+                        <MenuItem value="Đ" sx={{ minHeight: 32, fontSize: "0.95rem" }}>
+                          Đúng
+                        </MenuItem>
+                        <MenuItem value="S" sx={{ minHeight: 32, fontSize: "0.95rem" }}>
+                          Sai
+                        </MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Paper>
+                );
+              })}
+            </Stack>
+          )}
 
           {/* IMAGE MULTIPLE */}
           {currentQuestion.type === "image" && (

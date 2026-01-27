@@ -745,7 +745,7 @@ useEffect(() => {
                 onChange={(e) => setExamLetter(e.target.value)}
                 label="Đề"
               >
-                {["A", "B", "C", "D"].map((d) => (
+                {["A", "B", "C", "D", "E", "F", "G", "H"].map((d) => (
                   <MenuItem key={d} value={d}>{d}</MenuItem>
                 ))}
               </Select>
