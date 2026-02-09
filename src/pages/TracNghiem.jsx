@@ -40,7 +40,10 @@ import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
 import CloseIcon from "@mui/icons-material/Close";
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import HighlightOffIcon from '@mui/icons-material/HighlightOff';
+import ChevronRightIcon from "@mui/icons-material/ChevronRight";
+import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
+
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { jsPDF } from "jspdf";
@@ -49,6 +52,9 @@ import html2canvas from "html2canvas";
 import IncompleteAnswersDialog from "../dialog/IncompleteAnswersDialog";
 import ExitConfirmDialog from "../dialog/ExitConfirmDialog";
 import ResultDialog from "../dialog/ResultDialog";
+
+import { getQuestionStatus } from "../utils/questionStatus";
+import { useTheme, useMediaQuery } from "@mui/material";
 
 // Hàm shuffle mảng
 function shuffleArray(array) {
@@ -107,6 +113,10 @@ export default function TracNghiem() {
   const [lop, setLop] = useState(locationState.lop || "4.1");
   const [selectedWeek, setSelectedWeek] = useState(locationState.selectedWeek || 13);
   const [mon, setMon] = useState(locationState.mon || "Tin học");
+
+  const theme = useTheme();
+  const isBelow1024 = useMediaQuery("(max-width:1023px)");
+  const [showSidebar, setShowSidebar] = useState(true);
 
   const studentClass = location.state?.lop || "";
 
@@ -781,214 +791,392 @@ const normalizeValue = (val) => {
   return String(val).trim();
 };
 
+const questionCircleStyle = {
+  width: { xs: 34, sm: 38 },
+  height: { xs: 34, sm: 38 },
+  borderRadius: "50%",
+  minWidth: 0,
+  fontSize: "0.85rem",
+  fontWeight: 600,
+  boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
+  transition: "all 0.2s ease",
+};
+
+const handleExit = () => {
+  if (submitted) {
+    navigate(-1);
+  } else {
+    setOpenExitConfirm(true);
+  }
+};
+
+const sidebarConfig = React.useMemo(() => {
+  // < 1024px → ẨN sidebar
+  if (isBelow1024) return null;
+
+  // ≥ 1024px → sidebar 5 ô số
+  return {
+    width: 260,
+    cols: 5,
+  };
+}, [isBelow1024]);
+
+
+const hasSidebar = sidebarConfig && questions.length > 0;
+const isSidebarVisible = hasSidebar && showSidebar;
+
 return (
   <Box
-    id="quiz-container"  // <-- Thêm dòng này
+    id="quiz-container"
     sx={{
       minHeight: "100vh",
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
       background: "linear-gradient(to bottom, #e3f2fd, #bbdefb)",
       pt: { xs: 2, sm: 3 },
       px: { xs: 1, sm: 2 },
     }}
   >
-    <Paper
+    {/* ================= WRAPPER ================= */}
+    <Box
       sx={{
-        p: { xs: 2, sm: 4 },
-        borderRadius: 3,
-        width: "100%",
-        maxWidth: 1000,
-        minWidth: { xs: "auto", sm: 700 },   // sửa minWidth giống mẫu
-        minHeight: { xs: "auto", sm: 650 },  // sửa minHeight giống mẫu
         display: "flex",
-        flexDirection: "column",
-        gap: 2,
-        position: "relative",
-        boxSizing: "border-box",
-        backgroundColor: "#fff",             // thêm nền trắng giống mẫu
-        pb: 3,
+        gap: 3,
+        width: "100%",
+        maxWidth: isSidebarVisible ? 1280 : 1000,
+        mx: "auto",
+        flexDirection: { xs: "column", md: "row" },
+        alignItems: "stretch",
       }}
     >
-      {/* Nút thoát */}
-      <Tooltip title="Thoát trắc nghiệm" arrow>
-        <IconButton
-          onClick={() => {
-            if (submitted) {
-              navigate(-1);
-            } else {
-              // Nếu không tìm thấy đề thì không mở dialog
-              if (!notFoundMessage) {
-                setOpenExitConfirm(true);
-              } else {
-                // Nếu muốn, có thể quay lại luôn
-                navigate(-1);
-              }
-            }
-          }}
+      {/* ================= LEFT CONTENT ================= */}
+      <Box
+        sx={{
+          flex: 1,
+          minWidth: 0,
+          maxWidth: 1000,
+        }}
+      >
+        <Paper
           sx={{
-            position: "absolute",
-            top: 8,
-            right: 8,
-            color: "#f44336",
-            bgcolor: "rgba(255,255,255,0.9)",
-            "&:hover": { bgcolor: "rgba(255,67,54,0.2)" },
+            p: { xs: 2, sm: 4 },
+            borderRadius: 3,
+            minHeight: { xs: "auto", sm: 650 },
+            display: "flex",
+            flexDirection: "column",
+            gap: 2,
+            position: "relative",
+            boxSizing: "border-box",
+            backgroundColor: "#fff",
+            pb: 3,
           }}
         >
-          <CloseIcon />
-        </IconButton>
-      </Tooltip>
+          {/* 🔘 TOGGLE SIDEBAR */}
+          {hasSidebar && (
+            <Tooltip
+              title={
+                showSidebar
+                  ? "Thu gọn bảng câu hỏi"
+                  : "Mở bảng câu hỏi"
+              }
+            >
+              <IconButton
+                onClick={() => setShowSidebar((prev) => !prev)}
+                sx={{
+                  position: "absolute",
+                  top: 12,
+                  right: 12,
+                  bgcolor: "#e3f2fd",
+                  border: "1px solid #90caf9",
+                  "&:hover": { bgcolor: "#bbdefb" },
+                  zIndex: 10,
+                }}
+              >
+                {showSidebar ? (
+                  <ChevronLeftIcon />
+                ) : (
+                  <ChevronRightIcon />
+                )}
+              </IconButton>
+            </Tooltip>
+          )}
 
-      {/* Thông tin học sinh */}
-      <Box
-        sx={{
-          p: 1.5,
-          border: "2px solid #1976d2",
-          borderRadius: 2,
-          color: "#1976d2",
-          width: "fit-content",
-          mb: 2,
-          position: { xs: "relative", sm: "absolute" },
-          top: { sm: 16 },
-          left: { sm: 16 },
-          alignSelf: { xs: "flex-start", sm: "auto" },
-          bgcolor: { xs: "#fff", sm: "transparent" },
-          zIndex: 2,
-        }}
-      >
-        <Typography variant="subtitle1" fontWeight="bold">
-          Tên: {capitalizeName(studentInfo.name)}
-        </Typography>
-        <Typography variant="subtitle1" fontWeight="bold">
-          Lớp: {studentInfo.className} 
-        </Typography>
-      </Box>
-
-      {/* Tiêu đề */}
-      <Typography
-        variant="h5"
-        fontWeight="bold"
-        sx={{ color: "#1976d2", mb: { xs: 1, sm: -1 }, textAlign: "center" }}
-      >
-        {loading
-          ? "TRẮC NGHIỆM"
-          : config?.baiTapTuan
-          ? "TRẮC NGHIỆM"
-          : config?.kiemTraDinhKi && hocKiDisplay && monHocDisplay
-          ? `KTĐK ${hocKiDisplay.toUpperCase()} - ${monHocDisplay.toUpperCase()}`
-          : "TRẮC NGHIỆM"}
-      </Typography>
-
-      {/* Đồng hồ với vị trí cố định */}
-      <Box
-        sx={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          mt: 0.5,
-          mb: -2,
-          minHeight: 40, // giữ khoảng trống luôn
-          width: "100%",
-        }}
-      >
-        {/* Nội dung đồng hồ chỉ hiển thị khi started && !loading */}
-        {started && !loading && (
+          
           <Box
             sx={{
-              display: "flex",
-              alignItems: "center",
-              gap: 1,
-              px: 3,
-              py: 0.5,
+              p: 1.5,
+              border: "2px solid #1976d2",
               borderRadius: 2,
-              bgcolor: "#fff", // tùy chỉnh nếu muốn nền
+              color: "#1976d2",
+              width: "fit-content",
+              mb: 2,
+              position: { xs: "relative", sm: "absolute" },
+              top: { sm: 16 },
+              left: { sm: 16 },
+              alignSelf: { xs: "flex-start", sm: "auto" },
+              bgcolor: { xs: "#fff", sm: "transparent" },
+              zIndex: 2,
             }}
           >
-            <AccessTimeIcon sx={{ color: "#d32f2f" }} />
-            <Typography variant="h6" sx={{ fontWeight: "bold", color: "#d32f2f" }}>
-              {formatTime(timeLeft)}
+            <Typography variant="subtitle1" fontWeight="bold">
+              Tên: {capitalizeName(studentInfo.name)}
+            </Typography>
+            <Typography variant="subtitle1" fontWeight="bold">
+              Lớp: {studentInfo.className} 
             </Typography>
           </Box>
-        )}
 
-        {/* Đường gạch ngang màu xám nhạt luôn hiển thị */}
+        {/* Tiêu đề */}
+        <Typography
+          variant="h5"
+          fontWeight="bold"
+          sx={{ color: "#1976d2", mb: { xs: 1, sm: -1 }, textAlign: "center" }}
+        >
+          {loading
+            ? "TRẮC NGHIỆM"
+            : config?.baiTapTuan
+            ? "TRẮC NGHIỆM"
+            : config?.kiemTraDinhKi && hocKiDisplay && monHocDisplay
+            ? `KTĐK ${hocKiDisplay.toUpperCase()} - ${monHocDisplay.toUpperCase()}`
+            : "TRẮC NGHIỆM"}
+        </Typography>
+
+        {/* Đồng hồ với vị trí cố định */}
         <Box
           sx={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            mt: 0.5,
+            mb: -2,
+            minHeight: 40, // giữ khoảng trống luôn
             width: "100%",
-            height: 1,
-            bgcolor: "#e0e0e0", // màu xám nhạt
-            mt: 0,
           }}
-        />
-      </Box>
-
-
-      {/* Loading */}
-      {loading && (
-        <Box sx={{ display: "flex", justifyContent: "center", mt: 1, width: "100%" }}>
-          <Box sx={{ width: { xs: "60%", sm: "30%" } }}>
-            <LinearProgress variant="determinate" value={progress} sx={{ height: 3, borderRadius: 3 }} />
-            <Typography variant="body2" sx={{ mt: 0.5, textAlign: "center" }}>
-              🔄 Đang tải... {progress}%
-            </Typography>
-          </Box>
-        </Box>
-      )}
-      
-      {!loading && currentQuestion && (
-        <Box key={currentQuestion.id || currentIndex}>
-          <Divider sx={{ my: 2 }} />
-          <Typography variant="h6" sx={{ mb: 2 }}>
-            <strong>Câu {currentIndex + 1}:</strong>{" "}
-            <span
-              dangerouslySetInnerHTML={{
-                __html: (currentQuestion.question || "").replace(/^<p>|<\/p>$/g, "")
+        >
+          {/* Nội dung đồng hồ chỉ hiển thị khi started && !loading */}
+          {started && !loading && (
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 1,
+                px: 3,
+                py: 0.5,
+                borderRadius: 2,
+                bgcolor: "#fff", // tùy chỉnh nếu muốn nền
               }}
-            />
-          </Typography>
-
-          {currentQuestion.image && (
-            <Box sx={{ width: "100%", textAlign: "center", mb: 2 }}>
-              <img
-                src={currentQuestion.image}
-                alt="question"
-                style={{
-                  maxWidth: "100%",
-                  maxHeight: 300,
-                  objectFit: "contain",
-                  borderRadius: 8
-                }}
-              />
+            >
+              <AccessTimeIcon sx={{ color: "#d32f2f" }} />
+              <Typography variant="h6" sx={{ fontWeight: "bold", color: "#d32f2f" }}>
+                {formatTime(timeLeft)}
+              </Typography>
             </Box>
           )}
 
-          {/* SORT */}
-          {currentQuestion.type === "sort" && (
-            <Box sx={{ mt: 0 }}>
-              {currentQuestion.questionImage && (
-                <Box sx={{ display: "flex", justifyContent: "center", mb: 2 }}>
-                  <img
-                    src={currentQuestion.questionImage}
-                    alt="Hình minh họa"
-                    style={{
-                      maxWidth: "100%",
-                      height: "auto",
-                      borderRadius: 8,
-                      marginTop: "-12px",
-                    }}
-                  />
-                </Box>
-              )}
+          {/* Đường gạch ngang màu xám nhạt luôn hiển thị */}
+          <Box
+            sx={{
+              width: "100%",
+              height: 1,
+              bgcolor: "#e0e0e0", // màu xám nhạt
+              mt: 0,
+            }}
+          />
+        </Box>
 
+
+        {/* Loading */}
+        {loading && (
+          <Box sx={{ display: "flex", justifyContent: "center", mt: 1, width: "100%" }}>
+            <Box sx={{ width: { xs: "60%", sm: "30%" } }}>
+              <LinearProgress variant="determinate" value={progress} sx={{ height: 3, borderRadius: 3 }} />
+              <Typography variant="body2" sx={{ mt: 0.5, textAlign: "center" }}>
+                🔄 Đang tải... {progress}%
+              </Typography>
+            </Box>
+          </Box>
+        )}
+        
+        {!loading && currentQuestion && (
+          <Box key={currentQuestion.id || currentIndex}>
+            <Divider sx={{ my: 2 }} />
+            <Typography variant="h6" sx={{ mb: 2 }}>
+              <strong>Câu {currentIndex + 1}:</strong>{" "}
+              <span
+                dangerouslySetInnerHTML={{
+                  __html: (currentQuestion.question || "").replace(/^<p>|<\/p>$/g, "")
+                }}
+              />
+            </Typography>
+
+            {currentQuestion.image && (
+              <Box sx={{ width: "100%", textAlign: "center", mb: 2 }}>
+                <img
+                  src={currentQuestion.image}
+                  alt="question"
+                  style={{
+                    maxWidth: "100%",
+                    maxHeight: 300,
+                    objectFit: "contain",
+                    borderRadius: 8
+                  }}
+                />
+              </Box>
+            )}
+
+            {/* SORT */}
+            {currentQuestion.type === "sort" && (
+              <Box sx={{ mt: 0 }}>
+                {currentQuestion.questionImage && (
+                  <Box sx={{ display: "flex", justifyContent: "center", mb: 2 }}>
+                    <img
+                      src={currentQuestion.questionImage}
+                      alt="Hình minh họa"
+                      style={{
+                        maxWidth: "100%",
+                        height: "auto",
+                        borderRadius: 8,
+                        marginTop: "-12px",
+                      }}
+                    />
+                  </Box>
+                )}
+
+                <DragDropContext
+                  onDragEnd={(result) => {
+                    if (!result.destination || submitted || !started) return;
+
+                    const currentOrder =
+                      answers[currentQuestion.id] ??
+                      (Array.isArray(currentQuestion.options)
+                        ? currentQuestion.options.map((_, idx) => idx)
+                        : []);
+
+                    const newOrder = reorder(
+                      currentOrder,
+                      result.source.index,
+                      result.destination.index
+                    );
+
+                    setAnswers((prev) => ({ ...prev, [currentQuestion.id]: newOrder }));
+                  }}
+                >
+                  <Droppable droppableId="sort-options">
+                    {(provided) => {
+                      const orderIdx =
+                        answers[currentQuestion.id] ??
+                        (Array.isArray(currentQuestion.options)
+                          ? currentQuestion.options.map((_, idx) => idx)
+                          : []);
+
+                      return (
+                        <Stack {...provided.droppableProps} ref={provided.innerRef} spacing={2}>
+                          {orderIdx.map((optIdx, pos) => {
+                            const optionData = currentQuestion.options?.[optIdx] ?? {};
+                            const optionText =
+                              typeof optionData === "string"
+                                ? optionData
+                                : optionData.text ?? "";
+                            const optionImage =
+                              typeof optionData === "object" ? optionData.image ?? null : null;
+
+                            // ✅ So sánh với correctTexts nếu có
+                            const normalize = (v) =>
+                              String(
+                                typeof v === "object" && v !== null ? v.text ?? "" : v ?? ""
+                              )
+                                .replace(/<[^>]*>/g, "")
+                                .trim()
+                                .toLowerCase();
+
+                            const userText = normalize(optionData);
+                            const correctText = normalize(
+                              currentQuestion.correctTexts?.[pos]
+                            );
+
+                            const isCorrectPos =
+                              submitted &&
+                              choXemDapAn &&
+                              userText &&
+                              correctText &&
+                              userText === correctText;
+
+
+                            return (
+                              <Draggable
+                                key={optIdx}
+                                draggableId={String(optIdx)}
+                                index={pos}
+                                isDragDisabled={submitted || !started}
+                              >
+                                {(provided, snapshot) => (
+                                  <Box
+                                    ref={provided.innerRef}
+                                    {...provided.draggableProps}
+                                    {...provided.dragHandleProps}
+                                    sx={{
+                                      borderRadius: 1,
+                                      bgcolor:
+                                        submitted && choXemDapAn
+                                          ? isCorrectPos
+                                            ? "#c8e6c9"
+                                            : "#ffcdd2"
+                                          : "transparent",
+                                      border: "1px solid #90caf9",
+                                      cursor: submitted || !started ? "default" : "grab",
+                                      boxShadow: "none",
+                                      transition:
+                                        "background-color 0.2s ease, border-color 0.2s ease",
+                                      minHeight: 40,
+                                      py: 0.5,
+                                      px: 3,
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: 1,
+                                      "&:hover": {
+                                        borderColor: "#1976d2",
+                                        bgcolor: "#f5f5f5",
+                                      },
+                                    }}
+                                  >
+                                    {/*{optionImage && (
+                                      <Box
+                                        component="img"
+                                        src={optionImage}
+                                        alt={`option-${optIdx}`}
+                                        sx={{
+                                          maxHeight: 40,
+                                          width: "auto",
+                                          objectFit: "contain",
+                                          borderRadius: 2,
+                                          flexShrink: 0,
+                                        }}
+                                      />
+                                    )}*/}
+
+                                    <QuestionOption option={optionData} />
+                                  </Box>
+                                )}
+                              </Draggable>
+                            );
+                          })}
+                          {provided.placeholder}
+                        </Stack>
+                      );
+                    }}
+                  </Droppable>
+                </DragDropContext>
+              </Box>
+            )}
+
+            {/* MATCH */}
+            {currentQuestion.type === "matching" && Array.isArray(currentQuestion.pairs) && (
               <DragDropContext
                 onDragEnd={(result) => {
                   if (!result.destination || submitted || !started) return;
 
                   const currentOrder =
                     answers[currentQuestion.id] ??
-                    (Array.isArray(currentQuestion.options)
-                      ? currentQuestion.options.map((_, idx) => idx)
+                    (Array.isArray(currentQuestion.pairs)
+                      ? currentQuestion.pairs.map((_, idx) => idx)
                       : []);
 
                   const newOrder = reorder(
@@ -1000,396 +1188,187 @@ return (
                   setAnswers((prev) => ({ ...prev, [currentQuestion.id]: newOrder }));
                 }}
               >
-                <Droppable droppableId="sort-options">
-                  {(provided) => {
-                    const orderIdx =
+                <Stack spacing={1.5} sx={{ width: "100%", px: 1 }}>
+                  {currentQuestion.pairs.map((pair, i) => {
+                    const optionText = pair?.left || "";
+                    const optionImage = pair?.leftImage?.url || pair?.leftIconImage?.url || null;
+
+                    const userOrder =
                       answers[currentQuestion.id] ??
-                      (Array.isArray(currentQuestion.options)
-                        ? currentQuestion.options.map((_, idx) => idx)
+                      (Array.isArray(currentQuestion.rightOptions)
+                        ? currentQuestion.rightOptions.map((_, idx) => idx)
                         : []);
 
+                    const rightIdx = userOrder[i];
+                    const rightVal = currentQuestion.rightOptions?.[rightIdx] ?? null;
+                    const rightText = typeof rightVal === "string" ? rightVal : rightVal?.text ?? "";
+                    const rightImage =
+                      typeof rightVal === "object" ? rightVal?.url ?? null : null;
+
+                    const isCorrect =
+                      submitted &&
+                      Array.isArray(currentQuestion.correct) &&
+                      userOrder[i] === currentQuestion.correct[i];
+
                     return (
-                      <Stack {...provided.droppableProps} ref={provided.innerRef} spacing={2}>
-                        {orderIdx.map((optIdx, pos) => {
-                          const optionData = currentQuestion.options?.[optIdx] ?? {};
-                          const optionText =
-                            typeof optionData === "string"
-                              ? optionData
-                              : optionData.text ?? "";
-                          const optionImage =
-                            typeof optionData === "object" ? optionData.image ?? null : null;
+                      <Stack
+                        key={i}
+                        direction="row"
+                        spacing={2}
+                        alignItems="stretch"
+                        sx={{ minHeight: 60 }}
+                      >
+                        {/* LEFT */}
+                        <Paper
+                          sx={{
+                            flex: 1,
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 1.5,
+                            px: 1,
+                            py: 0.5,
+                            border: "1px solid #64b5f6",
+                            borderRadius: 1,
+                            boxShadow: "none",
+                          }}
+                        >
+                          {optionImage && (
+                            <Box
+                              component="img"
+                              src={optionImage}
+                              alt={`left-${i}`}
+                              sx={{
+                                maxHeight: 40,
+                                maxWidth: 40,
+                                objectFit: "contain",
+                                borderRadius: 2,
+                                flexShrink: 0,
+                              }}
+                            />
+                          )}
+                          {optionText && (
+                            <Typography
+                              component="div"
+                              sx={{
+                                fontSize: "1.1rem",
+                                flex: 1,
+                                wordBreak: "break-word",
+                                whiteSpace: "pre-wrap",
+                                lineHeight: 1.5,
+                                "& p": { margin: 0 },
+                              }}
+                              dangerouslySetInnerHTML={{ __html: optionText }}
+                            />
+                          )}
+                        </Paper>
 
-                          // ✅ So sánh với correctTexts nếu có
-                          const normalize = (v) =>
-                            String(
-                              typeof v === "object" && v !== null ? v.text ?? "" : v ?? ""
-                            )
-                              .replace(/<[^>]*>/g, "")
-                              .trim()
-                              .toLowerCase();
-
-                          const userText = normalize(optionData);
-                          const correctText = normalize(
-                            currentQuestion.correctTexts?.[pos]
-                          );
-
-                          const isCorrectPos =
-                            submitted &&
-                            choXemDapAn &&
-                            userText &&
-                            correctText &&
-                            userText === correctText;
-
-
-                          return (
-                            <Draggable
-                              key={optIdx}
-                              draggableId={String(optIdx)}
-                              index={pos}
-                              isDragDisabled={submitted || !started}
+                        {/* RIGHT */}
+                        <Droppable droppableId={`right-${i}`} direction="vertical">
+                          {(provided) => (
+                            <Stack
+                              ref={provided.innerRef}
+                              {...provided.droppableProps}
+                              sx={{ flex: 1 }}
                             >
-                              {(provided, snapshot) => (
-                                <Box
-                                  ref={provided.innerRef}
-                                  {...provided.draggableProps}
-                                  {...provided.dragHandleProps}
-                                  sx={{
-                                    borderRadius: 1,
-                                    bgcolor:
-                                      submitted && choXemDapAn
-                                        ? isCorrectPos
-                                          ? "#c8e6c9"
-                                          : "#ffcdd2"
-                                        : "transparent",
-                                    border: "1px solid #90caf9",
-                                    cursor: submitted || !started ? "default" : "grab",
-                                    boxShadow: "none",
-                                    transition:
-                                      "background-color 0.2s ease, border-color 0.2s ease",
-                                    minHeight: 40,
-                                    py: 0.5,
-                                    px: 3,
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: 1,
-                                    "&:hover": {
-                                      borderColor: "#1976d2",
-                                      bgcolor: "#f5f5f5",
-                                    },
-                                  }}
+                              {rightVal && (
+                                <Draggable
+                                  key={rightIdx}
+                                  draggableId={String(rightIdx)}
+                                  index={i}
+                                  isDragDisabled={submitted || !started}
                                 >
-                                  {/*{optionImage && (
-                                    <Box
-                                      component="img"
-                                      src={optionImage}
-                                      alt={`option-${optIdx}`}
+                                  {(provided) => (
+                                    <Paper
+                                      ref={provided.innerRef}
+                                      {...provided.draggableProps}
+                                      {...provided.dragHandleProps}
                                       sx={{
-                                        maxHeight: 40,
-                                        width: "auto",
-                                        objectFit: "contain",
-                                        borderRadius: 2,
-                                        flexShrink: 0,
+                                        flex: 1,
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 1.5,
+                                        px: 1,
+                                        py: 0.5,
+                                        border: "1px solid #90caf9",
+                                        borderRadius: 1,
+                                        boxShadow: "none",
+                                        cursor: submitted || !started ? "default" : "grab",
+                                        bgcolor:
+                                          submitted && choXemDapAn
+                                            ? isCorrect
+                                              ? "#c8e6c9"
+                                              : "#ffcdd2"
+                                            : "transparent",
+                                        transition:
+                                          "background-color 0.2s ease, border-color 0.2s ease",
+                                        "&:hover": {
+                                          borderColor: "#1976d2",
+                                          bgcolor: "#f5f5f5",
+                                        },
                                       }}
-                                    />
-                                  )}*/}
-
-                                  <QuestionOption option={optionData} />
-                                </Box>
+                                    >
+                                      {rightImage && (
+                                        <Box
+                                          component="img"
+                                          src={rightImage}
+                                          alt={`right-${rightIdx}`}
+                                          sx={{
+                                            maxHeight: 40,
+                                            maxWidth: 40,
+                                            objectFit: "contain",
+                                            borderRadius: 2,
+                                            flexShrink: 0,
+                                          }}
+                                        />
+                                      )}
+                                      {rightText && (
+                                        <Typography
+                                          component="div"
+                                          sx={{
+                                            fontSize: "1.1rem",
+                                            flex: 1,
+                                            wordBreak: "break-word",
+                                            whiteSpace: "pre-wrap",
+                                            lineHeight: 1.5,
+                                            "& p": { margin: 0 },
+                                          }}
+                                          dangerouslySetInnerHTML={{ __html: rightText }}
+                                        />
+                                      )}
+                                    </Paper>
+                                  )}
+                                </Draggable>
                               )}
-                            </Draggable>
-                          );
-                        })}
-                        {provided.placeholder}
+                              {provided.placeholder}
+                            </Stack>
+                          )}
+                        </Droppable>
                       </Stack>
                     );
-                  }}
-                </Droppable>
+                  })}
+                </Stack>
               </DragDropContext>
-            </Box>
-          )}
+            )}
 
-          {/* MATCH */}
-          {currentQuestion.type === "matching" && Array.isArray(currentQuestion.pairs) && (
-            <DragDropContext
-              onDragEnd={(result) => {
-                if (!result.destination || submitted || !started) return;
+            {/* 1. Single */}
+            {currentQuestion.type === "single" && Array.isArray(currentQuestion?.displayOrder) && (
+              <Stack spacing={2}>
+                {currentQuestion.displayOrder.map((optIdx) => {
+                  const selected = answers[currentQuestion.id] === optIdx;
 
-                const currentOrder =
-                  answers[currentQuestion.id] ??
-                  (Array.isArray(currentQuestion.pairs)
-                    ? currentQuestion.pairs.map((_, idx) => idx)
-                    : []);
+                  const correctArray = Array.isArray(currentQuestion.correct)
+                    ? currentQuestion.correct
+                    : [currentQuestion.correct];
 
-                const newOrder = reorder(
-                  currentOrder,
-                  result.source.index,
-                  result.destination.index
-                );
-
-                setAnswers((prev) => ({ ...prev, [currentQuestion.id]: newOrder }));
-              }}
-            >
-              <Stack spacing={1.5} sx={{ width: "100%", px: 1 }}>
-                {currentQuestion.pairs.map((pair, i) => {
-                  const optionText = pair?.left || "";
-                  const optionImage = pair?.leftImage?.url || pair?.leftIconImage?.url || null;
-
-                  const userOrder =
-                    answers[currentQuestion.id] ??
-                    (Array.isArray(currentQuestion.rightOptions)
-                      ? currentQuestion.rightOptions.map((_, idx) => idx)
-                      : []);
-
-                  const rightIdx = userOrder[i];
-                  const rightVal = currentQuestion.rightOptions?.[rightIdx] ?? null;
-                  const rightText = typeof rightVal === "string" ? rightVal : rightVal?.text ?? "";
-                  const rightImage =
-                    typeof rightVal === "object" ? rightVal?.url ?? null : null;
-
-                  const isCorrect =
-                    submitted &&
-                    Array.isArray(currentQuestion.correct) &&
-                    userOrder[i] === currentQuestion.correct[i];
-
-                  return (
-                    <Stack
-                      key={i}
-                      direction="row"
-                      spacing={2}
-                      alignItems="stretch"
-                      sx={{ minHeight: 60 }}
-                    >
-                      {/* LEFT */}
-                      <Paper
-                        sx={{
-                          flex: 1,
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 1.5,
-                          px: 1,
-                          py: 0.5,
-                          border: "1px solid #64b5f6",
-                          borderRadius: 1,
-                          boxShadow: "none",
-                        }}
-                      >
-                        {optionImage && (
-                          <Box
-                            component="img"
-                            src={optionImage}
-                            alt={`left-${i}`}
-                            sx={{
-                              maxHeight: 40,
-                              maxWidth: 40,
-                              objectFit: "contain",
-                              borderRadius: 2,
-                              flexShrink: 0,
-                            }}
-                          />
-                        )}
-                        {optionText && (
-                          <Typography
-                            component="div"
-                            sx={{
-                              fontSize: "1.1rem",
-                              flex: 1,
-                              wordBreak: "break-word",
-                              whiteSpace: "pre-wrap",
-                              lineHeight: 1.5,
-                              "& p": { margin: 0 },
-                            }}
-                            dangerouslySetInnerHTML={{ __html: optionText }}
-                          />
-                        )}
-                      </Paper>
-
-                      {/* RIGHT */}
-                      <Droppable droppableId={`right-${i}`} direction="vertical">
-                        {(provided) => (
-                          <Stack
-                            ref={provided.innerRef}
-                            {...provided.droppableProps}
-                            sx={{ flex: 1 }}
-                          >
-                            {rightVal && (
-                              <Draggable
-                                key={rightIdx}
-                                draggableId={String(rightIdx)}
-                                index={i}
-                                isDragDisabled={submitted || !started}
-                              >
-                                {(provided) => (
-                                  <Paper
-                                    ref={provided.innerRef}
-                                    {...provided.draggableProps}
-                                    {...provided.dragHandleProps}
-                                    sx={{
-                                      flex: 1,
-                                      display: "flex",
-                                      alignItems: "center",
-                                      gap: 1.5,
-                                      px: 1,
-                                      py: 0.5,
-                                      border: "1px solid #90caf9",
-                                      borderRadius: 1,
-                                      boxShadow: "none",
-                                      cursor: submitted || !started ? "default" : "grab",
-                                      bgcolor:
-                                        submitted && choXemDapAn
-                                          ? isCorrect
-                                            ? "#c8e6c9"
-                                            : "#ffcdd2"
-                                          : "transparent",
-                                      transition:
-                                        "background-color 0.2s ease, border-color 0.2s ease",
-                                      "&:hover": {
-                                        borderColor: "#1976d2",
-                                        bgcolor: "#f5f5f5",
-                                      },
-                                    }}
-                                  >
-                                    {rightImage && (
-                                      <Box
-                                        component="img"
-                                        src={rightImage}
-                                        alt={`right-${rightIdx}`}
-                                        sx={{
-                                          maxHeight: 40,
-                                          maxWidth: 40,
-                                          objectFit: "contain",
-                                          borderRadius: 2,
-                                          flexShrink: 0,
-                                        }}
-                                      />
-                                    )}
-                                    {rightText && (
-                                      <Typography
-                                        component="div"
-                                        sx={{
-                                          fontSize: "1.1rem",
-                                          flex: 1,
-                                          wordBreak: "break-word",
-                                          whiteSpace: "pre-wrap",
-                                          lineHeight: 1.5,
-                                          "& p": { margin: 0 },
-                                        }}
-                                        dangerouslySetInnerHTML={{ __html: rightText }}
-                                      />
-                                    )}
-                                  </Paper>
-                                )}
-                              </Draggable>
-                            )}
-                            {provided.placeholder}
-                          </Stack>
-                        )}
-                      </Droppable>
-                    </Stack>
-                  );
-                })}
-              </Stack>
-            </DragDropContext>
-          )}
-
-          {/* 1. Single */}
-          {currentQuestion.type === "single" && Array.isArray(currentQuestion?.displayOrder) && (
-            <Stack spacing={2}>
-              {currentQuestion.displayOrder.map((optIdx) => {
-                const selected = answers[currentQuestion.id] === optIdx;
-
-                const correctArray = Array.isArray(currentQuestion.correct)
-                  ? currentQuestion.correct
-                  : [currentQuestion.correct];
-
-                const isCorrect = submitted && correctArray.includes(optIdx);
-                const isWrong = submitted && selected && !correctArray.includes(optIdx);
-
-                const handleSelect = () => {
-                  if (submitted || !started) return;
-                  handleSingleSelect(currentQuestion.id, optIdx);
-                };
-
-                const optionData = currentQuestion.options?.[optIdx] ?? {};
-
-                return (
-                  <Paper
-                    key={optIdx}
-                    onClick={handleSelect}
-                    sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 1,
-                      borderRadius: 1,
-                      cursor: submitted || !started ? "default" : "pointer",
-                      bgcolor:
-                        submitted && choXemDapAn
-                          ? isCorrect
-                            ? "#c8e6c9"
-                            : isWrong
-                            ? "#ffcdd2"
-                            : "transparent"
-                          : "transparent",
-                      border: "1px solid #90caf9",
-                      minHeight: 40,
-                      py: 0.5,
-                      px: 1,
-                      boxShadow: "none",
-                      transition: "background-color 0.2s ease, border-color 0.2s ease",
-                      "&:hover": {
-                        borderColor: "#1976d2",
-                        bgcolor: "#f5f5f5",
-                      },
-                    }}
-                  >
-                    {/* Radio button */}
-                    <Radio checked={selected} onChange={handleSelect} sx={{ mr: 1 }} />
-
-                    {/* Hiển thị option text + image nếu có (đã xử lý trong QuestionOption) */}
-                    <Box sx={{ flex: 1 }}>
-                      <QuestionOption option={optionData} />
-                    </Box>
-                  </Paper>
-                );
-              })}
-            </Stack>
-          )}
-
-          {/* 2. Multiple */}
-          {currentQuestion.type === "multiple" && Array.isArray(currentQuestion.displayOrder) && (
-            <Stack spacing={2}>
-              {/* Hình minh họa câu hỏi nếu có */}
-              {currentQuestion.questionImage && (
-                <Box sx={{ display: "flex", justifyContent: "center", mb: 2 }}>
-                  <img
-                    src={currentQuestion.questionImage}
-                    alt="Hình minh họa"
-                    style={{
-                      maxWidth: "100%",
-                      height: "auto",
-                      borderRadius: 8,
-                      marginTop: "-12px",
-                    }}
-                  />
-                </Box>
-              )}
-
-              {currentQuestion.displayOrder
-                .filter((optIdx) => currentQuestion.options?.[optIdx] !== undefined)
-                .map((optIdx) => {
-                  const optionData = currentQuestion.options[optIdx];
-                  const optionText = optionData?.text ?? "";
-                  const optionImage = optionData?.image ?? null;
-
-                  const userAns = answers[currentQuestion.id] || [];
-                  const checked = userAns.includes(optIdx);
-
-                  const isCorrect = submitted && currentQuestion.correct.includes(optIdx);
-                  const isWrong = submitted && checked && !currentQuestion.correct.includes(optIdx);
+                  const isCorrect = submitted && correctArray.includes(optIdx);
+                  const isWrong = submitted && selected && !correctArray.includes(optIdx);
 
                   const handleSelect = () => {
                     if (submitted || !started) return;
-                    handleMultipleSelect(currentQuestion.id, optIdx, !checked);
+                    handleSingleSelect(currentQuestion.id, optIdx);
                   };
+
+                  const optionData = currentQuestion.options?.[optIdx] ?? {};
 
                   return (
                     <Paper
@@ -1398,6 +1377,7 @@ return (
                       sx={{
                         display: "flex",
                         alignItems: "center",
+                        gap: 1,
                         borderRadius: 1,
                         cursor: submitted || !started ? "default" : "pointer",
                         bgcolor:
@@ -1412,7 +1392,6 @@ return (
                         minHeight: 40,
                         py: 0.5,
                         px: 1,
-                        gap: 1,
                         boxShadow: "none",
                         transition: "background-color 0.2s ease, border-color 0.2s ease",
                         "&:hover": {
@@ -1421,50 +1400,23 @@ return (
                         },
                       }}
                     >
-                      {/* Checkbox */}
-                      <Checkbox checked={checked} onChange={handleSelect} sx={{ mr: 1 }} />
+                      {/* Radio button */}
+                      <Radio checked={selected} onChange={handleSelect} sx={{ mr: 1 }} />
 
-                      {/* Hình option nếu có */}
-                      {optionImage && (
-                        <Box
-                          component="img"
-                          src={optionImage}
-                          alt={`option-${optIdx}`}
-                          sx={{
-                            maxHeight: 40,
-                            maxWidth: 40,
-                            objectFit: "contain",
-                            borderRadius: 2,
-                            flexShrink: 0,
-                          }}
-                        />
-                      )}
-
-                      {/* Text option */}
-                      <Typography
-                        variant="body1"
-                        sx={{
-                          userSelect: "none",
-                          fontSize: "1.1rem",
-                          lineHeight: 1.5,
-                          flex: 1,
-                          whiteSpace: "pre-wrap",
-                          "& p": { margin: 0 },
-                        }}
-                        component="div"
-                        dangerouslySetInnerHTML={{ __html: optionText }}
-                      />
+                      {/* Hiển thị option text + image nếu có (đã xử lý trong QuestionOption) */}
+                      <Box sx={{ flex: 1 }}>
+                        <QuestionOption option={optionData} />
+                      </Box>
                     </Paper>
                   );
                 })}
-            </Stack>
-          )}
+              </Stack>
+            )}
 
-          {/* TRUE / FALSE */}
-          {currentQuestion.type === "truefalse" &&
-            Array.isArray(currentQuestion?.options) && (
+            {/* 2. Multiple */}
+            {currentQuestion.type === "multiple" && Array.isArray(currentQuestion.displayOrder) && (
               <Stack spacing={2}>
-                {/* Hiển thị hình minh họa nếu có */}
+                {/* Hình minh họa câu hỏi nếu có */}
                 {currentQuestion.questionImage && (
                   <Box sx={{ display: "flex", justifyContent: "center", mb: 2 }}>
                     <img
@@ -1473,549 +1425,777 @@ return (
                       style={{
                         maxWidth: "100%",
                         height: "auto",
-                        borderRadius: 4,
+                        borderRadius: 8,
                         marginTop: "-12px",
                       }}
                     />
                   </Box>
                 )}
 
-                {currentQuestion.options.map((opt, i) => {
+                {currentQuestion.displayOrder
+                  .filter((optIdx) => currentQuestion.options?.[optIdx] !== undefined)
+                  .map((optIdx) => {
+                    const optionData = currentQuestion.options[optIdx];
+                    const optionText = optionData?.text ?? "";
+                    const optionImage = optionData?.image ?? null;
+
+                    const userAns = answers[currentQuestion.id] || [];
+                    const checked = userAns.includes(optIdx);
+
+                    const isCorrect = submitted && currentQuestion.correct.includes(optIdx);
+                    const isWrong = submitted && checked && !currentQuestion.correct.includes(optIdx);
+
+                    const handleSelect = () => {
+                      if (submitted || !started) return;
+                      handleMultipleSelect(currentQuestion.id, optIdx, !checked);
+                    };
+
+                    return (
+                      <Paper
+                        key={optIdx}
+                        onClick={handleSelect}
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          borderRadius: 1,
+                          cursor: submitted || !started ? "default" : "pointer",
+                          bgcolor:
+                            submitted && choXemDapAn
+                              ? isCorrect
+                                ? "#c8e6c9"
+                                : isWrong
+                                ? "#ffcdd2"
+                                : "transparent"
+                              : "transparent",
+                          border: "1px solid #90caf9",
+                          minHeight: 40,
+                          py: 0.5,
+                          px: 1,
+                          gap: 1,
+                          boxShadow: "none",
+                          transition: "background-color 0.2s ease, border-color 0.2s ease",
+                          "&:hover": {
+                            borderColor: "#1976d2",
+                            bgcolor: "#f5f5f5",
+                          },
+                        }}
+                      >
+                        {/* Checkbox */}
+                        <Checkbox checked={checked} onChange={handleSelect} sx={{ mr: 1 }} />
+
+                        {/* Hình option nếu có */}
+                        {optionImage && (
+                          <Box
+                            component="img"
+                            src={optionImage}
+                            alt={`option-${optIdx}`}
+                            sx={{
+                              maxHeight: 40,
+                              maxWidth: 40,
+                              objectFit: "contain",
+                              borderRadius: 2,
+                              flexShrink: 0,
+                            }}
+                          />
+                        )}
+
+                        {/* Text option */}
+                        <Typography
+                          variant="body1"
+                          sx={{
+                            userSelect: "none",
+                            fontSize: "1.1rem",
+                            lineHeight: 1.5,
+                            flex: 1,
+                            whiteSpace: "pre-wrap",
+                            "& p": { margin: 0 },
+                          }}
+                          component="div"
+                          dangerouslySetInnerHTML={{ __html: optionText }}
+                        />
+                      </Paper>
+                    );
+                  })}
+              </Stack>
+            )}
+
+            {/* TRUE / FALSE */}
+            {currentQuestion.type === "truefalse" &&
+              Array.isArray(currentQuestion?.options) && (
+                <Stack spacing={2}>
+                  {/* Hiển thị hình minh họa nếu có */}
+                  {currentQuestion.questionImage && (
+                    <Box sx={{ display: "flex", justifyContent: "center", mb: 2 }}>
+                      <img
+                        src={currentQuestion.questionImage}
+                        alt="Hình minh họa"
+                        style={{
+                          maxWidth: "100%",
+                          height: "auto",
+                          borderRadius: 4,
+                          marginTop: "-12px",
+                        }}
+                      />
+                    </Box>
+                  )}
+
+                  {currentQuestion.options.map((opt, i) => {
+                    const userAns = answers[currentQuestion.id] || [];
+                    const selected = userAns[i] ?? "";
+
+                    const originalIdx = Array.isArray(currentQuestion.initialOrder)
+                      ? currentQuestion.initialOrder[i]
+                      : i;
+
+                    const correctArray = Array.isArray(currentQuestion.correct)
+                      ? currentQuestion.correct
+                      : [];
+
+                    const correctVal = correctArray[originalIdx] ?? "";
+
+                    const showResult = submitted && choXemDapAn;
+                    const isCorrect = showResult && selected === correctVal;
+                    const isWrong =
+                      showResult && selected !== "" && selected !== correctVal;
+
+                    // ⭐⭐ FIX DỨT ĐIỂM OBJECT OBJECT
+                    let optionText = "";
+                    let optionImage = null;
+
+                    if (typeof opt === "string") {
+                      optionText = opt;
+                    } else if (opt && typeof opt === "object") {
+                      optionText = opt.text ?? "";
+                      optionImage = opt.image ?? null;
+                    }
+
+                    return (
+                      <Paper
+                        key={i}
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 1,
+                          borderRadius: 1,
+                          minHeight: 40,
+                          py: 0.5,
+                          px: 1,
+                          bgcolor: isCorrect
+                            ? "#c8e6c9"
+                            : isWrong
+                            ? "#ffcdd2"
+                            : "transparent",
+                          border: "1px solid #90caf9",
+                          boxShadow: "none",
+                          transition:
+                            "background-color 0.2s ease, border-color 0.2s ease",
+                          "&:hover": {
+                            borderColor: "#1976d2",
+                            bgcolor: "#f5f5f5",
+                          },
+                        }}
+                      >
+                        {/* Ảnh option nếu có */}
+                        {optionImage && (
+                          <Box
+                            component="img"
+                            src={optionImage}
+                            alt={`truefalse-${i}`}
+                            sx={{
+                              maxHeight: 40,
+                              objectFit: "contain",
+                              borderRadius: 1,
+                              flexShrink: 0,
+                            }}
+                          />
+                        )}
+
+                        {/* Text option */}
+                        <Typography
+                          component="div"
+                          sx={{
+                            userSelect: "none",
+                            fontSize: "1.1rem",
+                            lineHeight: 1.5,
+                            flex: 1,
+                            whiteSpace: "pre-wrap",
+                            "& p": { margin: 0 },
+                          }}
+                          dangerouslySetInnerHTML={{ __html: optionText }}
+                        />
+
+                        {/* Dropdown Đúng / Sai */}
+                        <FormControl size="small" sx={{ width: 90 }}>
+                          <Select
+                            value={selected}
+                            onChange={(e) => {
+                              if (submitted || !started) return;
+                              const val = e.target.value;
+                              setAnswers((prev) => {
+                                const arr = Array.isArray(prev[currentQuestion.id])
+                                  ? [...prev[currentQuestion.id]]
+                                  : Array(currentQuestion.options.length).fill("");
+                                arr[i] = val;
+                                return { ...prev, [currentQuestion.id]: arr };
+                              });
+                            }}
+                            sx={{
+                              height: 32,
+                              fontSize: "0.95rem",
+                              "& .MuiSelect-select": { py: 0.5 },
+                            }}
+                          >
+                            <MenuItem value="Đ">Đúng</MenuItem>
+                            <MenuItem value="S">Sai</MenuItem>
+                          </Select>
+                        </FormControl>
+                      </Paper>
+                    );
+                  })}
+                </Stack>
+              )}
+
+
+            {/* IMAGE MULTIPLE */}
+            {currentQuestion.type === "image" && (
+              <Stack
+                direction={{ xs: "column", sm: "row" }}
+                gap={2}
+                flexWrap="wrap"
+                justifyContent="center"
+                alignItems="center"
+              >
+                {currentQuestion.displayOrder.map((optIdx) => {
+                  const option = currentQuestion.options[optIdx];
+
+                  // ✅ ẢNH = option.text
+                  const imageUrl =
+                    typeof option === "string"
+                      ? option
+                      : option?.text ?? "";
+
+                  if (!imageUrl) return null;
+
                   const userAns = answers[currentQuestion.id] || [];
-                  const selected = userAns[i] ?? "";
+                  const checked = userAns.includes(optIdx);
 
-                  const originalIdx = Array.isArray(currentQuestion.initialOrder)
-                    ? currentQuestion.initialOrder[i]
-                    : i;
-
-                  const correctArray = Array.isArray(currentQuestion.correct)
-                    ? currentQuestion.correct
-                    : [];
-
-                  const correctVal = correctArray[originalIdx] ?? "";
-
-                  const showResult = submitted && choXemDapAn;
-                  const isCorrect = showResult && selected === correctVal;
+                  const isCorrect =
+                    submitted && currentQuestion.correct.includes(optIdx);
                   const isWrong =
-                    showResult && selected !== "" && selected !== correctVal;
-
-                  // ⭐⭐ FIX DỨT ĐIỂM OBJECT OBJECT
-                  let optionText = "";
-                  let optionImage = null;
-
-                  if (typeof opt === "string") {
-                    optionText = opt;
-                  } else if (opt && typeof opt === "object") {
-                    optionText = opt.text ?? "";
-                    optionImage = opt.image ?? null;
-                  }
+                    submitted && checked && !currentQuestion.correct.includes(optIdx);
 
                   return (
                     <Paper
-                      key={i}
+                      key={optIdx}
+                      onClick={() => {
+                        if (submitted || !started) return;
+                        handleMultipleSelect(
+                          currentQuestion.id,
+                          optIdx,
+                          !checked
+                        );
+                      }}
                       sx={{
+                        width: 150,
+                        height: 180,
                         display: "flex",
+                        flexDirection: "column",
                         alignItems: "center",
-                        gap: 1,
+                        justifyContent: "center",
                         borderRadius: 1,
-                        minHeight: 40,
-                        py: 0.5,
-                        px: 1,
-                        bgcolor: isCorrect
-                          ? "#c8e6c9"
-                          : isWrong
-                          ? "#ffcdd2"
-                          : "transparent",
                         border: "1px solid #90caf9",
-                        boxShadow: "none",
-                        transition:
-                          "background-color 0.2s ease, border-color 0.2s ease",
-                        "&:hover": {
-                          borderColor: "#1976d2",
-                          bgcolor: "#f5f5f5",
-                        },
+                        cursor: submitted || !started ? "default" : "pointer",
+                        bgcolor:
+                          submitted && choXemDapAn
+                            ? isCorrect
+                              ? "#c8e6c9"
+                              : isWrong
+                              ? "#ffcdd2"
+                              : "transparent"
+                            : "transparent",
                       }}
                     >
-                      {/* Ảnh option nếu có */}
-                      {optionImage && (
-                        <Box
-                          component="img"
-                          src={optionImage}
-                          alt={`truefalse-${i}`}
-                          sx={{
-                            maxHeight: 40,
-                            objectFit: "contain",
-                            borderRadius: 1,
-                            flexShrink: 0,
-                          }}
-                        />
-                      )}
-
-                      {/* Text option */}
-                      <Typography
-                        component="div"
-                        sx={{
-                          userSelect: "none",
-                          fontSize: "1.1rem",
-                          lineHeight: 1.5,
-                          flex: 1,
-                          whiteSpace: "pre-wrap",
-                          "& p": { margin: 0 },
+                      {/* ✅ IMAGE (ĐÃ GIẢM KÍCH THƯỚC) */}
+                      <img
+                        src={imageUrl}
+                        alt={`option-${optIdx}`}
+                        style={{
+                          maxWidth: "75%",     // 🔥 giảm chiều ngang
+                          maxHeight: 80,       // 🔥 giảm chiều cao
+                          objectFit: "contain",
+                          marginBottom: 6,
                         }}
-                        dangerouslySetInnerHTML={{ __html: optionText }}
+                        onError={(e) => {
+                          e.currentTarget.style.display = "none";
+                        }}
                       />
 
-                      {/* Dropdown Đúng / Sai */}
-                      <FormControl size="small" sx={{ width: 90 }}>
-                        <Select
-                          value={selected}
-                          onChange={(e) => {
-                            if (submitted || !started) return;
-                            const val = e.target.value;
-                            setAnswers((prev) => {
-                              const arr = Array.isArray(prev[currentQuestion.id])
-                                ? [...prev[currentQuestion.id]]
-                                : Array(currentQuestion.options.length).fill("");
-                              arr[i] = val;
-                              return { ...prev, [currentQuestion.id]: arr };
-                            });
-                          }}
-                          sx={{
-                            height: 32,
-                            fontSize: "0.95rem",
-                            "& .MuiSelect-select": { py: 0.5 },
-                          }}
-                        >
-                          <MenuItem value="Đ">Đúng</MenuItem>
-                          <MenuItem value="S">Sai</MenuItem>
-                        </Select>
-                      </FormControl>
+                      {/* ✅ CHECKBOX */}
+                      <Checkbox
+                        checked={checked}
+                        disabled={submitted || !started}
+                      />
                     </Paper>
+
                   );
                 })}
               </Stack>
             )}
+            
 
-
-          {/* IMAGE MULTIPLE */}
-          {currentQuestion.type === "image" && (
-            <Stack
-              direction={{ xs: "column", sm: "row" }}
-              gap={2}
-              flexWrap="wrap"
-              justifyContent="center"
-              alignItems="center"
-            >
-              {currentQuestion.displayOrder.map((optIdx) => {
-                const option = currentQuestion.options[optIdx];
-
-                // ✅ ẢNH = option.text
-                const imageUrl =
-                  typeof option === "string"
-                    ? option
-                    : option?.text ?? "";
-
-                if (!imageUrl) return null;
-
-                const userAns = answers[currentQuestion.id] || [];
-                const checked = userAns.includes(optIdx);
-
-                const isCorrect =
-                  submitted && currentQuestion.correct.includes(optIdx);
-                const isWrong =
-                  submitted && checked && !currentQuestion.correct.includes(optIdx);
-
-                return (
-                  <Paper
-                    key={optIdx}
-                    onClick={() => {
-                      if (submitted || !started) return;
-                      handleMultipleSelect(
-                        currentQuestion.id,
-                        optIdx,
-                        !checked
-                      );
-                    }}
-                    sx={{
-                      width: 150,
-                      height: 180,
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      borderRadius: 1,
-                      border: "1px solid #90caf9",
-                      cursor: submitted || !started ? "default" : "pointer",
-                      bgcolor:
-                        submitted && choXemDapAn
-                          ? isCorrect
-                            ? "#c8e6c9"
-                            : isWrong
-                            ? "#ffcdd2"
-                            : "transparent"
-                          : "transparent",
-                    }}
-                  >
-                    {/* ✅ IMAGE (ĐÃ GIẢM KÍCH THƯỚC) */}
-                    <img
-                      src={imageUrl}
-                      alt={`option-${optIdx}`}
-                      style={{
-                        maxWidth: "75%",     // 🔥 giảm chiều ngang
-                        maxHeight: 80,       // 🔥 giảm chiều cao
-                        objectFit: "contain",
-                        marginBottom: 6,
-                      }}
-                      onError={(e) => {
-                        e.currentTarget.style.display = "none";
-                      }}
-                    />
-
-                    {/* ✅ CHECKBOX */}
-                    <Checkbox
-                      checked={checked}
-                      disabled={submitted || !started}
-                    />
-                  </Paper>
-
-                );
-              })}
-            </Stack>
-          )}
-          
-
-          {/* FILLBLANK */}
-          {currentQuestion.type === "fillblank" &&
-            typeof currentQuestion?.option === "string" && (
-              <DragDropContext onDragEnd={handleDragEnd}>
-                <Stack spacing={2}>
-                  {/* ======================= CÂU HỎI + CHỖ TRỐNG ======================= */}
-                  <Box
-                    sx={{
-                      width: "100%",
-                      lineHeight: 1.6,
-                      fontSize: "1.1rem",
-                      whiteSpace: "normal",
-                      fontFamily: "Roboto, Arial, sans-serif",
-                    }}
-                  >
-                    {currentQuestion.option.split("[...]").map((part, idx, arr) => (
-                      <span
-                        key={idx}
-                        style={{ display: "inline", fontFamily: "Roboto, Arial, sans-serif" }}
-                      >
-                        {/* Phần văn bản */}
-                        <Typography
-                          component="span"
-                          variant="body1"
-                          sx={{
-                            mr: 0.5,
-                            lineHeight: 1.5,
-                            fontSize: "1.1rem",
-                            "& p, & div": { display: "inline", margin: 0 },
-                          }}
-                          dangerouslySetInnerHTML={{ __html: part }}
-                        />
-
-                        {/* ======================= CHỖ TRỐNG ======================= */}
-                        {idx < arr.length - 1 && (
-                          <Droppable droppableId={`blank-${idx}`} direction="horizontal">
-                            {(provided) => {
-                              const userWord = currentQuestion.filled?.[idx] ?? "";
-
-                              // ✅ LẤY ĐÁP ÁN ĐÚNG (STRING)
-                              const correctWordObj = currentQuestion.options?.[idx];
-                              const correctWord =
-                                typeof correctWordObj === "string"
-                                  ? correctWordObj
-                                  : correctWordObj?.text ?? "";
-
-                              const color =
-                                submitted && userWord
-                                  ? userWord.trim() === correctWord.trim()
-                                    ? "green"
-                                    : "red"
-                                  : "#000";
-
-                              return (
-                                <Box
-                                  component="span"
-                                  ref={provided.innerRef}
-                                  {...provided.droppableProps}
-                                  sx={{
-                                    display: "inline-flex",
-                                    alignItems: "baseline",
-                                    justifyContent: "center",
-                                    minWidth: 80,
-                                    maxWidth: 300,
-                                    px: 1,
-                                    border: "1px dashed #90caf9",
-                                    borderRadius: 1,
-                                    fontFamily: "Roboto, Arial, sans-serif",
-                                    fontSize: "1.1rem",
-                                    lineHeight: "normal",
-                                    color: color,
-                                    verticalAlign: "baseline",
-                                  }}
-                                >
-                                  {userWord && (
-                                    <Draggable
-                                      draggableId={`filled-${idx}`}
-                                      index={0}
-                                    >
-                                      {(prov) => (
-                                        <Paper
-                                          ref={prov.innerRef}
-                                          {...prov.draggableProps}
-                                          {...prov.dragHandleProps}
-                                          sx={{
-                                            px: 2,
-                                            py: 0.5,
-                                            bgcolor: "#e3f2fd",
-                                            cursor: "grab",
-                                            fontFamily: "Roboto, Arial, sans-serif",
-                                            fontSize: "1.1rem",
-                                            display: "inline-flex",
-                                            alignItems: "center",
-                                            justifyContent: "center",
-                                            minHeight: 30,
-                                            maxWidth: "100%",
-                                            color: color,
-                                            border: "1px solid #90caf9",
-                                            boxShadow: "none",
-                                            "&:hover": { bgcolor: "#bbdefb" },
-                                          }}
-                                        >
-                                          {userWord}
-                                        </Paper>
-                                      )}
-                                    </Draggable>
-                                  )}
-                                  {provided.placeholder}
-                                </Box>
-                              );
-                            }}
-                          </Droppable>
-                        )}
-                      </span>
-                    ))}
-                  </Box>
-
-                  {/* ======================= KHU VỰC THẺ TỪ ======================= */}
-                  <Box sx={{ mt: 2, textAlign: "left" }}>
-                    <Typography
+            {/* FILLBLANK */}
+            {currentQuestion.type === "fillblank" &&
+              typeof currentQuestion?.option === "string" && (
+                <DragDropContext onDragEnd={handleDragEnd}>
+                  <Stack spacing={2}>
+                    {/* ======================= CÂU HỎI + CHỖ TRỐNG ======================= */}
+                    <Box
                       sx={{
-                        mb: 1,
-                        fontWeight: "bold",
+                        width: "100%",
+                        lineHeight: 1.6,
                         fontSize: "1.1rem",
+                        whiteSpace: "normal",
                         fontFamily: "Roboto, Arial, sans-serif",
                       }}
                     >
-                      Các từ cần điền:
-                    </Typography>
-
-                    <Droppable droppableId="words" direction="horizontal">
-                      {(provided) => (
-                        <Box
-                          ref={provided.innerRef}
-                          {...provided.droppableProps}
-                          sx={{
-                            display: "flex",
-                            flexWrap: "wrap",
-                            gap: 1,
-                            minHeight: 50,
-                            maxHeight: 80,
-                            p: 1,
-                            border: "1px solid #90caf9",
-                            borderRadius: 2,
-                            bgcolor: "white",
-                            overflowY: "auto",
-                          }}
+                      {currentQuestion.option.split("[...]").map((part, idx, arr) => (
+                        <span
+                          key={idx}
+                          style={{ display: "inline", fontFamily: "Roboto, Arial, sans-serif" }}
                         >
-                          {(currentQuestion.shuffledOptions ||
-                            currentQuestion.options ||
-                            [])
-                            .filter((o) => {
-                              const text =
-                                typeof o === "string" ? o : o?.text ?? "";
-                              return !(currentQuestion.filled ?? []).includes(text);
-                            })
-                            .map((word, idx) => {
-                              const wordText =
-                                typeof word === "string"
-                                  ? word
-                                  : word?.text ?? "";
+                          {/* Phần văn bản */}
+                          <Typography
+                            component="span"
+                            variant="body1"
+                            sx={{
+                              mr: 0.5,
+                              lineHeight: 1.5,
+                              fontSize: "1.1rem",
+                              "& p, & div": { display: "inline", margin: 0 },
+                            }}
+                            dangerouslySetInnerHTML={{ __html: part }}
+                          />
 
-                              return (
-                                <Draggable
-                                  key={`${wordText}-${idx}`}
-                                  draggableId={`word-${idx}`}
-                                  index={idx}
-                                >
-                                  {(prov) => (
-                                    <Paper
-                                      ref={prov.innerRef}
-                                      {...prov.draggableProps}
-                                      {...prov.dragHandleProps}
-                                      elevation={0}
-                                      sx={{
-                                        px: 2,
-                                        py: 0.5,
-                                        bgcolor: "#e3f2fd",
-                                        cursor: "grab",
-                                        display: "flex",
-                                        alignItems: "center",
-                                        justifyContent: "center",
-                                        minHeight: 30,
-                                        fontFamily: "Roboto, Arial, sans-serif",
-                                        fontSize: "1.1rem",
-                                        border: "1px solid #90caf9",
-                                        boxShadow: "none",
-                                        "&:hover": { bgcolor: "#bbdefb" },
-                                      }}
-                                    >
-                                      {wordText}
-                                    </Paper>
-                                  )}
-                                </Draggable>
-                              );
-                            })}
+                          {/* ======================= CHỖ TRỐNG ======================= */}
+                          {idx < arr.length - 1 && (
+                            <Droppable droppableId={`blank-${idx}`} direction="horizontal">
+                              {(provided) => {
+                                const userWord = currentQuestion.filled?.[idx] ?? "";
 
-                          {provided.placeholder}
-                        </Box>
-                      )}
-                    </Droppable>
-                  </Box>
-                </Stack>
-              </DragDropContext>
+                                // ✅ LẤY ĐÁP ÁN ĐÚNG (STRING)
+                                const correctWordObj = currentQuestion.options?.[idx];
+                                const correctWord =
+                                  typeof correctWordObj === "string"
+                                    ? correctWordObj
+                                    : correctWordObj?.text ?? "";
+
+                                const color =
+                                  submitted && userWord
+                                    ? userWord.trim() === correctWord.trim()
+                                      ? "green"
+                                      : "red"
+                                    : "#000";
+
+                                return (
+                                  <Box
+                                    component="span"
+                                    ref={provided.innerRef}
+                                    {...provided.droppableProps}
+                                    sx={{
+                                      display: "inline-flex",
+                                      alignItems: "baseline",
+                                      justifyContent: "center",
+                                      minWidth: 80,
+                                      maxWidth: 300,
+                                      px: 1,
+                                      border: "1px dashed #90caf9",
+                                      borderRadius: 1,
+                                      fontFamily: "Roboto, Arial, sans-serif",
+                                      fontSize: "1.1rem",
+                                      lineHeight: "normal",
+                                      color: color,
+                                      verticalAlign: "baseline",
+                                    }}
+                                  >
+                                    {userWord && (
+                                      <Draggable
+                                        draggableId={`filled-${idx}`}
+                                        index={0}
+                                      >
+                                        {(prov) => (
+                                          <Paper
+                                            ref={prov.innerRef}
+                                            {...prov.draggableProps}
+                                            {...prov.dragHandleProps}
+                                            sx={{
+                                              px: 2,
+                                              py: 0.5,
+                                              bgcolor: "#e3f2fd",
+                                              cursor: "grab",
+                                              fontFamily: "Roboto, Arial, sans-serif",
+                                              fontSize: "1.1rem",
+                                              display: "inline-flex",
+                                              alignItems: "center",
+                                              justifyContent: "center",
+                                              minHeight: 30,
+                                              maxWidth: "100%",
+                                              color: color,
+                                              border: "1px solid #90caf9",
+                                              boxShadow: "none",
+                                              "&:hover": { bgcolor: "#bbdefb" },
+                                            }}
+                                          >
+                                            {userWord}
+                                          </Paper>
+                                        )}
+                                      </Draggable>
+                                    )}
+                                    {provided.placeholder}
+                                  </Box>
+                                );
+                              }}
+                            </Droppable>
+                          )}
+                        </span>
+                      ))}
+                    </Box>
+
+                    {/* ======================= KHU VỰC THẺ TỪ ======================= */}
+                    <Box sx={{ mt: 2, textAlign: "left" }}>
+                      <Typography
+                        sx={{
+                          mb: 1,
+                          fontWeight: "bold",
+                          fontSize: "1.1rem",
+                          fontFamily: "Roboto, Arial, sans-serif",
+                        }}
+                      >
+                        Các từ cần điền:
+                      </Typography>
+
+                      <Droppable droppableId="words" direction="horizontal">
+                        {(provided) => (
+                          <Box
+                            ref={provided.innerRef}
+                            {...provided.droppableProps}
+                            sx={{
+                              display: "flex",
+                              flexWrap: "wrap",
+                              gap: 1,
+                              minHeight: 50,
+                              maxHeight: 80,
+                              p: 1,
+                              border: "1px solid #90caf9",
+                              borderRadius: 2,
+                              bgcolor: "white",
+                              overflowY: "auto",
+                            }}
+                          >
+                            {(currentQuestion.shuffledOptions ||
+                              currentQuestion.options ||
+                              [])
+                              .filter((o) => {
+                                const text =
+                                  typeof o === "string" ? o : o?.text ?? "";
+                                return !(currentQuestion.filled ?? []).includes(text);
+                              })
+                              .map((word, idx) => {
+                                const wordText =
+                                  typeof word === "string"
+                                    ? word
+                                    : word?.text ?? "";
+
+                                return (
+                                  <Draggable
+                                    key={`${wordText}-${idx}`}
+                                    draggableId={`word-${idx}`}
+                                    index={idx}
+                                  >
+                                    {(prov) => (
+                                      <Paper
+                                        ref={prov.innerRef}
+                                        {...prov.draggableProps}
+                                        {...prov.dragHandleProps}
+                                        elevation={0}
+                                        sx={{
+                                          px: 2,
+                                          py: 0.5,
+                                          bgcolor: "#e3f2fd",
+                                          cursor: "grab",
+                                          display: "flex",
+                                          alignItems: "center",
+                                          justifyContent: "center",
+                                          minHeight: 30,
+                                          fontFamily: "Roboto, Arial, sans-serif",
+                                          fontSize: "1.1rem",
+                                          border: "1px solid #90caf9",
+                                          boxShadow: "none",
+                                          "&:hover": { bgcolor: "#bbdefb" },
+                                        }}
+                                      >
+                                        {wordText}
+                                      </Paper>
+                                    )}
+                                  </Draggable>
+                                );
+                              })}
+
+                            {provided.placeholder}
+                          </Box>
+                        )}
+                      </Droppable>
+                    </Box>
+                  </Stack>
+                </DragDropContext>
+              )}
+
+          </Box>
+        )}
+
+        {/* Nút điều hướng luôn cố định ở đáy Paper */}
+        <Box sx={{ flexGrow: 1 }} />
+        {started && !loading && (
+          <Stack
+            direction="row"
+            justifyContent="space-between"
+            alignItems="center"
+            sx={{
+              mt: 2,
+              pt: 2,
+              mb: { xs: "20px", sm: "5px" },
+              borderTop: "1px solid #e0e0e0",
+            }}
+          >
+            {/* ===== CÂU TRƯỚC ===== */}
+            <Button
+              variant="outlined"
+              startIcon={<ArrowBackIcon />}
+              onClick={handlePrev}
+              disabled={currentIndex === 0}
+              sx={{
+                width: 150,
+                bgcolor: currentIndex === 0 ? "#e0e0e0" : "#bbdefb",
+                borderRadius: 1,
+                color: "#0d47a1",
+                "&:hover": {
+                  bgcolor: currentIndex === 0 ? "#e0e0e0" : "#90caf9",
+                },
+              }}
+            >
+              Câu trước
+            </Button>
+
+            {/* ===== CÂU SAU / NỘP BÀI ===== */}
+            {currentIndex < questions.length - 1 ? (
+              <Button
+                variant="outlined"
+                endIcon={<ArrowForwardIcon />}
+                onClick={handleNext}
+                sx={{
+                  width: 150,
+                  bgcolor: "#bbdefb",
+                  borderRadius: 1,
+                  color: "#0d47a1",
+                  "&:hover": { bgcolor: "#90caf9" },
+                }}
+              >
+                Câu sau
+              </Button>
+            ) : (
+              // ✅ CHỈ HIỆN KHI SIDEBAR KHÔNG HIỂN THỊ
+              !isSidebarVisible && (
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={handleSubmit}
+                  disabled={submitted || isEmptyQuestion}
+                  sx={{
+                    width: 150,
+                    borderRadius: 1,
+                  }}
+                >
+                  Nộp bài
+                </Button>
+              )
+            )}
+          </Stack>
+        )}
+
+        {notFoundMessage && (
+          <Card
+            sx={{
+              bgcolor: "#ffebee",
+              border: "1px solid #f44336",
+              p: 2,
+              mb: 2,
+              width: "60%",    // chiếm 50% chiều rộng
+              mx: "auto",      // căn giữa ngang
+              mt: 4            // optional: thêm khoảng cách từ trên
+            }}
+          >
+            <Typography
+              sx={{ color: "#d32f2f", fontWeight: "bold", fontSize: "1.5rem", textAlign: "center" }}
+            >
+              {notFoundMessage}
+            </Typography>
+          </Card>
+        )}
+      </Paper>
+    </Box>
+    
+      {/* ================= RIGHT SIDEBAR ================= */}
+      {isSidebarVisible && (
+        <Box
+          sx={{
+            width: sidebarConfig.width,   // 260 / auto
+            flexShrink: 0,
+            display: { xs: "none", md: "block" },
+          }}
+        >
+          <Card
+            sx={{
+              p: 2,
+              borderRadius: 2,
+              position: sidebarConfig.width === 260 ? "sticky" : "static",
+              top: 24,
+            }}
+          >
+            <Typography
+              fontWeight="bold"
+              textAlign="center"
+              mb={2}
+              fontSize="1.1rem"
+              color="#0d47a1"
+            >
+              Câu hỏi
+            </Typography>
+
+            <Divider sx={{ mt: -1, mb: 3, bgcolor: "#e0e0e0" }} />
+
+            {/* ===== GRID Ô SỐ ===== */}
+            <Box
+              sx={{
+                display: "grid",
+                gridTemplateColumns: `repeat(${sidebarConfig.cols}, 1fr)`,
+                gap: 1.2,
+                justifyItems: "center",
+                mb: !submitted ? 8 : 0,
+              }}
+            >
+              {questions.map((q, index) => {
+                const status = getQuestionStatus({
+                  question: q,
+                  userAnswer: answers[q.id],
+                  submitted,
+                });
+
+                const active = currentIndex === index;
+
+                let bgcolor = "#eeeeee";
+                let border = "1px solid transparent";
+                let textColor = "#0d47a1";
+
+                if (!submitted && status === "answered") bgcolor = "#bbdefb";
+
+                if (submitted) {
+                  if (status === "correct") bgcolor = "#c8e6c9";
+                  else if (status === "wrong") bgcolor = "#ffcdd2";
+                  else {
+                    bgcolor = "#fafafa";
+                    border = "1px dashed #bdbdbd";
+                  }
+                }
+
+                if (active) {
+                  border = "2px solid #9e9e9e";
+                  textColor = "#616161";
+                }
+
+                return (
+                  <IconButton
+                    key={q.id}
+                    onClick={() => setCurrentIndex(index)}
+                    sx={{
+                      width: 38,
+                      height: 38,
+                      borderRadius: "50%",
+                      fontSize: "0.85rem",
+                      fontWeight: 600,
+                      bgcolor,
+                      color: textColor,
+                      border,
+                      boxShadow: "none",
+                    }}
+                  >
+                    {index + 1}
+                  </IconButton>
+                );
+              })}
+            </Box>
+
+            {!submitted && (
+              <Button fullWidth variant="contained" onClick={handleSubmit}>
+                Nộp bài
+              </Button>
             )}
 
+            <Button
+              fullWidth
+              variant="outlined"
+              color="error"
+              sx={{ mt: submitted ? 8 : 1.5 }}
+              onClick={() => {
+                if (submitted) navigate(-1);
+                else setOpenExitConfirm(true);
+              }}
+            >
+              Thoát
+            </Button>
+          </Card>
         </Box>
       )}
 
-      {/* Nút điều hướng luôn cố định ở đáy Paper */}
-      <Box sx={{ flexGrow: 1 }} />
-      {started && !loading && (
-        <Stack
-          direction="row"
-          justifyContent="space-between"
-          alignItems="center"
-          sx={{
-            position: "static",
-            mt: 2,                     // cách option phía trên
-            pt: 2,                     // ⬅⬅⬅ KHOẢNG CÁCH GIỮA GẠCH & NÚT
-            mb: { xs: "20px", sm: "5px" },
-            borderTop: "1px solid #e0e0e0",
-          }}
-        >
+      {/* Dialog câu chưa làm */}
+      <IncompleteAnswersDialog
+        open={openAlertDialog}
+        onClose={() => setOpenAlertDialog(false)}
+        unansweredQuestions={unansweredQuestions}
+      />
 
-          <Button
-            variant="outlined"
-            startIcon={<ArrowBackIcon />}
-            onClick={handlePrev}
-            disabled={currentIndex === 0}
-            sx={{
-              width: { xs: "150px", sm: "150px" },
-              bgcolor: currentIndex === 0 ? "#e0e0e0" : "#bbdefb",
-              borderRadius: 1,
-              color: "#0d47a1",
-              "&:hover": { bgcolor: currentIndex === 0 ? "#e0e0e0" : "#90caf9" },
-            }}
-          >
-            Câu trước
-          </Button>
+      {/* Dialog xác nhận thoát */}
+        <ExitConfirmDialog
+        open={openExitConfirm}
+        onClose={() => setOpenExitConfirm(false)}
+      />
 
-          {currentIndex < questions.length - 1 ? (
-            <Button
-              variant="outlined"
-              endIcon={<ArrowForwardIcon />}
-              onClick={handleNext}
-              sx={{
-                width: { xs: "150px", sm: "150px" },
-                bgcolor: "#bbdefb",
-                borderRadius: 1,
-                color: "#0d47a1",
-                "&:hover": { bgcolor: "#90caf9" },
-              }}
-            >
-              Câu sau
-            </Button>
-          ) : (
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={handleSubmit}
-              disabled={submitted || isEmptyQuestion}
-              sx={{ width: { xs: "120px", sm: "150px" }, borderRadius: 1 }}
-            >
-              Nộp bài
-            </Button>
-          )}
-        </Stack>
-      )}
+      {/* Dialog xáchiển thị kết quả */}
+      <ResultDialog
+        open={openResultDialog}
+        onClose={() => setOpenResultDialog(false)}
+        dialogMode={dialogMode}
+        dialogMessage={dialogMessage}
+        studentResult={studentResult}
+        choXemDiem={choXemDiem}
+        configData={configData}
+        convertPercentToScore={convertPercentToScore}
+      />
 
-
-      {notFoundMessage && (
-        <Card
-          sx={{
-            bgcolor: "#ffebee",
-            border: "1px solid #f44336",
-            p: 2,
-            mb: 2,
-            width: "60%",    // chiếm 50% chiều rộng
-            mx: "auto",      // căn giữa ngang
-            mt: 4            // optional: thêm khoảng cách từ trên
-          }}
-        >
-          <Typography
-            sx={{ color: "#d32f2f", fontWeight: "bold", fontSize: "1.5rem", textAlign: "center" }}
-          >
-            {notFoundMessage}
-          </Typography>
-        </Card>
-      )}
-    </Paper>
-
-    {/* Dialog câu chưa làm */}
-    <IncompleteAnswersDialog
-      open={openAlertDialog}
-      onClose={() => setOpenAlertDialog(false)}
-      unansweredQuestions={unansweredQuestions}
-    />
-
-    {/* Dialog xác nhận thoát */}
-      <ExitConfirmDialog
-      open={openExitConfirm}
-      onClose={() => setOpenExitConfirm(false)}
-    />
-
-    {/* Dialog xáchiển thị kết quả */}
-    <ResultDialog
-      open={openResultDialog}
-      onClose={() => setOpenResultDialog(false)}
-      dialogMode={dialogMode}
-      dialogMessage={dialogMessage}
-      studentResult={studentResult}
-      choXemDiem={choXemDiem}
-      configData={configData}
-      convertPercentToScore={convertPercentToScore}
-    />
-
-    {/* Snackbar */}
-    <Snackbar
-      open={snackbar.open}
-      autoHideDuration={3000}
-      onClose={handleCloseSnackbar}
-      anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-    >
-      <Alert
+      {/* Snackbar */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={3000}
         onClose={handleCloseSnackbar}
-        severity={snackbar.severity}
-        sx={{ width: "100%" }}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
       >
-        {snackbar.message}
-      </Alert>
-    </Snackbar>
+        <Alert
+          onClose={handleCloseSnackbar}
+          severity={snackbar.severity}
+          sx={{ width: "100%" }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+    </Box>
   </Box>
 );
 
