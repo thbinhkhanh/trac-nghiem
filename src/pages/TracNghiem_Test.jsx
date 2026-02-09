@@ -2520,10 +2520,14 @@ return (
                 mb={2}
                 fontSize="1.1rem"
                 color="#0d47a1"
+                sx={{
+                  userSelect: "none",        // ✅ CHẶN BÔI ĐEN
+                  cursor: "default",
+                }}
               >
                 Câu hỏi
               </Typography>
-  
+
               <Divider sx={{ mt: -1, mb: 3, bgcolor: "#e0e0e0" }} />
   
               {/* ===== GRID Ô SỐ ===== */}
