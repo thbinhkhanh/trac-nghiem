@@ -39,6 +39,11 @@ import ExamDeleteConfirmDialog from "../dialog/ExamDeleteConfirmDialog";
 import QuestionCard from "../Types/questions/QuestionCard";
 import { saveAllQuestions } from "../utils/saveAllQuestions";
 
+import { exportQuestionsToJSON } from "../utils/exportJson_importJson.js";
+import { importQuestionsFromJSON } from "../utils/exportJson_importJson.js";
+import DownloadIcon from "@mui/icons-material/Download";
+import UploadFileIcon from "@mui/icons-material/UploadFile";
+
 export default function TracNghiemGV() {
   const { config, setConfig } = useConfig(); 
   const { config: quizConfig, updateConfig: updateQuizConfig } = useTracNghiem();
@@ -69,6 +74,8 @@ const [semester, setSemester] = useState("Giữa kỳ I");
 const semesters = ["Giữa kỳ I", "Cuối kỳ I", "Giữa kỳ II", "Cả năm"];
 const classes = ["Lớp 1", "Lớp 2", "Lớp 3", "Lớp 4", "Lớp 5"];
 const years = ["2025-2026", "2026-2027", "2027-2028", "2028-2029", "2029-2030"];
+
+const fileInputRef = React.useRef(null);
 
 
   // ⚙️ Danh sách câu hỏi
@@ -640,6 +647,52 @@ useEffect(() => {
     displayTitle = `📝 Đề: ${mon} - ${lop}`;
   }
 
+  const handleExportJSON = () => {
+    const result = exportQuestionsToJSON({
+      questions,
+      fileName: "de_trac_nghiem",
+    });
+
+    if (result.success) {
+      setSnackbar({
+        open: true,
+        message: "✅ Xuất đề thành công!",
+        severity: "success",
+      });
+    } else {
+      setSnackbar({
+        open: true,
+        message: "❌ Lỗi khi xuất đề!",
+        severity: "error",
+      });
+    }
+  };
+
+  const handleImportJSON = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const result = await importQuestionsFromJSON(file);
+
+    if (result.success) {
+      setQuestions(result.data);
+
+      setSnackbar({
+        open: true,
+        message: "✅ Nhập đề thành công!",
+        severity: "success",
+      });
+    } else {
+      setSnackbar({
+        open: true,
+        message: `❌ ${result.error}`,
+        severity: "error",
+      });
+    }
+
+    // reset input để chọn lại file cùng tên vẫn trigger
+    e.target.value = "";
+  };
 
   return (
     <Box sx={{ minHeight: "100vh", p: 3, backgroundColor: "#e3f2fd", display: "flex", justifyContent: "center" }}>
@@ -666,6 +719,32 @@ useEffect(() => {
               <SaveIcon />
             </IconButton>
           </Tooltip>
+
+          {/* Export */}
+          <Tooltip title="Xuất đề kiểm tra (JSON)">
+            <IconButton onClick={handleExportJSON} sx={{ color: "#2e7d32" }}>
+              <DownloadIcon />
+            </IconButton>
+          </Tooltip>
+
+          {/* Import */}
+          <Tooltip title="Nhập đề kiểm tra (JSON)">
+            <IconButton
+              onClick={() => fileInputRef.current.click()}
+              sx={{ color: "#ed6c02" }}
+            >
+              <UploadFileIcon />
+            </IconButton>
+          </Tooltip>
+
+          {/* Input file ẩn */}
+          <input
+            type="file"
+            accept=".json"
+            ref={fileInputRef}
+            style={{ display: "none" }}
+            onChange={handleImportJSON}
+          />
         </Stack>
 
         {/* Tiêu đề */}

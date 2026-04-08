@@ -12,9 +12,6 @@ import { StudentContext } from "../context/StudentContext";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "../firebase";
 
-import BackupPage from "./BackupPage";
-import RestorePage from "./RestorePage";
-
 export default function QuanTri() {
   const account = localStorage.getItem("account") || "";
   const isLamVanBen = account === "TH Lâm Văn Bền";
@@ -35,9 +32,6 @@ export default function QuanTri() {
   const [addingClass, setAddingClass] = useState(false);
   const [newClass, setNewClass] = useState("");
   const [timeInput, setTimeInput] = useState(config.timeLimit || 20);
-
-  const [openBackup, setOpenBackup] = useState(false);
-  const [openRestore, setOpenRestore] = useState(false);
 
   // ===== Fetch mật khẩu Firestore =====
   useEffect(() => {
@@ -215,7 +209,7 @@ export default function QuanTri() {
 
   return (
     <Box sx={{ minHeight: "100vh", backgroundColor: "#e3f2fd", pt: 3, display: "flex", justifyContent: "center" }}>
-      <Stack spacing={2} sx={{ width: { xs: "95%", sm: "400px" } }}>
+      <Stack spacing={2} sx={{ width: { xs: "95%", sm: "350px" } }}>
         <Card elevation={6} sx={{ p: 3, borderRadius: 3 }}>
           <Typography variant="h6" fontWeight="bold" color="primary" textAlign="center" mt= {2} mb={2}>
             CẤU HÌNH HỆ THỐNG
@@ -378,24 +372,6 @@ export default function QuanTri() {
                 <Typography>Xuất file bài làm</Typography>
               </Box>
             </Box>
-
-            <Stack direction="row" spacing={2} mt={2} justifyContent="center">
-              <Button
-                variant="contained"
-                color="primary"
-                onClick={() => setOpenBackup(true)}
-              >
-                Sao lưu
-              </Button>
-
-              <Button
-                variant="outlined"
-                color="secondary"
-                onClick={() => setOpenRestore(true)}
-              >
-                Phục hồi
-              </Button>
-            </Stack>
           </Stack>
         </Card>
       </Stack>
@@ -423,18 +399,6 @@ export default function QuanTri() {
           </Stack>
         </DialogContent>
       </Dialog>
-
-      {/* Backup Dialog */}
-      <BackupPage
-        open={openBackup}
-        onClose={() => setOpenBackup(false)}
-      />
-
-      {/* Restore Dialog */}
-      <RestorePage
-        open={openRestore}
-        onClose={() => setOpenRestore(false)}
-      />
     </Box>
   );
 }
