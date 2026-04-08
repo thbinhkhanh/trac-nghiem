@@ -66,12 +66,33 @@ export const importQuestionsFromJSON = (file) => {
           }
 
           const questions = jsonData.map((q, index) => {
+            // 🔥 detect options dạng app1 (string)
+            const isStringOptions =
+              Array.isArray(q.options) &&
+              typeof q.options[0] === "string";
+
+            // 🔥 convert option → object nếu là string (ảnh/text)
+            const normalizeOption = (opt) => {
+              if (typeof opt === "object" && opt !== null) return opt;
+
+              return {
+                text: opt || "",
+                image: "",
+                formats: {},
+              };
+            };
+
             const base = {
               id: q.id || `q_${Date.now()}_${index}`,
               question: q.question || "",
               questionImage: q.questionImage || "",
               type: q.type || "single",
-              options: q.options || [],
+
+              // 🔥 CHỈ convert khi là string (app1)
+              options: isStringOptions
+                ? q.options.map(normalizeOption)
+                : q.options || [],
+
               correct: q.correct || [],
               score: q.score ?? 0.5,
             };
@@ -80,36 +101,59 @@ export const importQuestionsFromJSON = (file) => {
               case "image":
                 return {
                   ...base,
-                  options: Array.from({ length: 4 }, (_, i) => q.options?.[i] || ""),
+                  options: Array.from({ length: 4 }, (_, i) =>
+                    normalizeOption(q.options?.[i])
+                  ),
                   correct: Array.isArray(q.correct) ? q.correct : [],
                 };
 
               case "truefalse":
                 return {
                   ...base,
-                  options: q.options?.length ? q.options : ["Đúng", "Sai"],
+                  options: base.options?.length
+                    ? base.options
+                    : [
+                        { text: "Đúng", image: "", formats: {} },
+                        { text: "Sai", image: "", formats: {} },
+                      ],
                   correct: q.correct?.length ? q.correct : ["Đúng"],
                 };
 
               case "matching":
                 return {
                   ...base,
-                  pairs: q.pairs || [],
+
+                  // 🔥 convert cả left/right nếu là string (ảnh)
+                  pairs: (q.pairs || []).map((p) => ({
+                    left: normalizeOption(p.left),
+                    right: normalizeOption(p.right),
+                  })),
+
                   columnRatio: q.columnRatio || { left: 1, right: 1 },
                 };
 
               case "sort":
                 return {
                   ...base,
-                  options: q.options || ["", "", "", ""],
-                  correct: q.correct || q.options?.map((_, i) => i) || [],
+                  options: base.options?.length
+                    ? base.options
+                    : [
+                        { text: "", image: "", formats: {} },
+                        { text: "", image: "", formats: {} },
+                        { text: "", image: "", formats: {} },
+                        { text: "", image: "", formats: {} },
+                      ],
+                  correct:
+                    q.correct?.length
+                      ? q.correct
+                      : q.options?.map((_, i) => i) || [],
                   sortType: q.sortType || "fixed",
                 };
 
               case "fillblank":
                 return {
                   ...base,
-                  options: q.options || [],
+                  options: base.options || [],
                   answers: q.answers || [],
                 };
 
@@ -118,7 +162,14 @@ export const importQuestionsFromJSON = (file) => {
               default:
                 return {
                   ...base,
-                  options: q.options || ["", "", "", ""],
+                  options: base.options?.length
+                    ? base.options
+                    : [
+                        { text: "", image: "", formats: {} },
+                        { text: "", image: "", formats: {} },
+                        { text: "", image: "", formats: {} },
+                        { text: "", image: "", formats: {} },
+                      ],
                   correct: q.correct || [],
                 };
             }
