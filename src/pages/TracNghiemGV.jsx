@@ -18,6 +18,10 @@ import {
   //Radio, 
   //Checkbox,
   Grid,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from "@mui/material";
 import { collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc } from "firebase/firestore";
 
@@ -76,6 +80,8 @@ const classes = ["Lớp 1", "Lớp 2", "Lớp 3", "Lớp 4", "Lớp 5"];
 const years = ["2025-2026", "2026-2027", "2027-2028", "2028-2029", "2029-2030"];
 
 const fileInputRef = React.useRef(null);
+const [fileName, setFileName] = useState("de_trac_nghiem");
+const [openExportDialog, setOpenExportDialog] = useState(false); // dialog export
 
 
   // ⚙️ Danh sách câu hỏi
@@ -648,9 +654,48 @@ useEffect(() => {
   }
 
   const handleExportJSON = () => {
+    let defaultName = "Đề_trắc nghiệm";
+
+    if (selectedClass || semester || schoolYear || examLetter) {
+      const subject = "Tin học";
+
+      const lop = selectedClass || ""; // đã là "Lớp 3"
+      const hk = semester === "Cuối kỳ I" ? "HK1" : "HK2";
+      const year = schoolYear || "";
+      const code = examLetter ? ` (${examLetter.toUpperCase()})` : "";
+
+      defaultName = `Đề_${subject}_${lop}_${hk}_${year}${code}`;
+    }
+
+    setFileName(defaultName);
+    setOpenExportDialog(true);
+  };
+  
+  const handleConfirmExport = () => {
+    setOpenExportDialog(false); // đóng dialog
+
+    let finalName = fileName.trim();
+
+    if (!finalName) {
+      setSnackbar({
+        open: true,
+        message: "❌ Tên file không được để trống",
+        severity: "error",
+      });
+      return;
+    }
+
+    // 🔥 Xóa hẳn phần: .json_123456
+    finalName = finalName.replace(/\.json_\d+$/, "");
+
+    // 🔥 nếu chưa có .json thì thêm
+    if (!finalName.endsWith(".json")) {
+      finalName += ".json";
+    }
+
     const result = exportQuestionsToJSON({
       questions,
-      fileName: "de_trac_nghiem",
+      fileName: finalName,
     });
 
     if (result.success) {
@@ -888,6 +933,49 @@ useEffect(() => {
           handleDeleteSelectedDoc={handleDeleteSelectedDoc}
           fetchQuizList={fetchQuizList}
         />
+
+        <Dialog
+          open={openExportDialog}
+          onClose={() => setOpenExportDialog(false)}
+          fullWidth
+          maxWidth="sm" // sm | md | lg (bạn có thể đổi md nếu muốn rộng hơn nữa)
+        >
+          <DialogTitle sx={{ fontWeight: "bold", pb: 1 }}>
+            📥 Xuất đề kiểm tra
+          </DialogTitle>
+
+          <DialogContent sx={{ pt: 1 }}>
+            <Typography variant="body2" sx={{ mb: 2, color: "text.secondary" }}>
+              Nhập tên file để lưu 
+            </Typography>
+
+            <TextField
+              fullWidth
+              value={fileName}
+              onChange={(e) => setFileName(e.target.value)}
+              label="Tên file"
+              placeholder="vd: de_trac_nghiem_lop_3"
+              autoFocus
+            />
+          </DialogContent>
+
+          <DialogActions sx={{ px: 3, pb: 2 }}>
+            <Button
+              onClick={() => setOpenExportDialog(false)}
+              variant="outlined"
+            >
+              Hủy
+            </Button>
+
+            <Button
+              onClick={handleConfirmExport}
+              variant="contained"
+              sx={{ px: 3 }}
+            >
+              Xuất file
+            </Button>
+          </DialogActions>
+        </Dialog>
 
         {/* SNACKBAR */}
         <Snackbar
