@@ -71,9 +71,15 @@ export const importQuestionsFromJSON = (file) => {
               Array.isArray(q.options) &&
               typeof q.options[0] === "string";
 
-            // 🔥 convert option → object nếu là string (ảnh/text)
+            // 🔥 normalize option (chỉ dùng cho options)
             const normalizeOption = (opt) => {
-              if (typeof opt === "object" && opt !== null) return opt;
+              if (typeof opt === "object" && opt !== null) {
+                return {
+                  text: opt.text || "",
+                  image: opt.image || "",
+                  formats: opt.formats || {},
+                };
+              }
 
               return {
                 text: opt || "",
@@ -88,7 +94,7 @@ export const importQuestionsFromJSON = (file) => {
               questionImage: q.questionImage || "",
               type: q.type || "single",
 
-              // 🔥 CHỈ convert khi là string (app1)
+              // 🔥 chỉ convert options (KHÔNG đụng pairs)
               options: isStringOptions
                 ? q.options.map(normalizeOption)
                 : q.options || [],
@@ -123,10 +129,10 @@ export const importQuestionsFromJSON = (file) => {
                 return {
                   ...base,
 
-                  // 🔥 convert cả left/right nếu là string (ảnh)
+                  // 🔥 FIX QUAN TRỌNG: giữ nguyên string (không convert)
                   pairs: (q.pairs || []).map((p) => ({
-                    left: normalizeOption(p.left),
-                    right: normalizeOption(p.right),
+                    left: p.left ?? "",
+                    right: p.right ?? "",
                   })),
 
                   columnRatio: q.columnRatio || { left: 1, right: 1 },
