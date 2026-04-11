@@ -198,7 +198,7 @@ useEffect(() => {
 
   function buildRuntimeQuestions(rawQuestions = []) {
     // 🔥 1. SHUFFLE THỨ TỰ CÂU HỎI
-    let saved = shuffleArray([...rawQuestions]);
+    const saved = [...rawQuestions];
 
     const loadedQuestions = saved.map((q, index) => {
       const questionId = q.id ?? `q_${index}`;

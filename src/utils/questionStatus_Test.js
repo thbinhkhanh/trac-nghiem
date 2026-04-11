@@ -1,4 +1,4 @@
-export function getQuestionStatus({
+export function getQuestionStatus_Test({
   question,
   userAnswer,
   submitted = false,
@@ -26,8 +26,16 @@ export function getQuestionStatus({
       case "sort":
         return !Array.isArray(userAnswer) || userAnswer.length === 0;
 
-      case "matching":
-        return !Array.isArray(userAnswer) || userAnswer.length === 0;
+      case "matching": {
+        if (!Array.isArray(userAnswer)) return true;
+
+        // 🔥 chỉ coi là chưa làm nếu tất cả đều rỗng/null/undefined
+        const empty = userAnswer.every(v =>
+          v === undefined || v === null || v === ""
+        );
+
+        return empty;
+      }
 
       case "truefalse": {
         const defaultOrder = question.options.map((_, i) => i);
@@ -72,6 +80,7 @@ export function getQuestionStatus({
           ? question.correct
           : [question.correct]
       );
+
       isCorrect =
         userSet.size === correctSet.size &&
         [...correctSet].every(v => userSet.has(v));
@@ -81,6 +90,7 @@ export function getQuestionStatus({
     case "truefalse": {
       const ua = Array.isArray(userAnswer) ? userAnswer : [];
       const ca = Array.isArray(question.correct) ? question.correct : [];
+
       isCorrect =
         ua.length === ca.length &&
         ua.every((val, i) => {
@@ -93,6 +103,7 @@ export function getQuestionStatus({
     case "fillblank": {
       const ua = Array.isArray(userAnswer) ? userAnswer : [];
       const ca = question.options || [];
+
       isCorrect =
         ua.length === ca.length &&
         ca.every((opt, i) =>
@@ -104,20 +115,53 @@ export function getQuestionStatus({
 
     case "sort": {
       const ua = Array.isArray(userAnswer) ? userAnswer : [];
-      const userTexts = ua.map(i => question.options[i]);
-      const correctTexts = question.correctTexts || [];
+
+      // 🔥 QUAN TRỌNG: chưa làm thì KHÔNG CHẤM
+      if (ua.length === 0) {
+        isCorrect = false;
+        break;
+      }
+
+      const correctOrder = Array.isArray(question.correctOrder)
+        ? question.correctOrder
+        : [];
+
+      const isSameOrder =
+        correctOrder.length > 0 &&
+        ua.length === correctOrder.length &&
+        ua.every((v, i) => v === correctOrder[i]);
+
+      if (isSameOrder) {
+        isCorrect = true;
+        break;
+      }
+
+      const userTexts = ua.map(i => question.options?.[i]);
+
+      const correctTexts = Array.isArray(question.correctTexts)
+        ? question.correctTexts
+        : [];
+
       isCorrect =
         userTexts.length === correctTexts.length &&
         userTexts.every((t, i) => t === correctTexts[i]);
+
       break;
     }
 
     case "matching": {
       const ua = Array.isArray(userAnswer) ? userAnswer : [];
-      const ca = question.correct || [];
+      const ca = Array.isArray(question.correct) ? question.correct : [];
+
+      if (ua.length === 0) {
+        isCorrect = false;
+        break;
+      }
+
       isCorrect =
         ua.length === ca.length &&
         ua.every((v, i) => v === ca[i]);
+
       break;
     }
   }

@@ -318,11 +318,19 @@ export const exportQuizPDF = async (
       }
 
       case "truefalse": {
-        const userAns = answers[q.id] || [];
+        const userAns = Array.isArray(answers[q.id]) ? answers[q.id] : [];
+        const correctArr = Array.isArray(q.correct) ? q.correct : [];
+
         q.options.forEach((opt, i) => {
           const text = extractText(opt);
-          const val = userAns[i] || "";
-          const correctVal = q.correct?.[i] || "";
+
+          // 🔑 map về index gốc (quan trọng)
+          const originalIdx = Array.isArray(q.initialOrder)
+            ? q.initialOrder[i]
+            : i;
+
+          const val = userAns[i] ?? "";
+          const correctVal = correctArr[originalIdx] ?? "";
 
           const mark = val ? `[${val}]` : "[ ]";
           const isCorrect = val === correctVal;
@@ -347,6 +355,7 @@ export const exportQuizPDF = async (
 
           y += line.length * lineHeight;
         });
+
         break;
       }
 

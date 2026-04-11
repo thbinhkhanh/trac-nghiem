@@ -56,7 +56,7 @@ import { useNavigate } from "react-router-dom";
 import { jsPDF } from "jspdf";
 import html2canvas from "html2canvas";
 
-import { getQuestionStatus } from "../utils/questionStatus";
+import { getQuestionStatus_Test } from "../utils/questionStatus_Test";
 import { useTheme, useMediaQuery } from "@mui/material";
 
 // Hàm shuffle mảng
@@ -123,9 +123,27 @@ export default function TracNghiem_Test() {
   // Lấy lớp từ tên đề
   const detectedClass = selectedExam?.match(/Lớp\s*(\d+)/)?.[1] || "Test";
 
+  const extractClassFromExam = (name = "") => {
+  const str = name.toLowerCase();
+
+  // "lớp 3"
+  let match = str.match(/lớp\s*(\d+)/i);
+  if (match) return match[1];
+
+  // "tin học 3", "toán 4"
+  match = str.match(/(tin học|toán|tiếng việt|anh văn|khoa học)\s*(\d+)/i);
+  if (match) return match[2];
+
+  // fallback: số đầu tiên trong chuỗi
+  match = str.match(/\b(\d{1,2})\b/);
+  if (match) return match[1];
+
+  return "Test";
+};
+
 // Gán thông tin mặc định theo yêu cầu
   const studentInfo = {
-    name: "Tên học sinh",
+    name: "Nguyễn Văn A",
     class: detectedClass,
     school: school
   };
@@ -308,7 +326,7 @@ export default function TracNghiem_Test() {
           question: questionText,
           image: q.image ?? null,
           options: processed.map(i => i.opt),
-          initialSortOrder: processed.map(i => i.idx),
+          initialSortOrder: options.map((_, i) => i),
           correctTexts: options,
           score: q.score ?? 1,
         };
@@ -533,7 +551,7 @@ export default function TracNghiem_Test() {
 
         //============================
         //Chấm Sort không tương tác
-        setAnswers(prev => {
+        /*setAnswers(prev => {
           const next = { ...prev };
 
           runtimeQuestions.forEach(q => {
@@ -545,7 +563,7 @@ export default function TracNghiem_Test() {
           });
 
           return next;
-        });
+        });*/
 
         } catch (err) {
         console.error("❌ Lỗi khi load câu hỏi:", err);
@@ -2541,7 +2559,7 @@ return (
                 }}
               >
                 {questions.map((q, index) => {
-                  const status = getQuestionStatus({
+                  const status = getQuestionStatus_Test({
                     question: q,
                     userAnswer: answers[q.id],
                     submitted,
