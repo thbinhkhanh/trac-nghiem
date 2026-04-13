@@ -496,16 +496,9 @@ useEffect(() => {
         const cacheFromContext = quizCache?.[CACHE_KEY];
 
         if (cacheFromContext && Array.isArray(cacheFromContext.questions)) {
-          let runtimeQuestions = buildRuntimeQuestions(cacheFromContext.questions);
-
-          // 🔹 Đảo thứ tự câu hỏi
-          runtimeQuestions = shuffleArray(runtimeQuestions);
-
-          // 🔹 Đảo thứ tự đáp án trong mỗi câu (nếu cần)
-          runtimeQuestions = runtimeQuestions.map(q => ({
-            ...q,
-            options: shuffleArray(q.options)
-          }));
+          const runtimeQuestions = buildRuntimeQuestions(
+            cacheFromContext.questions // RAW
+          );
 
           setQuestions(runtimeQuestions);
           setProgress(100);
@@ -556,11 +549,7 @@ useEffect(() => {
             : data.updatedAt?.toMillis?.() ?? 0;
 
         // --- Xử lý câu hỏi ---
-       let runtimeQuestions = buildRuntimeQuestions(data.questions);
-
-        // 🔹 Đảo thứ tự câu hỏi
-        runtimeQuestions = shuffleArray(runtimeQuestions);
-
+        const runtimeQuestions = buildRuntimeQuestions(data.questions);
         setQuestions(runtimeQuestions);
 
         setProgress(100);
