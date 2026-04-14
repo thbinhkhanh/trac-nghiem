@@ -201,146 +201,119 @@ useEffect(() => {
   }
 
   useEffect(() => {
-  const fetchQuestions = async () => {
-    try {
-      setLoading(true);
+    const fetchQuestions = async () => {
+      try {
+        setLoading(true);
 
-      let docId = null;
-      const collectionName = "NGANHANG_DE";
-      let hocKiFromConfig = config.hocKy || "Cuối kỳ I";
-      let timeLimitMinutes = config.timeLimit ?? 20;
+        let docId = null;
+        const collectionName = "NGANHANG_DE";
+        let hocKiFromConfig = config.hocKy || "Cuối kỳ I";
+        let timeLimitMinutes = config.timeLimit ?? 20;
 
-      setTimeLimitMinutes(timeLimitMinutes);
-      setChoXemDiem(config.choXemDiem ?? false);
-      setChoXemDapAn(config.choXemDapAn ?? false);
+        setTimeLimitMinutes(timeLimitMinutes);
+        setChoXemDiem(config.choXemDiem ?? false);
+        setChoXemDapAn(config.choXemDapAn ?? false);
 
-      // ================= LẤY LỚP =================
-      const studentClass = studentInfo?.className || "";
-      const classNumber = studentClass.match(/\d+/)?.[0];
+        // ================= LẤY LỚP =================
+        const studentClass = studentInfo?.className || "";
+        const classNumber = studentClass.match(/\d+/)?.[0];
 
-      if (!classNumber) {
-        setSnackbar({
-          open: true,
-          message: "❌ Không xác định được lớp của học sinh!",
-          severity: "error",
-        });
-        setLoading(false);
-        return;
-      }
+        if (!classNumber) {
+          setSnackbar({
+            open: true,
+            message: "❌ Không xác định được lớp của học sinh!",
+            severity: "error",
+          });
+          setLoading(false);
+          return;
+        }
 
-      const classLabel = `Lớp ${classNumber}`;
+        const classLabel = `Lớp ${classNumber}`;
 
-      // ================= TÌM ĐỀ =================
-      const deThiSnap = await getDocs(collection(db, "DETHI"));
-      const matchedDoc = deThiSnap.docs.find(d =>
-        d.id.includes(classLabel)
-      );
+        // ================= TÌM ĐỀ =================
+        const deThiSnap = await getDocs(collection(db, "DETHI"));
+        const matchedDoc = deThiSnap.docs.find(d =>
+          d.id.includes(classLabel)
+        );
 
-      if (!matchedDoc) {
-        setSnackbar({
-          open: true,
-          message: `❌ Không tìm thấy đề kiểm tra ${classLabel}!`,
-          severity: "warning",
-        });
-        setLoading(false);
-        return;
-      }
+        if (!matchedDoc) {
+          setSnackbar({
+            open: true,
+            message: `❌ Không tìm thấy đề kiểm tra ${classLabel}!`,
+            severity: "warning",
+          });
+          setLoading(false);
+          return;
+        }
 
-      docId = matchedDoc.id;
-      const CACHE_KEY = `exam_${docId}`;
+        docId = matchedDoc.id;
 
-      // ================= CACHE =================
-      const cacheFromContext = quizCache?.[CACHE_KEY];
+        // ================= FIREBASE =================
+        const docSnap = await getDoc(doc(db, collectionName, docId));
 
-      if (cacheFromContext?.runtimeQuestions) {
-        // ⭐ DÙNG CACHE — KHÔNG SHUFFLE LẠI
-        setQuestions(cacheFromContext.runtimeQuestions);
+        if (!docSnap.exists()) {
+          setSnackbar({
+            open: true,
+            message: "❌ Không tìm thấy đề trắc nghiệm!",
+            severity: "error",
+          });
+          setLoading(false);
+          return;
+        }
+
+        const data = docSnap.data();
+
+        // ================= INFO =================
+        setQuizClass(data.class || "");
+
+        const hocKi = data.semester || hocKiFromConfig;
+        const monHoc = data.subject || "";
+
+        setHocKi(hocKi);
+        setMonHoc(monHoc);
+
+        window.currentHocKi = hocKi;
+        window.currentMonHoc = monHoc;
+
+        // ================= TIME =================
+        setTimeLeft(timeLimitMinutes * 60);
+
+        // ================= COLUMN RATIO =================
+        const defaultRatio = { left: 1, right: 1 };
+
+        const columnRatio =
+          data.columnRatio &&
+          typeof data.columnRatio === "object"
+            ? {
+                left: Number(data.columnRatio.left) || 1,
+                right: Number(data.columnRatio.right) || 1,
+              }
+            : defaultRatio;
+
+        setColumnRatio?.(columnRatio);
+        window.currentColumnRatio = columnRatio;
+
+        // ================= QUESTIONS =================
+        // ⭐ Đảo thứ tự câu hỏi mỗi lần load
+        const shuffledQuestions = shuffleArray([...data.questions]);
+
+        // ⭐ Build runtime (shuffle option bên trong)
+        const runtimeQuestions = buildRuntimeQuestions(shuffledQuestions);
+
+        setQuestions(runtimeQuestions);
         setProgress(100);
         setStarted(true);
+
+      } catch (err) {
+        console.error("❌ Lỗi khi load câu hỏi:", err);
+        setQuestions([]);
+      } finally {
         setLoading(false);
-        return;
       }
+    };
 
-      // ================= FIREBASE =================
-      const docSnap = await getDoc(doc(db, collectionName, docId));
-
-      if (!docSnap.exists()) {
-        setSnackbar({
-          open: true,
-          message: "❌ Không tìm thấy đề trắc nghiệm!",
-          severity: "error",
-        });
-        setLoading(false);
-        return;
-      }
-
-      const data = docSnap.data();
-
-      // ================= INFO =================
-      setQuizClass(data.class || "");
-
-      const hocKi = data.semester || hocKiFromConfig;
-      const monHoc = data.subject || "";
-
-      setHocKi(hocKi);
-      setMonHoc(monHoc);
-
-      window.currentHocKi = hocKi;
-      window.currentMonHoc = monHoc;
-
-      // ================= TIME =================
-      setTimeLeft(timeLimitMinutes * 60);
-
-      // ================= COLUMN RATIO =================
-      const defaultRatio = { left: 1, right: 1 };
-
-      const columnRatio =
-        data.columnRatio &&
-        typeof data.columnRatio === "object"
-          ? {
-              left: Number(data.columnRatio.left) || 1,
-              right: Number(data.columnRatio.right) || 1,
-            }
-          : defaultRatio;
-
-      setColumnRatio?.(columnRatio);
-      window.currentColumnRatio = columnRatio;
-
-      // ================= QUESTIONS =================
-      // ⭐ Shuffle câu hỏi 1 lần duy nhất
-      const shuffledQuestions = shuffleArray([...data.questions]);
-
-      // ⭐ Build runtime (shuffle option bên trong)
-      const runtimeQuestions = buildRuntimeQuestions(shuffledQuestions);
-
-      setQuestions(runtimeQuestions);
-      setProgress(100);
-      setStarted(true);
-
-      // ================= LƯU CACHE =================
-      const serverUpdatedAt =
-        typeof data.updatedAt === "number"
-          ? data.updatedAt
-          : data.updatedAt?.toMillis?.() ?? 0;
-
-      setQuizCache(prev => ({
-        ...prev,
-        [CACHE_KEY]: {
-          runtimeQuestions,   // ⭐ LƯU BẢN ĐÃ SHUFFLE
-          updatedAt: serverUpdatedAt,
-        },
-      }));
-
-    } catch (err) {
-      console.error("❌ Lỗi khi load câu hỏi:", err);
-      setQuestions([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  fetchQuestions();
-}, []);
+    fetchQuestions();
+  }, []);
 
   // Hàm chuyển chữ đầu thành hoa
   const capitalizeName = (name = "") =>
@@ -415,8 +388,7 @@ useEffect(() => {
       getQuestionMax,
       capitalizeName,
       formatTime,
-      //xuatFileBaiLam: true,
-      xuatFileBaiLam: config?.xuatFileBaiLam ?? false,
+      xuatFileBaiLam: true,
       exportQuizPDF,
   });
 
@@ -447,8 +419,7 @@ const autoSubmit = () => {
     capitalizeName,
     mapHocKyToDocKey,
     formatTime,
-    //xuatFileBaiLam: true,
-    xuatFileBaiLam: config?.xuatFileBaiLam ?? false,
+    xuatFileBaiLam: true,
     exportQuizPDF,
   });
 };
