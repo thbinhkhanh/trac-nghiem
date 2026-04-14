@@ -285,8 +285,8 @@ export const renderQuestionByType = ({
                         src={optionImage}
                         alt={`left-${i}`}
                         sx={{
-                            maxHeight: 40,
-                            maxWidth: 40,
+                            maxHeight: 60,
+                            maxWidth: 60,
                             objectFit: "contain",
                             borderRadius: 2,
                             flexShrink: 0,
