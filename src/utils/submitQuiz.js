@@ -164,12 +164,27 @@ export const handleSubmitQuiz = async ({
 
       else if (q.type === "fillblank") {
         const user = Array.isArray(rawAnswer) ? rawAnswer : [];
-        const correct = Array.isArray(q.correct) ? q.correct : [];
+        let correct = Array.isArray(q.correct) ? q.correct : [];
 
-        if (
+        const normalize = (v) =>
+          String(v ?? "")
+            .replace(/<[^>]*>/g, "")
+            .trim()
+            .toLowerCase();
+
+        // 🔥 FIX INDEX (1-based → 0-based)
+        if (correct.length && !isNaN(correct[0])) {
+          correct = correct.map(i => {
+            const opt = q.options?.[Number(i) - 1];
+            return opt?.text ?? "";
+          });
+        }
+
+        const isCorrect =
           user.length === correct.length &&
-          user.every((v, i) => String(v ?? "").trim() === String(correct[i] ?? "").trim())
-        ) {
+          user.every((v, i) => normalize(v) === normalize(correct[i]));
+
+        if (isCorrect) {
           total += q.score ?? 1;
         }
       }
