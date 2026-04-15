@@ -395,6 +395,7 @@ useEffect(() => {
   const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "info" });
   const handleCloseSnackbar = (event, reason) => { if (reason === "clickaway") return; setSnackbar(prev => ({ ...prev, open: false })); };
 
+  console.log("🔎 hocKi truyền xuống submit:", hocKi);
   const handleSubmit = () =>
     handleSubmitQuiz({
       studentName,
@@ -412,6 +413,7 @@ useEffect(() => {
       startTime,
       db,
       config,
+      hocKi: config?.hocKy,
       getQuestionMax,
       capitalizeName,
       formatTime,
@@ -432,6 +434,7 @@ const autoSubmit = () => {
     startTime,
     db,
     config,
+    hocKi: config?.hocKy,
     configData,
     selectedWeek,
     getQuestionMax,

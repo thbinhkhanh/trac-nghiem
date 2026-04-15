@@ -19,6 +19,7 @@ export const handleSubmitQuiz = async ({
   formatTime,
   xuatFileBaiLam,
   exportQuizPDF,
+  hocKi,
 }) => {
   try {
     /* ===== KIỂM TRA THÔNG TIN ===== */
@@ -27,7 +28,16 @@ export const handleSubmitQuiz = async ({
       return;
     }
 
-    const hocKi = window.currentHocKi || "Giữa kỳ I";
+    if (!hocKi) {
+      setSnackbar({
+        open: true,
+        message: "❌ Thiếu học kỳ (hocKi)",
+        severity: "error",
+      });
+      return;
+    }
+
+    const hocKiFinal = hocKi;
     const monHoc = "Tin học";
 
     /* ===== KIỂM TRA CÂU CHƯA LÀM ===== */
@@ -200,7 +210,7 @@ export const handleSubmitQuiz = async ({
 
     /* ===== XUẤT PDF (NẾU CÓ) ===== */
     if (xuatFileBaiLam) {
-      const quizTitle = `KTĐK ${hocKi.toUpperCase()} - ${monHoc.toUpperCase()}`;
+      const quizTitle = `KTĐK ${hocKiFinal.toUpperCase()} - ${monHoc.toUpperCase()}`;
       exportQuizPDF(
         studentInfo,
         studentClass,
@@ -236,7 +246,7 @@ export const handleSubmitQuiz = async ({
 
     const docRef = doc(
       db,
-      `${collectionRoot}/${hocKi}/${lop}/${docId}`
+      `${collectionRoot}/${hocKiFinal}/${lop}/${docId}`
     );
 
     await setDoc(
