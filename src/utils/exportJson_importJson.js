@@ -78,7 +78,9 @@ export const importQuestionsFromJSON = (file) => {
               question: q.question || "",
               questionImage: q.questionImage || "",
               type: q.type || "single",
-
+              
+              option: q.option || "",
+              
               // 🔥 chỉ convert options (KHÔNG đụng pairs)
               options: isStringOptions
                 ? q.options.map(normalizeOption)
