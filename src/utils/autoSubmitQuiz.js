@@ -1,6 +1,6 @@
 import { doc, setDoc } from "firebase/firestore";
 
-export const handleSubmitQuiz = async ({
+export const autoSubmitQuiz = async ({
   studentName,
   studentClass,
   studentInfo,
