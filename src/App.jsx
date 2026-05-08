@@ -47,6 +47,7 @@ function AppContent() {
 
   const [loading, setLoading] = useState(true);
   const [openLockedDialog, setOpenLockedDialog] = useState(false);
+  const [openLogo, setOpenLogo] = useState(false);
 
   // ✅ CHỈ DÙNG ĐỂ KẾT THÚC LOADING
   useEffect(() => {
@@ -121,11 +122,13 @@ function AppContent() {
               component="img"
               src="/Logo.png"
               alt="Logo"
+              onClick={() => setOpenLogo(true)}
               sx={{
                 height: 34,
                 flexShrink: 0,
                 ml: { xs: -1, sm: -2 },
                 mr: 1,
+                cursor: "pointer",
               }}
             />
 
@@ -187,6 +190,52 @@ function AppContent() {
           )}
         </Toolbar>
       </AppBar>
+
+      {openLogo && (
+        <Box
+          onClick={() => setOpenLogo(false)}
+          sx={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            bgcolor: "rgba(0,0,0,0.6)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 2000,
+            cursor: "pointer",
+          }}
+        >
+          {/* Khung trắng */}
+          <Box
+            onClick={() => setOpenLogo(false)}
+            sx={{
+              width: "clamp(150px, 42vw, 260px)",
+              height: "clamp(150px, 42vw, 260px)",
+              bgcolor: "white",
+              borderRadius: "16px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              boxShadow: "0 10px 40px rgba(0,0,0,0.5)",
+              animation: "zoomIn 0.3s ease",
+            }}
+          >
+            <Box
+              component="img"
+              src="/Logo.png"
+              alt="Logo lớn"
+              sx={{
+                maxWidth: "85%",
+                maxHeight: "85%",
+                objectFit: "contain",
+              }}
+            />
+          </Box>
+        </Box>
+      )}
 
       {/* ===== ROUTES ===== */}
       <Box sx={{ paddingTop: "44px" }}>

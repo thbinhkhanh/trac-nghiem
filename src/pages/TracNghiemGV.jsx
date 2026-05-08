@@ -41,11 +41,20 @@ import CloseIcon from "@mui/icons-material/Close";
 import OpenExamDialog from "../dialog/OpenExamDialog";
 import ExamDeleteConfirmDialog from "../dialog/ExamDeleteConfirmDialog";
 import ExportDialog from "../dialog/ExportDialog";
+import ExportSourceDialog from "../dialog/ExportSourceDialog";
+import ImportSourceDialog from "../dialog/ImportSourceDialog";
+import mammoth from "mammoth";
+import { exportQuestionsToWord } from "../utils/exportQuizWORD";
+
 import QuestionCard from "../Types/questions/QuestionCard";
 import { saveAllQuestions } from "../utils/saveAllQuestions";
 
-import { exportQuestionsToJSON } from "../utils/exportJson_importJson.js";
-import { importQuestionsFromJSON } from "../utils/exportJson_importJson.js";
+//import { exportQuestionsToJSON } from "../utils/exportJson_importJson.js";
+//import { importQuestionsFromJSON } from "../utils/exportJson_importJson.js";
+import { handleImportQuiz } from "../utils/importQuizJson";
+import { handleExportQuiz, handleConfirmExportQuiz } from "../utils/exportQuizJson";
+import ImportModeDialog from "../dialog/ImportModeDialog";
+
 import DownloadIcon from "@mui/icons-material/Download";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
 
@@ -84,6 +93,12 @@ const fileInputRef = React.useRef(null);
 const [fileName, setFileName] = useState("de_trac_nghiem");
 const [openExportDialog, setOpenExportDialog] = useState(false); // dialog export
 
+const [openExportSourceDialog, setOpenExportSourceDialog] = useState(false);
+const [openImportSourceDialog, setOpenImportSourceDialog] = useState(false);
+const [importData, setImportData] = useState([]);
+const [openImportModeDialog, setOpenImportModeDialog] = useState(false);
+const fileInputRefWord = React.useRef(null);
+const [lessonInput, setLessonInput] = useState("");
 
   // ⚙️ Danh sách câu hỏi
   const [questions, setQuestions] = useState([]);
@@ -655,73 +670,396 @@ useEffect(() => {
   }
 
   const handleExportJSON = () => {
-    let defaultName = "";
-
-    if (selectedClass || semester || schoolYear || examLetter) {
-      const subject = "Tin học";
-
-      const lop = selectedClass || ""; // đã là "Lớp 3"
-      const hk = semester === "Cuối kỳ I" ? "HK1" : "HK2";
-      const year = schoolYear || "";
-      const code = examLetter ? ` (${examLetter.toUpperCase()})` : "";
-
-      defaultName = `Đề ${subject} ${lop} ${hk} ${year}${code}`;
-    }
-
-    setFileName(defaultName);
-    setOpenExportDialog(true);
+    handleExportQuiz({
+      questions,
+      selectedClass,
+      semester,
+      schoolYear,
+      examLetter,
+      selectedSubject: "Tin học",
+      selectedDoc,
+      fileName,
+      setFileName,
+      //setOpenExportDialog,
+      setSnackbar,
+    });
   };
   
   const handleConfirmExport = () => {
-    setOpenExportDialog(false); // đóng dialog
+    setOpenExportDialog(false);
 
-    let finalName = fileName.trim();
-
-    if (!finalName) {
-      setSnackbar({
-        open: true,
-        message: "❌ Tên file không được để trống",
-        severity: "error",
-      });
-      return;
-    }
-
-    // 🔥 Xóa hẳn phần: .json_123456
-    finalName = finalName.replace(/\.json_\d+$/, "");
-
-    // 🔥 nếu chưa có .json thì thêm
-    if (!finalName.endsWith(".json")) {
-      finalName += ".json";
-    }
-
-    const result = exportQuestionsToJSON({
+    handleConfirmExportQuiz({
+      fileName,
       questions,
-      fileName: finalName,
+      setSnackbar,
     });
-
-    if (result.success) {
-      setSnackbar({
-        open: true,
-        message: "✅ Xuất đề thành công!",
-        severity: "success",
-      });
-    } else {
-      setSnackbar({
-        open: true,
-        message: "❌ Lỗi khi xuất đề!",
-        severity: "error",
-      });
-    }
   };
 
-  const handleImportJSON = async (e) => {
+  const handleImportJSON = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    handleImportQuiz({
+      event: e,
+      setQuestions: (data) => {
+        const isEmptyUI =
+          !questions ||
+          questions.length === 0 ||
+          (questions.length === 1 && !questions[0]?.question?.trim());
+
+        // 👉 UI rỗng → import thẳng, không hỏi
+        if (isEmptyUI) {
+          setQuestions(data);
+          setSelectedDoc(null);
+          setIsEditingNewDoc(true);
+
+          setSnackbar({
+            open: true,
+            message: "✅ Nhập đề thành công!",
+            severity: "success",
+          });
+        } 
+        // 👉 UI có dữ liệu → mở dialog chọn overwrite/append
+        else {
+          setImportData(data);
+          setOpenImportModeDialog(true);
+        }
+      },
+      setSnackbar,
+    });
+  };
+
+  const handleImportOverwrite = () => {
+    setQuestions(importData);
+    setSelectedDoc(null);
+    setIsEditingNewDoc(true);
+    setOpenImportModeDialog(false);
+
+    setSnackbar({
+      open: true,
+      message: "✅ Nhập đề thành công!",
+      severity: "success",
+    });
+  };
+
+  const handleImportAppend = () => {
+    setQuestions((prev) => [...prev, ...importData]);
+
+    setOpenImportModeDialog(false);
+
+    setSnackbar({
+      open: true,
+      message: "✅ Nhập đề thành công!",
+      severity: "success",
+    });
+  };
+
+  const getDefaultName = () => {
+  const cls = selectedClass || "";
+  const les = (lesson || lessonInput || "").trim();
+
+  return `${cls} - ${les}`;
+};
+
+const handleImportWord = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    const result = await importQuestionsFromJSON(file);
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const htmlResult = await mammoth.convertToHtml({ arrayBuffer });
+      const html = htmlResult.value;
 
-    if (result.success) {
-      setQuestions(result.data);
+      const textResult = await mammoth.extractRawText({ arrayBuffer });
+      const text = textResult.value;
+
+      const escapeHTML = (str = "") =>
+        str
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;");
+
+      // ===== Detect type =====
+      const detectType = (block) => {
+        const normalized = block.replace(/\s+/g, " ");
+        const lines = block.split("\n").map(l => l.trim()).filter(Boolean);
+
+        // ✅ FIX: fillblank ưu tiên cao nhất
+        if (
+          /\[\s*\.\.\.\s*\]/.test(block) ||   // [...]
+          /\[…\]/.test(block) ||             // […] (Unicode)
+          /…/.test(block)                    // ellipsis
+        ) {
+          return "fillblank";
+        }
+
+        if (lines.some(l => /^[A-D][\.\)]/.test(l))) return "choice";
+        if (lines.some(l => /^\d+\./.test(l))) return "sort";
+        if (lines.some(l => /^[ĐS][\.\)]/.test(l))) return "truefalse";
+
+        return "matching";
+      };
+
+      // ===== Choice parser =====
+      const parseChoice = (block, index) => {
+        const lines = block.split("\n").map(l => l.trim()).filter(Boolean);
+        if (!lines.length) return null;
+
+        const questionText = lines[0].replace(/^Câu\s*\d+\s*[:\.\-)]?\s*/i, "");
+        const options = [];
+        const correct = [];
+
+        lines.slice(1).forEach(line => {
+          const match = line.match(/^([A-D])[\.\)\:\-\s]*/i);
+          if (match) {
+            let text = line.replace(/^([A-D])[\.\)\:\-\s]*/i, "").trim();
+            const isCorrect = /\*/.test(text);
+
+            text = text.replace(/\*/g, "").trim();
+
+            if (isCorrect) correct.push(options.length);
+
+            options.push({
+              text: `<p>${escapeHTML(text)}</p>`,
+              image: ""
+            });
+          }
+        });
+
+        while (options.length < 4) {
+          options.push({ text: "", image: "" });
+        }
+
+        return {
+          id: `q_${Date.now()}_${index}`,
+          question: `<p>${escapeHTML(questionText)}</p>`,
+          type: correct.length > 1 ? "multiple" : "single",
+          options: options.slice(0, 4),
+          correct,
+          score: 0.5,
+          sortType: "shuffle",
+          pairs: []
+        };
+      };
+
+      // ===== Sort parser =====
+      const parseSort = (block, index) => {
+        const lines = block.split("\n").map(l => l.trim()).filter(Boolean);
+        const questionText = lines[0].replace(/^Câu\s*\d+\s*[:\.\-)]?\s*/i, "");
+        const items = [];
+
+        lines.slice(1).forEach(line => {
+          const match = line.match(/^\d+\.\s*(.+)/);
+          if (match) {
+            items.push({
+              text: `<p>${escapeHTML(match[1])}</p>`,
+              image: ""
+            });
+          }
+        });
+
+        if (items.length < 2) return null;
+
+        return {
+          id: `q_${Date.now()}_${index}`,
+          question: `<p>${escapeHTML(questionText)}</p>`,
+          type: "sort",
+          options: items,
+          correct: [],
+          sortType: "shuffle",
+          pairs: []
+        };
+      };
+
+      // ===== True/False parser =====
+      const parseTrueFalse = (block, index) => {
+        const lines = block.split("\n").map(l => l.trim()).filter(Boolean);
+        if (!lines.length) return null;
+
+        const questionText = lines[0].replace(/^Câu\s*\d+\s*[:\.\-)]?\s*/i, "");
+        const options = [];
+        const correct = [];
+
+        lines.slice(1).forEach(line => {
+          const match = line.match(/^([ĐS])[\.\)\:\-\s]*/i);
+          if (match) {
+            let text = line.replace(/^([ĐS])[\.\)\:\-\s]*/i, "").trim();
+            text = text.replace(/\*/g, "").trim();
+
+            options.push({
+              text: `<p>${escapeHTML(text)}</p>`,
+              image: ""
+            });
+
+            correct.push(match[1].toUpperCase());
+          }
+        });
+
+        return {
+          id: `q_${Date.now()}_${index}`,
+          question: `<p>${escapeHTML(questionText)}</p>`,
+          type: "truefalse",
+          options,
+          correct,
+          score: 0.5,
+          sortType: "shuffle",
+          pairs: []
+        };
+      };
+
+      // ===== FillBlank parser (FIXED) =====
+      const parseFillBlank = (block, index) => {
+        const lines = block.split("\n").map(l => l.trim()).filter(Boolean);
+        if (!lines.length) return null;
+
+        let rawText = lines.join(" ");
+
+        // ===== 1. REMOVE "Từ cần điền" =====
+        rawText = rawText.split(/Từ cần điền/i)[0].trim();
+
+        // ===== 2. TÁCH ":" =====
+        const colonIndex = rawText.indexOf(":");
+
+        let questionText = "";
+        let optionText = "";
+
+        if (colonIndex !== -1) {
+          questionText = rawText.slice(0, colonIndex + 1).trim();
+          optionText = rawText.slice(colonIndex + 1).trim();
+        } else {
+          questionText = rawText;
+          optionText = "";
+        }
+
+        // ===== 3. FIX TRIỆT ĐỂ BLANK (QUAN TRỌNG NHẤT) =====
+        optionText = optionText.replace(/\[\s*(?:\.{3,}|…)\s*\]/g, "[...]");
+
+        // ===== 4. LẤY ĐÁP ÁN =====
+        const answerLine = lines.find(l => /^Từ cần điền/i.test(l)) || "";
+
+        const answers = answerLine
+          .replace(/^Từ cần điền\s*:\s*/i, "")
+          .split("/")
+          .map(a => a.replace(/\u00a0/g, " ").trim())
+          .filter(Boolean);
+
+        return {
+          id: `q_${Date.now()}_${index}`,
+
+          question: `<p>${escapeHTML(questionText)}</p>`,
+
+          type: "fillblank",
+
+          option: `<p>${escapeHTML(optionText)}</p>`,
+
+          options: answers.map(a => ({
+            text: a,
+            image: "",
+            formats: {}
+          })),
+
+          correct: answers,
+          score: 0.5,
+          sortType: "shuffle",
+          pairs: [],
+          title: "",
+          questionImage: ""
+        };
+      };
+
+    // ===== Matching parser =====
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, "text/html");
+    const tables = doc.querySelectorAll("table");
+    let tableIndex = 0;
+
+    const parseMatchingFromTable = (index) => {
+      if (!tables[tableIndex]) return null;
+
+      const table = tables[tableIndex++];
+
+      // ✅ LẤY QUESTION TỪ <p> TRƯỚC TABLE
+      let questionText = "";
+      let prev = table.previousElementSibling;
+
+      while (prev) {
+        if (prev.tagName === "P" && prev.innerText.trim()) {
+          questionText = prev.innerText.trim();
+          break;
+        }
+        prev = prev.previousElementSibling;
+      }
+
+      // 🔥 CẮT "Câu 1."
+      questionText = questionText.replace(/^Câu\s*\d+\s*[:\.\-)]?\s*/i, "");
+
+      const rows = table.querySelectorAll("tr");
+      const pairs = [];
+
+      rows.forEach(row => {
+        const cells = row.querySelectorAll("td, th");
+        if (cells.length < 2) return;
+
+        const l = cells[0].innerText.trim();
+        const r = cells[1].innerText.trim();
+
+        if (!l || !r) return;
+
+        pairs.push({
+          left: `<p>${escapeHTML(l)}</p>`,
+          right: `<p>${escapeHTML(r)}</p>`
+        });
+      });
+
+      if (pairs.length < 2) return null;
+
+      return {
+        id: `q_${Date.now()}_table_${index}`,
+
+        // ✅ DÙNG QUESTION THẬT (đã bỏ "Câu 1.")
+        question: `<p>${escapeHTML(questionText)}</p>`,
+
+        type: "matching",
+        questionType: "matching",
+        pairs,
+        options: [],
+        correct: [],
+        sortType: "shuffle",
+        score: 0.5
+      };
+    };
+
+    // ===== Split blocks =====
+    const blocks = text
+      .split(/Câu\s*\d+\s*[:\.\-)]?/gi)
+      .map(b => b.trim())
+      .filter(Boolean);
+
+    // ===== Parse all =====
+    const finalQuestions = blocks
+      .map((block, index) => {
+        const type = detectType(block);
+
+        if (type === "choice") return parseChoice(block, index);
+        if (type === "sort") return parseSort(block, index);
+        if (type === "truefalse") return parseTrueFalse(block, index);
+        if (type === "fillblank") return parseFillBlank(block, index);
+        if (type === "matching") return parseMatchingFromTable(index);
+
+        return null;
+      })
+      .filter(Boolean);
+
+    const isCurrentEmpty =
+      !questions ||
+      questions.length === 0 ||
+      (questions.length === 1 && !questions[0]?.question?.trim());
+
+    if (isCurrentEmpty) {
+      setQuestions(finalQuestions);
+      setSelectedDoc(null);
+      setIsEditingNewDoc(true);
+      setLessonInput(lessonInput || "");
 
       setSnackbar({
         open: true,
@@ -729,16 +1067,38 @@ useEffect(() => {
         severity: "success",
       });
     } else {
-      setSnackbar({
-        open: true,
-        message: `❌ ${result.error}`,
-        severity: "error",
-      });
+      setImportData(finalQuestions);
+      setOpenImportModeDialog(true);
     }
 
-    // reset input để chọn lại file cùng tên vẫn trigger
-    e.target.value = "";
-  };
+  } catch (err) {
+    console.error(err);
+    setSnackbar({
+      open: true,
+      message: "❌ Lỗi đọc file Word",
+      severity: "error"
+    });
+  }
+
+  e.target.value = "";
+};
+
+const buildExportFileName = () => {
+  const lop = selectedClass?.replace("Lớp ", "") || "";
+  const mon = "Tin học"; // hoặc selectedSubject nếu bạn có
+  const nam = schoolYear || "";
+  const ky = semester || "";
+  const de = examLetter || "";
+
+  const kyShort =
+    ky === "Cả năm" ? "CN"
+    : ky === "Giữa kỳ I" ? "GK1"
+    : ky === "Cuối kỳ I" ? "CK1"
+    : ky === "Giữa kỳ II" ? "GK2"
+    : ky;
+
+  return `Đề ${mon} ${lop}_${kyShort}_${nam} (${de})`;
+};
 
   return (
     <Box sx={{ minHeight: "100vh", p: 3, backgroundColor: "#e3f2fd", display: "flex", justifyContent: "center" }}>
@@ -767,30 +1127,43 @@ useEffect(() => {
           </Tooltip>
 
           {/* Export */}
-          <Tooltip title="Xuất đề kiểm tra (JSON)">
-            <IconButton onClick={handleExportJSON} sx={{ color: "#2e7d32" }}>
+          <Tooltip title="Xuất đề kiểm tra">
+            <IconButton
+              onClick={() => setOpenExportSourceDialog(true)}
+              sx={{ color: "#2e7d32" }}
+            >
               <DownloadIcon />
             </IconButton>
           </Tooltip>
 
           {/* Import */}
-          <Tooltip title="Nhập đề kiểm tra (JSON)">
-            <IconButton
-              onClick={() => fileInputRef.current.click()}
-              sx={{ color: "#ed6c02" }}
-            >
-              <UploadFileIcon />
-            </IconButton>
-          </Tooltip>
+          <IconButton
+            onClick={() => setOpenImportSourceDialog(true)}
+            sx={{ color: "#ed6c02" }}
+          >
+            <UploadFileIcon />
+          </IconButton>
 
           {/* Input file ẩn */}
-          <input
-            type="file"
-            accept=".json"
-            ref={fileInputRef}
-            style={{ display: "none" }}
-            onChange={handleImportJSON}
-          />
+          {/* INPUT JSON */}
+            <input
+              type="file"
+              accept=".json"
+              ref={fileInputRef}
+              style={{ display: "none" }}
+              onChange={handleImportJSON}
+            />
+
+            {/* INPUT WORD */}
+            <input
+              type="file"
+              accept=".docx"
+              ref={fileInputRefWord}
+              style={{ display: "none" }}
+              onChange={handleImportWord}
+            />
+
+
         </Stack>
 
         {/* Tiêu đề */}
@@ -941,6 +1314,109 @@ useEffect(() => {
           fileName={fileName}
           setFileName={setFileName}
           onConfirm={handleConfirmExport}
+        />
+
+        <ExportSourceDialog
+          open={openExportSourceDialog}
+          onClose={() => setOpenExportSourceDialog(false)}
+          onSelectJSON={async () => {
+            setOpenExportSourceDialog(false);
+
+            try {
+              const exportName = buildExportFileName();
+
+              handleExportJSON(exportName);
+
+              setSnackbar({
+                open: true,
+                message: "✅ Xuất JSON thành công!",
+                severity: "success",
+              });
+            } catch (err) {
+              console.error(err);
+              setSnackbar({
+                open: true,
+                message: "❌ Xuất JSON thất bại!",
+                severity: "error",
+              });
+            }
+          }}
+          onSelectWord={async () => {
+            setOpenExportSourceDialog(false);
+
+            try {
+              const exportName = buildExportFileName();
+
+              await exportQuestionsToWord(
+                questions,
+                exportName
+              );
+
+              setSnackbar({
+                open: true,
+                message: "✅ Xuất Word thành công!",
+                severity: "success",
+              });
+            } catch (err) {
+              console.error(err);
+              setSnackbar({
+                open: true,
+                message: "❌ Xuất Word thất bại!",
+                severity: "error",
+              });
+            }
+          }}
+        />
+
+        <ImportSourceDialog
+          open={openImportSourceDialog}
+          onClose={() => setOpenImportSourceDialog(false)}
+
+          onSelectJSON={() => {
+            setOpenImportSourceDialog(false);
+            fileInputRef.current?.click(); // mở file JSON
+          }}
+
+          onSelectWord={() => {
+            setOpenImportSourceDialog(false);
+
+            // 👉 THAY console.log bằng trigger thật
+            setTimeout(() => {
+              fileInputRefWord.current?.click?.(); 
+            }, 0);
+          }}
+
+          onSelectFirestore={() => {
+            setOpenImportSourceDialog(false);
+            fetchQuizList();
+          }}
+        />
+
+        <ImportModeDialog
+          open={openImportModeDialog}
+          onClose={() => setOpenImportModeDialog(false)}
+
+          onOverwrite={() => {
+            setQuestions(importData);     // ghi đè
+            setOpenImportModeDialog(false);
+
+            setSnackbar({
+              open: true,
+              message: "✅ Nhập đề thành công!",
+              severity: "success",
+            });
+          }}
+
+          onAppend={() => {
+            setQuestions((prev) => [...prev, ...importData]); // ghi tiếp
+            setOpenImportModeDialog(false);
+
+            setSnackbar({
+              open: true,
+              message: "✅ Nhập đề thành công!",
+              severity: "success",
+            });
+          }}
         />
 
         {/* SNACKBAR */}

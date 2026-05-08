@@ -20,7 +20,8 @@ import { db } from "../firebase";
 import { useContext } from "react";
 import { ConfigContext } from "../context/ConfigContext";
 import DeleteConfirmDialog from "../dialog/DeleteConfirmDialog";
-import { exportWordFile } from "../utils/exportWordFile";
+//import { exportWordFile } from "../utils/exportWordFile";
+import { exportQuestionsToWord } from "../utils/exportQuizWORD";
 
 
 export default function DeThi() {
@@ -174,6 +175,40 @@ export default function DeThi() {
     }
   };
 
+  const formatExportName = (examName = "") => {
+    if (!examName) return "Đề thi";
+
+    // ❌ bỏ (C), (A) nếu đã có ở cuối để tránh double
+    let name = examName.replace(/\s*\([A-Z]\)\s*$/, "");
+
+    name = name.replace(/^quiz_/i, "");
+
+    const parts = name.split("_");
+
+    const classPart = parts.find(p => /lớp/i.test(p)) || "";
+    const classNumber = classPart.match(/\d+/)?.[0] || "";
+
+    const subject =
+      parts.find(
+        p =>
+          !/lớp/i.test(p) &&
+          !/\d{2}-\d{2}/.test(p) &&
+          !/\(.*\)/.test(p)
+      ) || "Môn";
+
+    const year = parts.find(p => /\d{2}-\d{2}/.test(p)) || "";
+
+    const extra =
+      parts.find(p => /cki|ckii|cn/i.test(p)) || "";
+
+    const letterMatch = examName.match(/\(([A-Z])\)/);
+    const letter = letterMatch ? letterMatch[1] : "";
+
+    return `Đề ${subject} ${classNumber}${extra ? `_${extra}` : ""}${year ? `_${year}` : ""}${letter ? ` (${letter})` : ""}`
+      .replace(/\s+/g, " ")
+      .trim();
+  };
+
   // ⭐ HÀM XUẤT FILE WORD ⭐
   const handleExportWord = async () => {
     if (selectedExamIds.length === 0) {
@@ -193,27 +228,30 @@ export default function DeThi() {
         if (!snap.exists()) continue;
 
         const data = snap.data();
-        const questions = Array.isArray(data.questions) ? data.questions : [];
+        const questions = Array.isArray(data.questions)
+          ? data.questions
+          : [];
+
         if (questions.length === 0) continue;
 
-        await exportWordFile({
-          title: data.tenDe || examId,
-          namHoc: selectedYear,
+        // ⭐ dùng đúng hàm exportQuizWORD bạn cung cấp
+        await exportQuestionsToWord(
           questions,
-        });
-
+          formatExportName(data.tenDe || examId)
+        );
       }
 
       setSnackbar({
         open: true,
-        message: `📄 Đã xuất ${selectedExamIds.length} đề ra file Word!`,
+        message: `📄 Đã xuất ${selectedExamIds.length} đề Word!`,
         severity: "success",
       });
+
     } catch (err) {
-      console.error("Lỗi xuất đề:", err);
+      console.error(err);
       setSnackbar({
         open: true,
-        message: "Lỗi khi xuất đề!",
+        message: "❌ Lỗi khi xuất file Word",
         severity: "error",
       });
     }
