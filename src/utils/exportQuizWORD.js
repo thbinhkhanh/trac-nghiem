@@ -359,14 +359,24 @@ export const exportQuestionsToWord = async (
           ? q.option.text
           : "";
 
-      const option = stripHTML(rawOption);
+      const option = stripHTML(rawOption)
+        .replace(/\r\n/g, "\n")
+        // 🔥 đảm bảo a), b), c) luôn xuống dòng
+        .replace(/([a-zA-Z]\))\s*/g, "\n$1 ")
+        .trim();
 
       // ❌ KHÔNG export lại q.question nữa
-      // children.push(createText(question));
 
-      // ✅ chỉ export phần nội dung điền khuyết
+      // ✅ tách từng dòng để giữ break chuẩn
       if (option) {
-        children.push(createText(option));
+        const optionLines = option
+          .split("\n")
+          .map(l => l.trim())
+          .filter(Boolean);
+
+        optionLines.forEach(line => {
+          children.push(createText(line));
+        });
       }
 
       // ===== FIX: lấy đáp án an toàn =====

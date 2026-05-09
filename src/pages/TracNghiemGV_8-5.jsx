@@ -912,22 +912,30 @@ const handleImportWord = async (e) => {
         const lines = block.split("\n").map(l => l.trim()).filter(Boolean);
         if (!lines.length) return null;
 
-        // Tìm dòng "Từ cần điền"
+        let rawText = lines.join(" ");
+
+        // ===== 1. REMOVE "Từ cần điền" =====
+        rawText = rawText.split(/Từ cần điền/i)[0].trim();
+
+        // ===== 2. TÁCH ":" =====
+        const colonIndex = rawText.indexOf(":");
+
+        let questionText = "";
+        let optionText = "";
+
+        if (colonIndex !== -1) {
+          questionText = rawText.slice(0, colonIndex + 1).trim();
+          optionText = rawText.slice(colonIndex + 1).trim();
+        } else {
+          questionText = rawText;
+          optionText = "";
+        }
+
+        // ===== 3. FIX TRIỆT ĐỂ BLANK (QUAN TRỌNG NHẤT) =====
+        optionText = optionText.replace(/\[\s*(?:\.{3,}|…)\s*\]/g, "[...]");
+
+        // ===== 4. LẤY ĐÁP ÁN =====
         const answerLine = lines.find(l => /^Từ cần điền/i.test(l)) || "";
-
-        // Phần question là dòng đầu tiên (dẫn nhập)
-        const questionText = lines[0].replace(/^Câu\s*\d+\s*[:\.\-)]?\s*/i, "");
-
-        // Phần option là các dòng còn lại (trừ dòng "Từ cần điền")
-        const optionLines = lines.slice(1).filter(l => !/^Từ cần điền/i.test(l));
-        let optionText = optionLines.join("\n");
-
-        optionText = optionText
-          .replace(/\[\s*(?:\.{3,}|…)\s*\]/g, "[...]")
-          .replace(/([a-zà-ỹ])\s*\n\s*([a-zà-ỹ])/gi, "$1$2")
-          .replace(/\s*#\s*/g, "\n")
-          .replace(/\n{2,}/g, "\n")
-          .trim();
 
         const answers = answerLine
           .replace(/^Từ cần điền\s*:\s*/i, "")
@@ -937,10 +945,19 @@ const handleImportWord = async (e) => {
 
         return {
           id: `q_${Date.now()}_${index}`,
+
           question: `<p>${escapeHTML(questionText)}</p>`,
+
           type: "fillblank",
-          option: `<p>${escapeHTML(optionText).replace(/\n/g, "<br>")}</p>`,
-          options: answers.map(a => ({ text: a, image: "", formats: {} })),
+
+          option: `<p>${escapeHTML(optionText)}</p>`,
+
+          options: answers.map(a => ({
+            text: a,
+            image: "",
+            formats: {}
+          })),
+
           correct: answers,
           score: 0.5,
           sortType: "shuffle",
@@ -956,10 +973,15 @@ const handleImportWord = async (e) => {
     const tables = doc.querySelectorAll("table");
     let tableIndex = 0;
 
-    const parseMatchingFromTable = (table, index) => {
+    const parseMatchingFromTable = (index) => {
+      if (!tables[tableIndex]) return null;
+
+      const table = tables[tableIndex++];
+
       // ✅ LẤY QUESTION TỪ <p> TRƯỚC TABLE
       let questionText = "";
       let prev = table.previousElementSibling;
+
       while (prev) {
         if (prev.tagName === "P" && prev.innerText.trim()) {
           questionText = prev.innerText.trim();
@@ -978,19 +1000,10 @@ const handleImportWord = async (e) => {
         const cells = row.querySelectorAll("td, th");
         if (cells.length < 2) return;
 
-        const getCellContent = (cell) => {
-          let text = cell.innerText.trim();
-          const img = cell.querySelector("img");
-          if (img) {
-            const alt = img.getAttribute("alt")?.trim();
-            text = alt ? `[Hình: ${alt}]` : "[Hình]";
-          }
-          return text;
-        };
+        const l = cells[0].innerText.trim();
+        const r = cells[1].innerText.trim();
 
-        const l = getCellContent(cells[0]);
-        const r = getCellContent(cells[1]);
-        if (!l && !r) return;
+        if (!l || !r) return;
 
         pairs.push({
           left: `<p>${escapeHTML(l)}</p>`,
@@ -1002,7 +1015,10 @@ const handleImportWord = async (e) => {
 
       return {
         id: `q_${Date.now()}_table_${index}`,
+
+        // ✅ DÙNG QUESTION THẬT (đã bỏ "Câu 1.")
         question: `<p>${escapeHTML(questionText)}</p>`,
+
         type: "matching",
         questionType: "matching",
         pairs,
@@ -1013,120 +1029,43 @@ const handleImportWord = async (e) => {
       };
     };
 
-    // ===== Parse theo thứ tự DOM =====
-    const elements = [...doc.body.querySelectorAll("p, table")];
-    const finalQuestions = [];
-    let index = 0;
+    // ===== Split blocks =====
+    const blocks = text
+      .split(/Câu\s*\d+\s*[:\.\-)]?/gi)
+      .map(b => b.trim())
+      .filter(Boolean);
 
-    elements.forEach(el => {
-      if (el.tagName === "P") {
-        const textBlock = el.innerText.trim();
-        if (!/^Câu\s*\d+/i.test(textBlock)) return;
-
-        let block = textBlock;
-        let next = el.nextElementSibling;
-        while (next && next.tagName === "P" && !/^Câu\s*\d+/i.test(next.innerText)) {
-          block += "\n" + next.innerText.trim();
-          next = next.nextElementSibling;
-        }
-
+    // ===== Parse all =====
+    const finalQuestions = blocks
+      .map((block, index) => {
         const type = detectType(block);
-        if (type === "choice") finalQuestions.push(parseChoice(block, index++));
-        else if (type === "sort") finalQuestions.push(parseSort(block, index++));
-        else if (type === "truefalse") finalQuestions.push(parseTrueFalse(block, index++));
-        else if (type === "fillblank") finalQuestions.push(parseFillBlank(block, index++));
-      }
 
-      if (el.tagName === "TABLE") {
-        const rows = el.querySelectorAll("tr");
+        if (type === "choice") return parseChoice(block, index);
+        if (type === "sort") return parseSort(block, index);
+        if (type === "truefalse") return parseTrueFalse(block, index);
+        if (type === "fillblank") return parseFillBlank(block, index);
+        if (type === "matching") return parseMatchingFromTable(index);
 
-        // lấy số cột tối đa
-        let maxCols = 0;
-        rows.forEach(r => {
-          const cols = r.querySelectorAll("td, th").length;
-          if (cols > maxCols) maxCols = cols;
-        });
+        return null;
+      })
+      .filter(Boolean);
 
-        // ====== CASE: IMAGE TABLE (> 2 cột) ======
-        if (maxCols > 2) {
-          const images = [];
-
-          rows.forEach(row => {
-            const cells = row.querySelectorAll("td, th");
-            if (!cells.length) return;
-
-            cells.forEach(cell => {
-              const img = cell.querySelector("img");
-              if (img) {
-                images.push({
-                  text: img.src || img.getAttribute("data-src") || "",
-                  alt: img.alt || "",
-                });
-              }
-            });
-          });
-
-          // ===== lấy câu hỏi thực tế (giống matching) =====
-          let questionText = "";
-          let prev = el.previousElementSibling;
-
-          while (prev) {
-            if (prev.tagName === "P" && prev.innerText.trim()) {
-              questionText = prev.innerText.trim();
-              break;
-            }
-            prev = prev.previousElementSibling;
-          }
-
-          if (!questionText) {
-            questionText = "Câu hỏi hình ảnh";
-          }
-
-          // clean "Câu 5: ..."
-          questionText = questionText.replace(/^Câu\s*\d+\s*[:\.\-)]?\s*/i, "");
-
-          if (images.length) {
-            finalQuestions.push({
-              id: `q_${Date.now()}_image_${index++}`,
-              question: `<p>${escapeHTML(questionText)}</p>`,
-              type: "image",
-              options: images.map(img => ({
-                text: "",
-                image: img.text
-              })),
-              correct: [],
-              score: 0.5,
-              sortType: "shuffle",
-              pairs: []
-            });
-          }
-
-          return; // ⛔ skip matching parser
-        }
-
-        // ====== NORMAL MATCHING ======
-        const q = parseMatchingFromTable(el, index++);
-        if (q) finalQuestions.push(q);
-      }
-    });
-
-    console.log("✅ FINAL:", finalQuestions);
-
-    const isEmpty =
+    const isCurrentEmpty =
       !questions ||
       questions.length === 0 ||
-      (questions.length === 1 && !questions[0].question);
+      (questions.length === 1 && !questions[0]?.question?.trim());
 
-    if (isEmpty) {
+    if (isCurrentEmpty) {
       setQuestions(finalQuestions);
-      setLessonInput("");
+      setSelectedDoc(null);
+      setIsEditingNewDoc(true);
+      setLessonInput(lessonInput || "");
 
       setSnackbar({
         open: true,
         message: "✅ Nhập đề thành công!",
         severity: "success",
       });
-      
     } else {
       setImportData(finalQuestions);
       setOpenImportModeDialog(true);
