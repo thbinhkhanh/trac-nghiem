@@ -169,7 +169,7 @@ export const exportQuizPDF = async (
   pdf.rect(margin, y, pageWidth - 2 * margin, 28);
 
   pdf.setTextColor(0, 0, 255);
-  pdf.text(`Trường: TH Bình Khánh`, margin + 5, y + 8);
+  pdf.text(`Trường: TH Lâm Văn Bền`, margin + 5, y + 8);
   pdf.text(`Họ tên: ${capitalizeName(studentInfo.name)}`, margin + 5, y + 15);
   pdf.text(`Lớp: ${className}`, margin + 5, y + 22);
 
@@ -957,8 +957,8 @@ export const exportQuizPDF = async (
               const size = await getImageSize(img64);
 
               // ⭐ SCALE LỚN HƠN (0.4 -> 0.55)
-              let w = size.width * 0.55 * 0.264583;
-              let h = size.height * 0.55 * 0.264583;
+              let w = size.width * 0.8 * 0.264583;
+              let h = size.height * 0.8 * 0.264583;
 
               const maxW = leftColWidth - cellPadding * 2;
 
