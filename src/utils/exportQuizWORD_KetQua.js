@@ -12,6 +12,7 @@ import {
 } from "docx";
 
 import { saveAs } from "file-saver";
+import { v4 as uuidv4 } from "uuid";
 
 // ================== UTILS ==================
 const capitalizeName = (name) => {
@@ -187,9 +188,10 @@ export const exportQuizPDF = async (
             children: [
               new ImageRun({
                 data: buffer,
-                transformation: { width: 200, height: 200 },
+                transformation: { width: 200, height: 100 }, // giảm 50%
               }),
             ],
+            alignment: AlignmentType.CENTER, // căn giữa ảnh
           })
         );
       }
@@ -366,26 +368,105 @@ export const exportQuizPDF = async (
         break;
       }
 
-      case "fillblank": {
-        // Tiêu đề câu hỏi (chỉ 1 lần)
+      case "matching": {
+        const rows = [];
+        for (let i = 0; i < q.pairs.length; i++) {
+          const pair = q.pairs[i];
+          const userAnswer = answers[q.id]?.[i];
+          const correctAnswer = q.correct[i];
+          const isCorrect = userAnswer !== undefined && userAnswer === correctAnswer;
+
+          const leftChildren = [];
+          if (pair.leftImage?.url) {
+            const buffer = await getImageBuffer(pair.leftImage.url);
+            if (buffer) {
+              leftChildren.push(
+                new Paragraph({
+                  children: [
+                    new ImageRun({
+                      data: buffer,
+                      transformation: { width: 40, height: 40 },
+                    }),
+                  ],
+                  alignment: AlignmentType.CENTER,
+                })
+              );
+            }
+          } else if (pair.left) {
+            leftChildren.push(
+              new Paragraph({
+                children: [new TextRun({ text: pair.left, color: "000000" })],
+              })
+            );
+          }
+
+          const rightChildren = [
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: extractText(pair.right).replace(/^Câu\s*\d+:\s*/i, ""), // loại bỏ "Câu x:"
+                  color: userAnswer !== undefined
+                    ? isCorrect ? "00AA00" : "FF0000"
+                    : "000000",
+                }),
+                new TextRun({
+                  text: userAnswer !== undefined ? (isCorrect ? " ✓" : " ✗") : "",
+                  color: isCorrect ? "00AA00" : "FF0000",
+                }),
+              ],
+            }),
+          ];
+
+          rows.push(
+            new TableRow({
+              children: [
+                new TableCell({ children: leftChildren }),
+                new TableCell({ children: rightChildren }),
+              ],
+            })
+          );
+        }
+
+        // 👉 Thêm khoảng cách trước bảng
+        children.push(new Paragraph(" "));
+
+        children.push(
+          new Table({
+            rows,
+            width: { size: 100, type: "pct" },
+            alignment: AlignmentType.CENTER,
+          })
+        );
+
+        break;
+      }
+
+      /*case "fillblank": {
+        // Tiêu đề câu hỏi
         children.push(
           new Paragraph({
             children: [
               new TextRun({
                 text: extractText(q.pairs?.[0]?.question || ""),
-                color: "0000AA", // xanh lam cho câu hỏi
+                color: "0000AA",
               }),
             ],
-            spacing: { line: 240 }, // khoảng cách dòng 1.0
+            spacing: { line: 240 },
           })
         );
 
-        // Nội dung chính có dấu [...]
+        // Nội dung chính: thay thế dấu [...] bằng từ học sinh nhập
+        const userAnswers = Array.isArray(answers[q.id]) ? answers[q.id] : [];
+        let filledText = q.option;
+        userAnswers.forEach((ans, i) => {
+          filledText = filledText.replace("...", ans || "_____");
+        });
+
         children.push(
           new Paragraph({
             children: [
               new TextRun({
-                text: extractText(q.option), // KHÔNG thêm "Câu 1:" nữa
+                text: extractText(filledText),
                 color: "000000",
               }),
             ],
@@ -393,10 +474,8 @@ export const exportQuizPDF = async (
           })
         );
 
-        // Hiển thị từng chỗ trống
-        const userAnswers = Array.isArray(answers[q.id]) ? answers[q.id] : [];
+        // Hiển thị từng chỗ trống với ✓/✗
         const correctAnswers = Array.isArray(q.correct) ? q.correct : [];
-
         correctAnswers.forEach((correctText, i) => {
           const userText = userAnswers[i] || "";
           const isCorrect = userText && userText === correctText;
@@ -408,15 +487,69 @@ export const exportQuizPDF = async (
                   text: `${i + 1}. ${userText || "_____"} ${userText ? (isCorrect ? "✓" : "✗") : ""}`,
                   color: userText
                     ? isCorrect
-                      ? "00AA00" // xanh nếu đúng
+                      ? "00AA00"
+                      : "FF0000"
+                    : "000000",
+                }),
+              ],
+              spacing: { line: 240 },
+            })
+          );
+        });
+
+        break;
+      }*/
+     
+        case "fillblank": {
+        // Chỉ hiển thị câu hỏi với chỗ trống (không push thêm q.question nữa)
+        children.push(
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: extractText(q.option), // chứa a), b), c), d) với [...]
+                color: "0000AA", // xanh lam cho câu hỏi
+              }),
+            ],
+            spacing: { line: 240 },
+          })
+        );
+
+        // Hiển thị từng chỗ trống với màu xanh/đỏ
+        const filled = Array.isArray(q.filled) ? q.filled : [];
+        const correct = Array.isArray(q.options) ? q.options : [];
+
+        filled.forEach((word, i) => {
+          const userWord = (word || "").trim();
+          const correctObj = correct[i];
+          const correctWord =
+            typeof correctObj === "string"
+              ? correctObj.trim()
+              : (correctObj?.text || "").trim();
+
+          const isCorrect =
+            userWord && userWord.toLowerCase() === correctWord.toLowerCase();
+
+          children.push(
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: `${i + 1}. `,
+                  color: "000000",
+                }),
+                new TextRun({
+                  text: userWord || "______",
+                  color: userWord
+                    ? isCorrect
+                      ? "00AA00" // xanh lá nếu đúng
                       : "FF0000" // đỏ nếu sai
                     : "000000",
                 }),
               ],
-              spacing: { line: 240 }, // 1.0 line
+              spacing: { line: 240 },
             })
           );
         });
+
         break;
       }
 
@@ -428,29 +561,34 @@ export const exportQuizPDF = async (
   }
 
   // ================== CREATE DOC ==================
-const doc = new Document({
-  sections: [{ children }],
-  // đặt style mặc định cho toàn bộ trang
-  styles: {
-    default: {
-      document: {
-        run: {
-          size: 24, // 12pt
-          font: "Times New Roman", // có thể chọn font khác nếu muốn
-        },
-        paragraph: {
-          spacing: { line: 240 }, // khoảng cách dòng ~1.5 (240 = 1.5 line)
+  const doc = new Document({
+    sections: [{ children }],
+    // đặt style mặc định cho toàn bộ trang
+    styles: {
+      default: {
+        document: {
+          run: {
+            size: 24, // 12pt
+            font: "Times New Roman", // có thể chọn font khác nếu muốn
+          },
+          paragraph: {
+            spacing: { line: 240 }, // khoảng cách dòng ~1.5 (240 = 1.5 line)
+          },
         },
       },
     },
-  },
-});
+  });
 
-const blob = await Packer.toBlob(doc);
-const fileName = `${className}_${capitalizeName(studentInfo.name).replace(
-  /\s+/g,
-  "_"
-)}_${Date.now()}.docx`;
+  const blob = await Packer.toBlob(doc);
 
-saveAs(blob, fileName);
+  // sinh chuỗi ngẫu nhiên 3 ký tự từ uuid
+  const id = uuidv4().replace(/-/g, "").substring(0, 3);
+
+  const fileName = `${className}_${capitalizeName(studentInfo.name).replace(
+    /\s+/g,
+    "_"
+  )}_${id}.docx`;
+
+  saveAs(blob, fileName);
+
 };

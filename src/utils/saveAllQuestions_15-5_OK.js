@@ -277,7 +277,7 @@ for (let q of questions) {
       option: q.option || "",
       question: q.question || "",
 
-      image: updatedQ.questionImage || "",
+      image: q.questionImage || null,
 
       answers: [
         {
@@ -297,9 +297,6 @@ for (let q of questions) {
       correct: q.correct || [],
       score: q.score || 1,
     };
-
-    delete updatedQ.image;    //khắc phục lỗi 2 hình trong Question Image
-    
   }
 
   // =========================

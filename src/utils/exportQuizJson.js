@@ -8,6 +8,7 @@ export const handleExportQuiz = ({
   selectedDoc,
   fileName,
   setFileName,
+  setOpenExportDialog,
   setSnackbar,
 }) => {
   try {
@@ -18,7 +19,7 @@ export const handleExportQuiz = ({
     // =========================
     if (selectedClass || semester || schoolYear || examLetter) {
       const subject = selectedSubject || "Tin học";
-      const lop = selectedClass?.replace("Lớp ", "") || "";
+      const lop = selectedClass || "";
 
       const hk =
         semester === "Cuối kỳ I"
@@ -34,23 +35,25 @@ export const handleExportQuiz = ({
       const year = schoolYear || "";
       const code = examLetter ? ` (${examLetter.toUpperCase()})` : "";
 
-      defaultName = `Đề ${subject} ${lop}_${hk}_${year}${code}`;
+      defaultName = `Đề ${subject} ${lop} ${hk} ${year}${code}`;
+    } else if (selectedDoc) {
+      const parts = selectedDoc.split("_");
+
+      if (parts.length >= 7) {
+        const subject = "Tin học";
+        const lop = `Lớp ${parts[3]}`;
+        const hk = parts[4].toUpperCase();
+        const year = parts[5];
+        const code = ` (${parts[6].toUpperCase()})`;
+
+        defaultName = `Đề_${subject}_${lop}_${hk}_${year}${code}`;
+      } else {
+        defaultName = selectedDoc;
+      }
     }
 
-    // =========================
-    // SET NAME (giữ lại nếu cần hiển thị UI)
-    // =========================
     setFileName(defaultName);
-
-    // =========================
-    // AUTO EXPORT (KHÔNG DIALOG)
-    // =========================
-    handleConfirmExportQuiz({
-      fileName: defaultName,
-      questions,
-      setSnackbar,
-    });
-
+    setOpenExportDialog(true);
   } catch (err) {
     setSnackbar?.({
       open: true,

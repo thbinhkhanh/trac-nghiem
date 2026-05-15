@@ -15,14 +15,24 @@ import { saveAs } from "file-saver";
 // ===== helper =====
 const stripHTML = (html = "") => {
   return String(html || "")
+    // ✅ đổi <br> thành xuống dòng
+    .replace(/<br\s*\/?>/gi, "\n")
+
+    // optional: xuống dòng sau </p>
+    .replace(/<\/p>/gi, "\n")
+
     // bỏ tag HTML
     .replace(/<[^>]*>/g, "")
-    // đổi &nbsp; và khoảng trắng không phá vỡ
+
+    // đổi nbsp
     .replace(/&nbsp;|\u00A0/g, " ")
-    // xóa các đoạn ".     " kiểu bạn gặp
-    .replace(/\.\s+/g, ". ")
-    // gộp nhiều khoảng trắng
-    .replace(/\s+/g, " ")
+
+    // giữ nguyên newline nhưng gộp space
+    .replace(/[ \t]+/g, " ")
+
+    // bỏ nhiều dòng trống
+    .replace(/\n{3,}/g, "\n\n")
+
     .trim();
 };
 
@@ -66,21 +76,63 @@ const fetchImage = async (url) => {
 // ===== CONST =====
 const FONT_SIZE = 24; // ~13pt
 
-const createText = (text, bold = false, align = "left") =>
-  new Paragraph({
+const createText = (text, bold = false, align = "left") => {
+  const lines = String(text).split("\n");
+
+  const children = [];
+
+  lines.forEach((line, index) => {
+    children.push(
+      new TextRun({
+        text: line,
+        bold,
+        size: FONT_SIZE,
+        font: "Times New Roman",
+      })
+    );
+
+    // ✅ xuống dòng trong Word
+    if (index < lines.length - 1) {
+      children.push(
+        new TextRun({
+          break: 1,
+        })
+      );
+    }
+  });
+
+  return new Paragraph({
     alignment:
       align === "center"
         ? AlignmentType.CENTER
         : AlignmentType.LEFT,
-    children: [
-      new TextRun({
-        text,
-        bold,
-        size: FONT_SIZE,
-        font: "Times New Roman",
-      }),
-    ],
+    children,
   });
+};
+
+const getImageBufferWithSize = async (url, maxHeight = 120) => {
+  const buffer = await fetchImage(url);
+  if (!buffer) return null;
+
+  // tạo object URL để lấy kích thước gốc
+  const blob = new Blob([buffer]);
+  const imgEl = new Image();
+  const objectUrl = URL.createObjectURL(blob);
+
+  return new Promise((resolve) => {
+    imgEl.onload = () => {
+      const ratio = imgEl.width / imgEl.height;
+
+      // cố định chiều cao, tính chiều rộng theo tỉ lệ
+      const height = maxHeight;
+      const width = Math.round(height * ratio);
+
+      URL.revokeObjectURL(objectUrl);
+      resolve({ buffer, width, height });
+    };
+    imgEl.src = objectUrl;
+  });
+};
 
 // ===== MAIN =====
 export const exportQuestionsToWord = async (
@@ -132,15 +184,15 @@ export const exportQuestionsToWord = async (
 
     // ===== IMAGE QUESTION =====
     if (q.questionImage) {
-      const img = await fetchImage(q.questionImage);
-      if (img) {
+      const result = await getImageBufferWithSize(q.questionImage, 120);
+      if (result) {
         children.push(
           new Paragraph({
             alignment: AlignmentType.CENTER,
             children: [
               new ImageRun({
-                data: img,
-                transformation: { width: 300, height: 200 },
+                data: result.buffer,
+                transformation: { width: result.width, height: result.height },
               }),
             ],
           })
@@ -244,8 +296,8 @@ export const exportQuestionsToWord = async (
                     new ImageRun({
                       data: img,
                       transformation: {
-                        width: 90,
-                        height: 90,
+                        width: 70,
+                        height: 70,
                       },
                     }),
                   ],
@@ -395,10 +447,7 @@ export const exportQuestionsToWord = async (
 
       if (cleanAnswers.length > 0) {
         children.push(
-          createText(
-            `Từ cần điền: ${cleanAnswers.join(" / ")}`,
-            true
-          )
+          createText(`Từ cần điền: ${cleanAnswers.join(" / ")}`, true)
         );
       }
     }

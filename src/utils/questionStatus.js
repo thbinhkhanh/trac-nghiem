@@ -24,10 +24,20 @@ export function getQuestionStatus({
         );
 
       case "sort":
-        return !Array.isArray(userAnswer) || userAnswer.length === 0;
+        return (
+          Array.isArray(question.initialSortOrder) &&
+          Array.isArray(userAnswer) &&
+          JSON.stringify(userAnswer) ===
+            JSON.stringify(question.initialSortOrder)
+        );
 
       case "matching":
-        return !Array.isArray(userAnswer) || userAnswer.length === 0;
+        return (
+          Array.isArray(question.initialMatchingOrder) &&
+          Array.isArray(userAnswer) &&
+          JSON.stringify(userAnswer) ===
+            JSON.stringify(question.initialMatchingOrder)
+        );
 
       case "truefalse": {
         const defaultOrder = question.options.map((_, i) => i);
@@ -95,9 +105,10 @@ export function getQuestionStatus({
       const ca = question.options || [];
       isCorrect =
         ua.length === ca.length &&
-        ca.every((opt, i) =>
-          ua[i]?.trim().toLowerCase() ===
-          opt.text?.trim().toLowerCase()
+        ca.every(
+          (opt, i) =>
+            ua[i]?.trim().toLowerCase() ===
+            opt.text?.trim().toLowerCase()
         );
       break;
     }

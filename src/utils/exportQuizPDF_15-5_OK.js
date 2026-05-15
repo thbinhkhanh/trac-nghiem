@@ -18,72 +18,6 @@ async function getBase64FromUrl(url) {
   });
 }
 
-const getImageType = (base64) => {
-  const match = base64.match(/^data:image\/(\w+);base64,/i);
-
-  if (!match) return "JPEG";
-
-  const type = match[1].toLowerCase();
-
-  switch (type) {
-    case "png":
-      return "PNG";
-
-    case "jpg":
-    case "jpeg":
-      return "JPEG";
-
-    case "webp":
-      return "WEBP";
-
-    default:
-      return "JPEG";
-  }
-};
-
-// convert webp -> png
-const convertToPng = (base64) => {
-  return new Promise((resolve) => {
-    const img = new Image();
-
-    img.onload = () => {
-      const canvas = document.createElement("canvas");
-
-      canvas.width = img.width;
-      canvas.height = img.height;
-
-      const ctx = canvas.getContext("2d");
-
-      ctx.drawImage(img, 0, 0);
-
-      resolve(canvas.toDataURL("image/png"));
-    };
-
-    img.src = base64;
-  });
-};
-
-const addImageAuto = async (
-  pdf,
-  base64,
-  x,
-  y,
-  w,
-  h
-) => {
-  let img = base64;
-
-  let type = getImageType(img);
-
-  // jsPDF hay lỗi với WEBP
-  if (type === "WEBP") {
-    img = await convertToPng(img);
-    type = "PNG";
-  }
-
-  pdf.addImage(img, type, x, y, w, h);
-};
-
 const getImageSize = (base64) => {
   return new Promise((resolve) => {
     const img = new Image();
@@ -127,15 +61,8 @@ const extractText = (val) => {
 const extractImage = (opt) => {
   if (!opt) return null;
 
-  // format mới phổ biến
-  if (opt.formats?.image?.url) return opt.formats.image.url;
   if (opt.formats?.image) return opt.formats.image;
 
-  // các kiểu khác
-  if (opt.image) return opt.image;
-  if (opt.url) return opt.url;
-
-  // fallback text URL
   if (typeof opt.text === "string" && opt.text.startsWith("http")) {
     return opt.text;
   }
@@ -227,40 +154,27 @@ export const exportQuizPDF = async (
     if (q.questionImage) {
       try {
         const img64 = await getBase64FromUrl(q.questionImage);
+
         const { width, height } = await getImageSize(img64);
 
-        // 🔥 tăng scale (0.4 -> 0.8)
-        const scale = 0.7;
+        // scale
+        let newWidth = width * 0.4 * 0.264583;
+        let newHeight = height * 0.4 * 0.264583;
 
-        let newWidth = width * scale * 0.264583;
-        let newHeight = height * scale * 0.264583;
-
+        // tránh tràn
         const maxWidth = pageWidth - 2 * margin;
-        const maxHeight = 80; // giới hạn chiều cao để không tràn
-
-        // fit theo width trước
         if (newWidth > maxWidth) {
           const ratio = maxWidth / newWidth;
           newWidth = maxWidth;
-          newHeight *= ratio;
-        }
-
-        // nếu vẫn quá cao thì fit theo height
-        if (newHeight > maxHeight) {
-          const ratio = maxHeight / newHeight;
-          newHeight = maxHeight;
-          newWidth *= ratio;
+          newHeight = newHeight * ratio;
         }
 
         // 👉 căn giữa
         const xCenter = (pageWidth - newWidth) / 2;
 
-        // 📌 vẽ ảnh
-        //pdf.addImage(img64, "PNG", xCenter, y, newWidth, newHeight);
-        await addImageAuto(pdf, img64, xCenter, y, newWidth, newHeight);
+        pdf.addImage(img64, "PNG", xCenter, y-5, newWidth, newHeight);
 
-        // 📌 đẩy con trỏ xuống đúng chuẩn
-        y += newHeight + 7;
+        y += newHeight - 2;
 
       } catch {}
     }
@@ -275,11 +189,10 @@ export const exportQuizPDF = async (
             ? q.displayOrder
             : q.options.map((_, i) => i);
 
-        for (const optIndex of order) {
+        order.forEach((optIndex) => {
           const opt = q.options[optIndex];
 
           const text = extractText(opt);
-          const imgUrl = extractImage(opt);
 
           const selected = userAns === optIndex ? "[x]" : "[ ]";
 
@@ -290,83 +203,26 @@ export const exportQuizPDF = async (
           const isCorrect =
             userAns === optIndex && correctArr.includes(optIndex);
 
-          // ================= TEXT LINES =================
           const lines = pdf.splitTextToSize(
             `${selected} ${text}`,
             pageWidth - 2 * margin - 10
           );
 
-          let img64 = null;
-          let w = 0;
-          let h = 0;
-
-          // ================= IMAGE PRE-CALC =================
-          if (imgUrl) {
-            try {
-              img64 = await getBase64FromUrl(imgUrl);
-              const size = await getImageSize(img64);
-
-              // ================== HEIGHT IS PRIMARY ==================
-              const scale = 0.8; // 🔥 TĂNG CHIỀU CAO (0.22 -> 0.35)
-
-              h = size.height * scale * 0.264583;
-
-              // 👉 width auto theo height (giữ tỉ lệ chuẩn)
-              w = (size.width / size.height) * h;
-
-              const maxW = pageWidth - 2 * margin - 20;
-
-              // nếu quá rộng thì co lại theo width
-              if (w > maxW) {
-                const r = maxW / w;
-                w = maxW;
-                h *= r;
-              }
-            } catch {
-              img64 = null;
-            }
-          }
-
-          // ================= TOTAL HEIGHT CHECK =================
-          const totalHeight =
-            lines.length * lineHeight + (img64 ? h + 3 : 0);
-
-          if (y + totalHeight > pageBottom) {
+          if (y + lines.length * lineHeight > pageBottom) {
             pdf.addPage();
             y = margin;
           }
 
-          // ================= TEXT =================
           pdf.text(lines, margin + 5, y);
 
           if (userAns === optIndex) {
-            pdf.setTextColor(
-              isCorrect ? 0 : 255,
-              isCorrect ? 128 : 0,
-              0
-            );
-
+            pdf.setTextColor(isCorrect ? 0 : 255, isCorrect ? 128 : 0, 0);
             pdf.text(isCorrect ? "✓" : "✗", pageWidth - margin - 10, y);
-
             pdf.setTextColor(0, 0, 0);
           }
 
-          let currentY = y + lines.length * lineHeight;
-
-          // ================= IMAGE (BELOW OPTION) =================
-          if (img64) {
-            // 👇 canh cùng lề với text option (giống pdf.text margin + 5)
-            const x = margin + 5;
-
-            //pdf.addImage(img64, "PNG", x, currentY - 5, w, h);
-            await addImageAuto(pdf, img64, x, currentY - 5, w, h);
-
-            currentY += h + 3;
-          }
-
-          // ================= UPDATE Y =================
-          y = currentY;
-        }
+          y += lines.length * lineHeight;
+        });
 
         break;
       }
@@ -374,97 +230,41 @@ export const exportQuizPDF = async (
       case "multiple": {
         const userAns = answers[q.id] || [];
 
+        // ⭐ FIX: dùng displayOrder nếu có
         const order =
           Array.isArray(q.displayOrder) && q.displayOrder.length
             ? q.displayOrder
             : q.options.map((_, i) => i);
 
-        for (const optIndex of order) {
+        order.forEach((optIndex) => {
           const opt = q.options[optIndex];
 
           const text = extractText(opt);
-          const imgUrl = extractImage(opt);
-
           const checked = userAns.includes(optIndex) ? "[x]" : "[ ]";
 
           const isCorrect =
             Array.isArray(q.correct) && q.correct.includes(optIndex);
 
-          // ================= TEXT =================
           const lines = pdf.splitTextToSize(
             `${checked} ${text}`,
             pageWidth - 2 * margin - 10
           );
 
-          let img64 = null;
-          let w = 0;
-          let h = 0;
-
-          // ================= IMAGE PRE-CALC =================
-          if (imgUrl) {
-            try {
-              img64 = await getBase64FromUrl(imgUrl);
-              const size = await getImageSize(img64);
-
-              const scale = 0.8;
-
-              h = size.height * scale * 0.264583;
-              w = (size.width / size.height) * h;
-
-              const maxW = pageWidth - 2 * margin - 20;
-
-              if (w > maxW) {
-                const r = maxW / w;
-                w = maxW;
-                h *= r;
-              }
-            } catch {
-              img64 = null;
-            }
-          }
-
-          // ================= HEIGHT CHECK =================
-          const totalHeight = lines.length * lineHeight + (img64 ? h + 3 : 0);
-
-          if (y + totalHeight > pageBottom) {
+          if (y + lines.length * lineHeight > pageBottom) {
             pdf.addPage();
             y = margin;
           }
 
-          // ================= TEXT =================
           pdf.text(lines, margin + 5, y);
 
           if (userAns.includes(optIndex)) {
-            pdf.setTextColor(
-              isCorrect ? 0 : 255,
-              isCorrect ? 128 : 0,
-              0
-            );
-
-            pdf.text(
-              isCorrect ? "✓" : "✗",
-              pageWidth - margin - 10,
-              y
-            );
-
+            pdf.setTextColor(isCorrect ? 0 : 255, isCorrect ? 128 : 0, 0);
+            pdf.text(isCorrect ? "✓" : "✗", pageWidth - margin - 10, y);
             pdf.setTextColor(0, 0, 0);
           }
 
-          let currentY = y + lines.length * lineHeight;
-
-          // ================= IMAGE BELOW OPTION =================
-          if (img64) {
-            const x = margin + 5; // canh cùng text
-
-            //pdf.addImage(img64, "PNG", x, currentY - 5, w, h);
-            await addImageAuto(pdf, img64, x, currentY - 5, w, h);
-
-            // 🔥 GIẢM khoảng cách giữa option và ảnh
-            currentY += h + 1;   // (trước là +3 → giờ sát hơn)
-          }
-
-          y = currentY;
-        }
+          y += lines.length * lineHeight;
+        });
 
         break;
       }
@@ -473,61 +273,28 @@ export const exportQuizPDF = async (
         const userOrder = Array.isArray(answers[q.id]) ? answers[q.id] : [];
         const correctTexts = Array.isArray(q.correctTexts) ? q.correctTexts : [];
 
+        // Nếu chưa làm → hiển thị theo thứ tự gốc
         const displayOrder =
           userOrder.length === q.options.length
             ? userOrder
             : q.options.map((_, i) => i);
 
-        for (let i = 0; i < displayOrder.length; i++) {
-          const optIndex = displayOrder[i];
-          const opt = q.options[optIndex];
-
-          const text = extractText(opt);
-          const imgUrl = extractImage(opt);
+        displayOrder.forEach((optIndex, i) => {
+          const text = extractText(q.options[optIndex]);
 
           const lines = pdf.splitTextToSize(
             `${i + 1}. ${text}`,
             pageWidth - 2 * margin - 15
           );
 
-          let img64 = null;
-          let w = 0;
-          let h = 0;
-
-          // ================= IMAGE PRE-CALC =================
-          if (imgUrl) {
-            try {
-              img64 = await getBase64FromUrl(imgUrl);
-              const size = await getImageSize(img64);
-
-              const scale = 0.8;
-
-              h = size.height * scale * 0.264583;
-              w = (size.width / size.height) * h;
-
-              const maxW = pageWidth - 2 * margin - 20;
-
-              if (w > maxW) {
-                const r = maxW / w;
-                w = maxW;
-                h *= r;
-              }
-            } catch {
-              img64 = null;
-            }
-          }
-
-          const totalHeight = lines.length * lineHeight + (img64 ? h + 2 : 0);
-
-          if (y + totalHeight > pageBottom) {
+          if (y + lines.length * lineHeight > pageBottom) {
             pdf.addPage();
             y = margin;
           }
 
-          // ================= TEXT =================
           pdf.text(lines, margin + 5, y);
 
-          // ===== CHECK RESULT =====
+          // ===== SO SÁNH GIỐNG HỆT CHẤM ĐIỂM =====
           if (
             userOrder.length === correctTexts.length &&
             correctTexts.length > 0
@@ -539,20 +306,8 @@ export const exportQuizPDF = async (
             pdf.setTextColor(0, 0, 0);
           }
 
-          let currentY = y + lines.length * lineHeight;
-
-          // ================= IMAGE BELOW OPTION =================
-          if (img64) {
-            const x = margin + 5;
-
-            //pdf.addImage(img64, "PNG", x, currentY - 5, w, h);
-            await addImageAuto(pdf, img64, x, currentY - 5, w, h);
-
-            currentY += h + 1; // giảm khoảng cách
-          }
-
-          y = currentY;
-        }
+          y += lines.length * lineHeight;
+        });
 
         break;
       }
@@ -627,8 +382,7 @@ export const exportQuizPDF = async (
             const isCorrect = correctIndexes.includes(index);
 
             if (img) {
-              //pdf.addImage(img.img64, "PNG", x, y + 5, img.newWidth, img.newHeight);
-              await addImageAuto(pdf, img.img64, x, y + 5, img.newWidth, img.newHeight);
+              pdf.addImage(img.img64, "PNG", x, y + 5, img.newWidth, img.newHeight);
 
               // checkbox
               pdf.text(isChosen ? "[x]" : "[ ]", x, y);
@@ -664,16 +418,14 @@ export const exportQuizPDF = async (
           ? q.initialOrder
           : q.correct.map((_, i) => i);
 
-        for (let displayIdx = 0; displayIdx < q.options.length; displayIdx++) {
-          const opt = q.options[displayIdx];
-
+        q.options.forEach((opt, displayIdx) => {
           const text = extractText(opt);
-          const imgUrl = extractImage(opt);
 
           const userVal = userAns[displayIdx]; // "Đ" | "S" | undefined
           const originalIdx = order[displayIdx];
-          const correctVal = q.correct?.[originalIdx];
+          const correctVal = q.correct?.[originalIdx]; // "Đ" | "S"
 
+          // ✅ HIỂN THỊ NHÃN
           const mark =
             userVal === "Đ"
               ? "[Đ]"
@@ -689,74 +441,21 @@ export const exportQuizPDF = async (
             pageWidth - 2 * margin
           );
 
-          let img64 = null;
-          let w = 0;
-          let h = 0;
-
-          // ================= IMAGE PRE-CALC =================
-          if (imgUrl) {
-            try {
-              img64 = await getBase64FromUrl(imgUrl);
-              const size = await getImageSize(img64);
-
-              const scale = 0.8;
-
-              h = size.height * scale * 0.264583;
-              w = (size.width / size.height) * h;
-
-              const maxW = pageWidth - 2 * margin - 20;
-
-              if (w > maxW) {
-                const r = maxW / w;
-                w = maxW;
-                h *= r;
-              }
-            } catch {
-              img64 = null;
-            }
-          }
-
-          const totalHeight =
-            lines.length * lineHeight + (img64 ? h + 2 : 0);
-
-          if (y + totalHeight > pageBottom) {
+          if (y + lines.length * lineHeight > pageBottom) {
             pdf.addPage();
             y = margin;
           }
 
-          // ================= TEXT =================
           pdf.text(lines, margin + 5, y);
 
           if (userVal !== undefined) {
-            pdf.setTextColor(
-              isCorrect ? 0 : 255,
-              isCorrect ? 128 : 0,
-              0
-            );
-
-            pdf.text(
-              isCorrect ? "✓" : "✗",
-              pageWidth - margin - 10,
-              y
-            );
-
+            pdf.setTextColor(isCorrect ? 0 : 255, isCorrect ? 128 : 0, 0);
+            pdf.text(isCorrect ? "✓" : "✗", pageWidth - margin - 10, y);
             pdf.setTextColor(0, 0, 0);
           }
 
-          let currentY = y + lines.length * lineHeight;
-
-          // ================= IMAGE BELOW OPTION =================
-          if (img64) {
-            const x = margin + 5;
-
-            //pdf.addImage(img64, "PNG", x, currentY - 5, w, h);
-            await addImageAuto(pdf, img64, x, currentY - 5, w, h);
-
-            currentY += h + 1; // 🔥 giảm khoảng cách
-          }
-
-          y = currentY;
-        }
+          y += lines.length * lineHeight;
+        });
 
         break;
       }
@@ -1010,15 +709,14 @@ export const exportQuizPDF = async (
             // 🟢 IMAGE: CENTER BOTH AXES
             const imgX = margin + (leftColWidth - imgW) / 2;
 
-            /*pdf.addImage(
+            pdf.addImage(
               img64,
               "PNG",
               imgX,
               leftBlockY,
               imgW,
               imgH
-            );*/
-            await addImageAuto(pdf, img64, imgX, leftBlockY, imgW, imgH);
+            );
           } else {
             // 🟢 TEXT: LEFT ALIGN + VERTICAL CENTER
             pdf.text(

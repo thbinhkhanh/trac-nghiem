@@ -17,6 +17,8 @@ const ResultDialog = ({
   dialogMessage,
   studentResult,
   choXemDiem,
+  configData,
+  convertPercentToScore,
 }) => {
   return (
     <Dialog
@@ -31,23 +33,14 @@ const ResultDialog = ({
       PaperProps={{
         sx: {
           borderRadius: 3,
-          p: 0,
+          p: 3,
           bgcolor: "#e3f2fd",
           boxShadow: "0 4px 12px rgba(33, 150, 243, 0.15)",
         },
       }}
     >
       {/* Header */}
-      <Box
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          p: 0.75,
-          bgcolor: "#90caf9",
-          borderRadius: "12px 12px 0 0",
-          mb: 2,
-        }}
-      >
+      <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
         <Box
           sx={{
             bgcolor: "#42a5f5",
@@ -63,36 +56,32 @@ const ResultDialog = ({
             fontSize: 18,
           }}
         >
-          🎉
+          📊
         </Box>
-
-        <DialogTitle
-          sx={{
-            p: 0,
-            fontWeight: "bold",
-            color: "#0d47a1",
-            fontSize: 20,
-          }}
-        >
-          Kết quả
+        <DialogTitle sx={{ p: 0, fontWeight: "bold", color: "#1565c0" }}>
+          KẾT QUẢ
         </DialogTitle>
-
         <IconButton
           onClick={onClose}
-          sx={{ ml: "auto", color: "#f44336" }}
+          sx={{
+            ml: "auto",
+            color: "#f44336",
+            "&:hover": { bgcolor: "rgba(244,67,54,0.1)" },
+          }}
         >
           <CloseIcon />
         </IconButton>
       </Box>
 
       {/* Nội dung */}
-      <DialogContent sx={{ textAlign: "center", px: 3, pb: 3 }}>
+      <DialogContent sx={{ textAlign: "center" }}>
         {dialogMode === "notFound" ? (
           <Typography
             sx={{
-              fontSize: 18,
+              fontSize: "1.15rem",
               fontWeight: 700,
               color: "red",
+              textAlign: "center",
             }}
           >
             {dialogMessage}
@@ -102,37 +91,34 @@ const ResultDialog = ({
             <Typography
               sx={{ fontSize: 18, fontWeight: "bold", color: "#0d47a1", mb: 1 }}
             >
-              {studentResult?.hoVaTen?.toUpperCase()}
+              {studentResult?.hoVaTen?.toUpperCase() || "HỌC SINH"}
             </Typography>
 
-            <Typography sx={{ fontSize: 17, color: "#1565c0", mb: 1 }}>
-              <strong>Lớp:</strong>{" "}
-              <span style={{ fontWeight: "bold" }}>
-                {studentResult?.lop}
-              </span>
+            <Typography sx={{ fontSize: 16, color: "#1565c0", mb: 1 }}>
+              Lớp: <span style={{ fontWeight: 600 }}>{studentResult?.lop}</span>
             </Typography>
 
-            {/* CHỈ DỰA VÀO choXemDiem */}
             {choXemDiem ? (
-              <Typography
-                sx={{
-                  fontSize: 17,
-                  fontWeight: 700,
-                  mt: 1,
-                }}
-              >
-                <span style={{ color: "#1565c0" }}>Điểm:</span>{" "}
-                <span style={{ color: "red" }}>
-                  {studentResult?.diem}
+              <Typography sx={{ fontSize: 16, color: "#0d47a1", mt: 2 }}>
+                Điểm:&nbsp;
+                <span style={{ fontWeight: 700, color: "red" }}>
+                  {configData?.kiemTraDinhKi === true
+                    ? studentResult?.diem
+                    : configData?.baiTapTuan === true
+                    ? convertPercentToScore(studentResult?.diemTN)
+                    : configData?.onTap === true
+                    ? studentResult?.diem // 👉 nhánh Ôn tập
+                    : ""}
                 </span>
               </Typography>
             ) : (
               <Typography
                 sx={{
-                  fontSize: 18,
+                  fontSize: 16,
+                  mt: 2,
+                  textAlign: "center",
                   fontWeight: 700,
                   color: "red",
-                  mt: 2,
                 }}
               >
                 ĐÃ HOÀN THÀNH BÀI KIỂM TRA

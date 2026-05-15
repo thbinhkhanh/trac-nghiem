@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useRef } from "react";
 import {
   Box,
   Paper,
@@ -36,28 +36,57 @@ const ImageOptions = ({ q, qi, update }) => {
     return data.secure_url;
   };
 
+  const fileInputRef = useRef(null);
+
+  const handleAddImageClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleAddImageFile = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const previewUrl = URL.createObjectURL(file);
+
+    const newOptions = [
+      ...(q.options || []),
+      {
+        preview: previewUrl,
+        file,
+        text: "",
+        image: "",
+        formats: {},
+      },
+    ];
+
+    update(qi, { options: newOptions });
+
+    // reset input để chọn lại được file giống nhau
+    e.target.value = "";
+  };
+
   /* =========================
      KHI CHỌN HÌNH
   ========================== */
-  const handleImageChange = async (index, file) => {
-    try {
-      const url = await uploadToCloudinary(file);
+  /* =========================
+   KHI CHỌN HÌNH (chỉ lưu preview + file, không upload ngay)
+========================== */
+  const handleImageChange = (index, file) => {
+    const previewUrl = URL.createObjectURL(file);
 
-      const newOptions = [...(q.options || [])];
+    const newOptions = [...(q.options || [])];
+    newOptions[index] = {
+      ...(newOptions[index] || {}),
+      preview: previewUrl,   // ✅ chỉ lưu preview
+      file,                  // ✅ giữ file để sau này upload
+      text: "",
+      image: "",
+      formats: newOptions[index]?.formats || {},
+    };
 
-      newOptions[index] = {
-        ...(newOptions[index] || {}),
-        text: url,          // ✅ URL nằm ở text
-        image: "",
-        formats: newOptions[index]?.formats || {},
-      };
-
-      update(qi, { options: newOptions });
-    } catch (err) {
-      console.error(err);
-      alert("Upload hình thất bại!");
-    }
+    update(qi, { options: newOptions });
   };
+
 
   /* =========================
      THÊM Ô HÌNH
@@ -109,10 +138,10 @@ const ImageOptions = ({ q, qi, update }) => {
       >
         {(q.options || []).map((option, oi) => {
           const imageUrl =
-            typeof option?.text === "string" &&
-            option.text.startsWith("http")
-              ? option.text
-              : "";
+            option?.preview || // preview khi vừa chọn file
+            option?.image ||   // nếu có trường image
+            (typeof option?.text === "string" ? option.text : "");
+
 
           const isChecked = q.correct?.includes(oi) || false;
 
@@ -129,26 +158,35 @@ const ImageOptions = ({ q, qi, update }) => {
                   position: "relative",
                 }}
               >
-                {imageUrl ? (
-                  <>
-                    <img
-                      src={imageUrl}
-                      alt={`option-${oi}`}
-                      style={{
-                        maxWidth: "60%",
-                        maxHeight: "60%",
-                        objectFit: "contain",
-                      }}
-                    />
+                {/* ICON X LUÔN HIỆN */}
+                <IconButton
+                  size="small"
+                  sx={{
+                    position: "absolute",
+                    top: 2,
+                    right: 2,
+                    zIndex: 2,
+                    bgcolor: "white",
+                    color: "red", // 👈 màu đỏ
+                    "&:hover": {
+                      bgcolor: "#eee",
+                    },
+                  }}
+                  onClick={() => removeOption(oi)}
+                >
+                  ✕
+                </IconButton>
 
-                    <IconButton
-                      size="small"
-                      sx={{ position: "absolute", top: 2, right: 2 }}
-                      onClick={() => removeOption(oi)}
-                    >
-                      ✕
-                    </IconButton>
-                  </>
+                {imageUrl ? (
+                  <img
+                    src={imageUrl}
+                    alt={`option-${oi}`}
+                    style={{
+                      maxWidth: "60%",
+                      maxHeight: "60%",
+                      objectFit: "contain",
+                    }}
+                  />
                 ) : (
                   <label
                     style={{
@@ -203,17 +241,26 @@ const ImageOptions = ({ q, qi, update }) => {
 
         {/* Nút thêm hình */}
         <Button
-          variant="outlined"
-          onClick={addOption}
-          sx={{
-            height: 120,
-            width: 120,
-            borderRadius: 2,
-            borderStyle: "dashed",
-          }}
-        >
-          + Thêm hình
-        </Button>
+            variant="outlined"
+            onClick={handleAddImageClick}
+            sx={{
+              height: 120,
+              width: 120,
+              borderRadius: 2,
+              borderStyle: "dashed",
+            }}
+          >
+            + Thêm hình
+          </Button>
+
+          <input
+            type="file"
+            accept="image/*"
+            hidden
+            ref={fileInputRef}
+            onChange={handleAddImageFile}
+          />
+
       </Stack>
     </Stack>
   );

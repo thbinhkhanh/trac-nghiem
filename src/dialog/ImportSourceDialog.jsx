@@ -90,7 +90,7 @@ const ImportSourceDialog = ({
               </Typography>
             </Box>
           </Paper>
-
+          
           {/* JSON */}
           <Paper
             elevation={2}
@@ -124,7 +124,7 @@ const ImportSourceDialog = ({
           </Paper>
 
           {/* FIRESTORE */}
-          {/*<Paper
+          <Paper
             elevation={2}
             onClick={() => {
               onClose();
@@ -153,7 +153,7 @@ const ImportSourceDialog = ({
                 Lấy từ Firestore
               </Typography>
             </Box>
-          </Paper>*/}
+          </Paper>
         </Stack>
       </DialogContent>
     </Dialog>

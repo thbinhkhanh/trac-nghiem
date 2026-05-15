@@ -1,24 +1,60 @@
-function shuffleArray(array) {
-  const arr = [...array];
-  for (let i = arr.length - 1; i > 0; i--) {
+// src/utils/buildRuntimeQuestions.js
+
+//import { shuffleArray, shuffleUntilDifferent } from "./shuffleUtils";
+// ↑ nếu 2 hàm này đang nằm ở file khác
+// nếu đang cùng file thì import đúng path tương ứng
+
+export function shuffleArray(arr = []) {
+  const copy = [...arr];
+  for (let i = copy.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
+    [copy[i], copy[j]] = [copy[j], copy[i]];
   }
-  return arr;
+  return copy;
 }
 
+/*export function shuffleUntilDifferent(arr = []) {
+  if (arr.length <= 1) return arr;
+
+  let shuffled;
+  do {
+    shuffled = shuffleArray(arr);
+  } while (shuffled.every((v, i) => v.idx === arr[i].idx));
+
+  return shuffled;
+}*/
+export function shuffleUntilDifferent(arr = []) {
+  if (arr.length <= 1) return arr;
+
+  let shuffled;
+  let attempts = 0;
+
+  do {
+    shuffled = shuffleArray(arr);
+    attempts++;
+  } while (
+    (
+      shuffled.every((v, i) => v.idx === arr[i].idx) || // giống y chang ban đầu
+      shuffled.every((v, i) => v.idx === i)             // ⚠️ trùng luôn correct order
+    ) &&
+    attempts < 100
+  );
+
+  return shuffled;
+}
+
+
 export function buildRuntimeQuestions(rawQuestions = []) {
-  const saved = shuffleArray([...rawQuestions]);
+  // 🔥 1. SHUFFLE THỨ TỰ CÂU HỎI
+  let saved = shuffleArray([...rawQuestions]);
 
   const loadedQuestions = saved
     .map((q, index) => {
       const questionId = q.id ?? `q_${index}`;
-
       const questionText =
         typeof q.question === "string" ? q.question.trim() : "";
 
       const rawType = (q.type || "").toString().trim().toLowerCase();
-
       const type = [
         "sort",
         "matching",
@@ -91,13 +127,25 @@ export function buildRuntimeQuestions(rawQuestions = []) {
       // ================= SORT =================
       if (type === "sort") {
         const options =
-          Array.isArray(q.options) && q.options.length
+          Array.isArray(q.options) && q.options.length > 0
             ? [...q.options]
             : ["", "", "", ""];
 
-        const indexed = options.map((opt, idx) => ({ opt, idx }));
+        const correctOrder = options.map((opt, idx) => ({
+          opt,
+          idx
+        }));
 
-        const processed = shuffleArray(indexed);
+        let shuffled;
+        let attempts = 0;
+
+        do {
+          shuffled = shuffleArray([...correctOrder]);
+          attempts++;
+        } while (
+          attempts < 100 &&
+          shuffled.every((v, i) => v.idx === correctOrder[i].idx)
+        );
 
         return {
           ...q,
@@ -106,8 +154,10 @@ export function buildRuntimeQuestions(rawQuestions = []) {
           question: questionText,
           image: q.image ?? null,
 
-          options: processed.map(i => i.opt),
-          initialSortOrder: processed.map(i => i.idx),
+          options: shuffled.map(i => i.opt),
+
+          initialSortOrder: correctOrder.map(i => i.idx),
+
           correctTexts: options,
 
           score: q.score ?? 1,
@@ -116,9 +166,8 @@ export function buildRuntimeQuestions(rawQuestions = []) {
 
       // ================= SINGLE / MULTIPLE =================
       if (type === "single" || type === "multiple") {
-        // ===== CHUẨN HOÁ OPTIONS =====
         const options =
-          Array.isArray(q.options) && q.options.length
+          Array.isArray(q.options) && q.options.length > 0
             ? q.options.map(opt => {
                 if (typeof opt === "string") {
                   if (/^https?:\/\/.*\.(png|jpg|jpeg|gif)$/i.test(opt)) {
@@ -126,25 +175,17 @@ export function buildRuntimeQuestions(rawQuestions = []) {
                   }
                   return { text: opt, image: null };
                 }
-                return {
-                  text: opt?.text ?? "",
-                  image: opt?.image ?? null,
-                };
+                if (typeof opt === "object") {
+                  return {
+                    text: opt.text ?? "",
+                    image: opt.image ?? null,
+                  };
+                }
+                return { text: "", image: null };
               })
-            : [
-                { text: "", image: null },
-                { text: "", image: null },
-                { text: "", image: null },
-                { text: "", image: null },
-              ];
+            : Array(4).fill({ text: "", image: null });
 
-        // ===== GẮN INDEX GỐC =====
-        const indexed = options.map((opt, idx) => ({
-          opt,
-          idx, // index gốc
-        }));
-
-        // ===== SHUFFLE =====
+        const indexed = options.map((opt, idx) => ({ opt, idx }));
         const shouldShuffle =
           q.sortType === "shuffle" || q.shuffleOptions === true;
 
@@ -152,39 +193,19 @@ export function buildRuntimeQuestions(rawQuestions = []) {
           ? shuffleArray(indexed)
           : indexed;
 
-        // ===== OPTIONS SAU SHUFFLE =====
-        const shuffledOptions = processed.map(i => i.opt);
-
-        // ===== CHUẨN HOÁ CORRECT GỐC =====
-        const correctRaw = Array.isArray(q.correct)
-          ? q.correct.map(Number)
-          : typeof q.correct === "number"
-          ? [Number(q.correct)]
-          : [];
-
-        // ===== 🔥 REMAP CORRECT SAU SHUFFLE =====
-        const newCorrect = processed
-          .map((item, newIdx) =>
-            correctRaw.includes(item.idx) ? newIdx : null
-          )
-          .filter(v => v !== null);
-
         return {
           ...q,
           id: questionId,
           type,
           question: questionText,
           image: q.image ?? null,
-
-          // 👉 options đã shuffle đúng
-          options: shuffledOptions,
-
-          // 👉 lưu lại mapping nếu cần debug
+          options,
           displayOrder: processed.map(i => i.idx),
-
-          // 👉 correct đã FIX
-          correct: newCorrect,
-
+          correct: Array.isArray(q.correct)
+            ? q.correct.map(Number)
+            : typeof q.correct === "number"
+            ? [q.correct]
+            : [],
           score: q.score ?? 1,
         };
       }
@@ -192,26 +213,9 @@ export function buildRuntimeQuestions(rawQuestions = []) {
       // ================= IMAGE =================
       if (type === "image") {
         const options =
-          Array.isArray(q.options) && q.options.length
+          Array.isArray(q.options) && q.options.length > 0
             ? q.options
             : ["", "", "", ""];
-
-        // Gắn index gốc
-        const indexed = options.map((opt, idx) => ({ opt, idx }));
-
-        // Shuffle
-        const processed = shuffleArray(indexed);
-
-        // Remap correct
-        const correctRaw = Array.isArray(q.correct)
-          ? q.correct.map(Number)
-          : [];
-
-        const newCorrect = processed
-          .map((item, newIdx) =>
-            correctRaw.includes(item.idx) ? newIdx : null
-          )
-          .filter(v => v !== null);
 
         return {
           ...q,
@@ -219,18 +223,14 @@ export function buildRuntimeQuestions(rawQuestions = []) {
           type,
           question: questionText,
           image: q.image ?? null,
-
-          // ⭐ OPTIONS ĐÃ SHUFFLE
-          options: processed.map(i => i.opt),
-
-          // ⭐ CORRECT ĐÃ REMAP
-          correct: newCorrect,
-
+          options,
+          displayOrder: shuffleArray(options.map((_, idx) => idx)),
+          correct: Array.isArray(q.correct) ? q.correct : [],
           score: q.score ?? 1,
         };
       }
 
-      // ================= TRUE/FALSE =================
+      // ================= TRUE / FALSE =================
       if (type === "truefalse") {
         const options =
           Array.isArray(q.options) && q.options.length >= 2
@@ -268,17 +268,29 @@ export function buildRuntimeQuestions(rawQuestions = []) {
           type,
           question: questionText,
           image: q.image ?? null,
-
+          option: q.option,
           options,
           shuffledOptions: shuffleArray([...options]),
-
           score: q.score ?? 1,
         };
       }
 
       return null;
     })
-    .filter(Boolean); // 🔥 quan trọng: loại null
+    .filter(Boolean);
 
-  return loadedQuestions;
+  // ================= VALIDATE =================
+  return loadedQuestions.filter(q => {
+    if (q.type === "matching")
+      return q.question.trim() && q.leftOptions.length && q.rightOptions.length;
+    if (q.type === "sort")
+      return q.question.trim() && q.options.length;
+    if (["single", "multiple", "image"].includes(q.type))
+      return q.question.trim() && q.options.length;
+    if (q.type === "truefalse")
+      return q.question.trim() && q.options.length >= 2;
+    if (q.type === "fillblank")
+      return q.question.trim() && q.options.length;
+    return false;
+  });
 }
