@@ -19,8 +19,6 @@ const ImageOptions = ({ q, qi, update }) => {
      UPLOAD CLOUDINARY
   ========================== */
   const uploadToCloudinary = async (file) => {
-    const [openDialog, setOpenDialog] = useState(false);
-
     const formData = new FormData();
     formData.append("file", file);
     formData.append("upload_preset", "tracnghiem_upload");
