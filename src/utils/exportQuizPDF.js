@@ -20,7 +20,6 @@ async function getBase64FromUrl(url) {
 
 const getImageType = (base64) => {
   const match = base64.match(/^data:image\/(\w+);base64,/i);
-
   if (!match) return "JPEG";
 
   const type = match[1].toLowerCase();
@@ -28,14 +27,11 @@ const getImageType = (base64) => {
   switch (type) {
     case "png":
       return "PNG";
-
     case "jpg":
     case "jpeg":
       return "JPEG";
-
     case "webp":
       return "WEBP";
-
     default:
       return "JPEG";
   }
@@ -45,43 +41,48 @@ const getImageType = (base64) => {
 const convertToPng = (base64) => {
   return new Promise((resolve) => {
     const img = new Image();
-
     img.onload = () => {
       const canvas = document.createElement("canvas");
-
       canvas.width = img.width;
       canvas.height = img.height;
 
       const ctx = canvas.getContext("2d");
-
       ctx.drawImage(img, 0, 0);
 
       resolve(canvas.toDataURL("image/png"));
     };
-
     img.src = base64;
   });
 };
 
-const addImageAuto = async (
-  pdf,
-  base64,
-  x,
-  y,
-  w,
-  h
-) => {
-  let img = base64;
+// add image an toàn (fix lỗi + webp + ảnh hỏng)
+const addImageAuto = async (pdf, base64, x, y, w, h) => {
+  try {
+    if (!base64 || !base64.startsWith("data:image/")) return;
 
-  let type = getImageType(img);
+    let img = base64;
+    let type = getImageType(img);
 
-  // jsPDF hay lỗi với WEBP
-  if (type === "WEBP") {
-    img = await convertToPng(img);
-    type = "PNG";
+    // WEBP → PNG
+    if (type === "WEBP") {
+      img = await convertToPng(img);
+      type = "PNG";
+    }
+
+    // check ảnh lỗi
+    await new Promise((resolve, reject) => {
+      const test = new Image();
+      test.onload = resolve;
+      test.onerror = reject;
+      test.src = img;
+    });
+
+    // ✅ CHỖ ĐÚNG PHẢI LÀ addImage
+    pdf.addImage(img, type, x, y, w, h);
+
+  } catch {
+    return;
   }
-
-  pdf.addImage(img, type, x, y, w, h);
 };
 
 const getImageSize = (base64) => {
@@ -169,7 +170,7 @@ export const exportQuizPDF = async (
   pdf.rect(margin, y, pageWidth - 2 * margin, 28);
 
   pdf.setTextColor(0, 0, 255);
-  pdf.text(`Trường: TH Lâm Văn Bền`, margin + 5, y + 8);
+  pdf.text(`Trường: TH Bình Khánh`, margin + 5, y + 8);
   pdf.text(`Họ tên: ${capitalizeName(studentInfo.name)}`, margin + 5, y + 15);
   pdf.text(`Lớp: ${className}`, margin + 5, y + 22);
 
@@ -256,7 +257,6 @@ export const exportQuizPDF = async (
         const xCenter = (pageWidth - newWidth) / 2;
 
         // 📌 vẽ ảnh
-        //pdf.addImage(img64, "PNG", xCenter, y, newWidth, newHeight);
         await addImageAuto(pdf, img64, xCenter, y, newWidth, newHeight);
 
         // 📌 đẩy con trỏ xuống đúng chuẩn
@@ -358,7 +358,6 @@ export const exportQuizPDF = async (
             // 👇 canh cùng lề với text option (giống pdf.text margin + 5)
             const x = margin + 5;
 
-            //pdf.addImage(img64, "PNG", x, currentY - 5, w, h);
             await addImageAuto(pdf, img64, x, currentY - 5, w, h);
 
             currentY += h + 3;
@@ -456,7 +455,6 @@ export const exportQuizPDF = async (
           if (img64) {
             const x = margin + 5; // canh cùng text
 
-            //pdf.addImage(img64, "PNG", x, currentY - 5, w, h);
             await addImageAuto(pdf, img64, x, currentY - 5, w, h);
 
             // 🔥 GIẢM khoảng cách giữa option và ảnh
@@ -545,7 +543,6 @@ export const exportQuizPDF = async (
           if (img64) {
             const x = margin + 5;
 
-            //pdf.addImage(img64, "PNG", x, currentY - 5, w, h);
             await addImageAuto(pdf, img64, x, currentY - 5, w, h);
 
             currentY += h + 1; // giảm khoảng cách
@@ -627,7 +624,6 @@ export const exportQuizPDF = async (
             const isCorrect = correctIndexes.includes(index);
 
             if (img) {
-              //pdf.addImage(img.img64, "PNG", x, y + 5, img.newWidth, img.newHeight);
               await addImageAuto(pdf, img.img64, x, y + 5, img.newWidth, img.newHeight);
 
               // checkbox
@@ -749,7 +745,6 @@ export const exportQuizPDF = async (
           if (img64) {
             const x = margin + 5;
 
-            //pdf.addImage(img64, "PNG", x, currentY - 5, w, h);
             await addImageAuto(pdf, img64, x, currentY - 5, w, h);
 
             currentY += h + 1; // 🔥 giảm khoảng cách
@@ -957,8 +952,8 @@ export const exportQuizPDF = async (
               const size = await getImageSize(img64);
 
               // ⭐ SCALE LỚN HƠN (0.4 -> 0.55)
-              let w = size.width * 0.8 * 0.264583;
-              let h = size.height * 0.8 * 0.264583;
+              let w = size.width * 0.55 * 0.264583;
+              let h = size.height * 0.55 * 0.264583;
 
               const maxW = leftColWidth - cellPadding * 2;
 
@@ -1010,14 +1005,6 @@ export const exportQuizPDF = async (
             // 🟢 IMAGE: CENTER BOTH AXES
             const imgX = margin + (leftColWidth - imgW) / 2;
 
-            /*pdf.addImage(
-              img64,
-              "PNG",
-              imgX,
-              leftBlockY,
-              imgW,
-              imgH
-            );*/
             await addImageAuto(pdf, img64, imgX, leftBlockY, imgW, imgH);
           } else {
             // 🟢 TEXT: LEFT ALIGN + VERTICAL CENTER
