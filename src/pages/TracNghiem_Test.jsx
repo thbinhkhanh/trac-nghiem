@@ -754,48 +754,6 @@ return (
 
           {/* Ô chọn đề */}
           <Stack direction="row" spacing={2} alignItems="center">
-            {/* ================= LOẠI ĐỀ ================= */}
-            <FormControl size="small" sx={{ width: 159 }}>
-              <InputLabel sx={{ fontSize: 16, fontWeight: "bold" }}>
-                Loại đề
-              </InputLabel>
-              <Select
-                value={examType}
-                label="Loại đề"
-                sx={{ fontSize: 16, fontWeight: 500 }}
-                onChange={(e) => {
-                  const type = e.target.value;
-                  setExamType(type);
-                  fetchQuizList(type);
-
-                  if (type === "bt") {
-                    setSelectedClass("4");
-                  } else {
-                    setSelectedClass("");
-                  }
-                }}
-              >
-                <MenuItem value="bt">Bài tập tuần</MenuItem>
-                <MenuItem value="kt">KTĐK</MenuItem>
-              </Select>
-            </FormControl>
-
-            {/* ================= CHỌN LỚP ================= */}
-            {examType === "bt" && (
-              <FormControl size="small" sx={{ width: 120 }}>
-                <InputLabel>Lớp</InputLabel>
-                <Select
-                  value={selectedClass}
-                  label="Lớp"
-                  onChange={(e) => setSelectedClass(e.target.value)}
-                >
-                  <MenuItem value="3">Lớp 3</MenuItem>
-                  <MenuItem value="4">Lớp 4</MenuItem>
-                  <MenuItem value="5">Lớp 5</MenuItem>
-                </Select>
-              </FormControl>
-            )}
-
             {/* ================= CHỌN ĐỀ ================= */}
             <FormControl size="small" sx={{ width: 220 }}>
               <InputLabel>Chọn đề</InputLabel>
