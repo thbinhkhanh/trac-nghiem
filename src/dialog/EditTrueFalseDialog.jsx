@@ -1,24 +1,30 @@
-// src/dialog/DeleteConfirmDialog.jsx
 import React from "react";
 import {
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
+  TextField,
   Button,
-  Typography,
-  Box,
   Stack,
+  Typography,
 } from "@mui/material";
-import WarningAmberRoundedIcon from "@mui/icons-material/WarningAmberRounded";
 
-const DeleteConfirmDialog = ({ open, onClose, onConfirm }) => {
+export default function EditTrueFalseDialog({
+  open,
+  onClose,
+  editTrue,
+  setEditTrue,
+  editFalse,
+  setEditFalse,
+  onSave,
+}) {
   return (
     <Dialog
       open={open}
       onClose={onClose}
-      maxWidth="xs"
       fullWidth
+      maxWidth="xs"
       PaperProps={{
         sx: {
           borderRadius: 3,
@@ -27,77 +33,70 @@ const DeleteConfirmDialog = ({ open, onClose, onConfirm }) => {
       }}
     >
       {/* HEADER */}
-      <DialogTitle>
-        <Stack direction="row" spacing={1.5} alignItems="center">
-          <Box
-            sx={{
-              width: 36,
-              height: 36,
-              borderRadius: "50%",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              bgcolor: "rgba(255, 152, 0, 0.12)",
-            }}
-          >
-            <WarningAmberRoundedIcon sx={{ color: "#ff9800" }} />
-          </Box>
-
-          <Typography fontWeight={600}>
-            Xác nhận xoá
-          </Typography>
-        </Stack>
+      <DialogTitle
+        sx={{
+          fontWeight: 600,
+          fontSize: 18,
+          pb: 1,
+        }}
+      >
+        Chỉnh sửa nhãn đáp án
       </DialogTitle>
 
       {/* CONTENT */}
       <DialogContent>
-        <Typography
-          variant="body2"
-          sx={{
-            color: "text.secondary",
-            lineHeight: 1.6,
-            mt: 1,
-          }}
-        >
-          Bạn có chắc chắn muốn xoá đề thi này?
-          <br />
-          Hành động này không thể hoàn tác.
-        </Typography>
+        <Stack spacing={2.5} sx={{ mt: 1 }}>
+          <TextField
+            label="Nhãn Đúng"
+            placeholder="Ví dụ: Đúng / True / ✔"
+            value={editTrue}
+            onChange={(e) => setEditTrue(e.target.value)}
+            fullWidth
+            size="small"
+            InputLabelProps={{
+              shrink: true, // 👈 fix lỗi bị khuất label
+            }}
+          />
+
+          <TextField
+            label="Nhãn Sai"
+            placeholder="Ví dụ: Sai / False / ✘"
+            value={editFalse}
+            onChange={(e) => setEditFalse(e.target.value)}
+            fullWidth
+            size="small"
+            InputLabelProps={{
+              shrink: true, // 👈 fix lỗi bị khuất label
+            }}
+          />
+
+          <Typography
+            variant="caption"
+            sx={{ color: "text.secondary", mt: 1 }}
+          >
+            Gợi ý: bạn có thể dùng chữ, emoji hoặc ký hiệu.
+          </Typography>
+        </Stack>
       </DialogContent>
 
       {/* ACTIONS */}
       <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Stack direction="row" spacing={1} width="100%">
-          <Button
-            onClick={onClose}
-            variant="outlined"
-            fullWidth
-            sx={{
-              borderRadius: 2,
-              textTransform: "none",
-              fontWeight: 600,
-            }}
-          >
-            Huỷ
-          </Button>
+        <Button onClick={onClose} variant="text">
+          Huỷ
+        </Button>
 
-          <Button
-            onClick={onConfirm}
-            variant="contained"
-            color="error"
-            fullWidth
-            sx={{
-              borderRadius: 2,
-              textTransform: "none",
-              fontWeight: 600,
-            }}
-          >
-            Xoá
-          </Button>
-        </Stack>
+        <Button
+          variant="contained"
+          onClick={onSave}
+          sx={{
+            borderRadius: 2,
+            textTransform: "none",
+            px: 3,
+          }}
+        >
+          Cập nhật
+        </Button>
       </DialogActions>
     </Dialog>
   );
-};
-
-export default DeleteConfirmDialog;
+}
