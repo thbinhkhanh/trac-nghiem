@@ -15,8 +15,6 @@ import {
   InputLabel,
   Card,
   Tooltip,
-  //Radio, 
-  //Checkbox,
   Grid,
   Dialog,
   DialogTitle,
@@ -49,11 +47,10 @@ import { exportQuestionsToWord } from "../utils/exportQuizWORD";
 import QuestionCard from "../Types/questions/QuestionCard";
 import { saveAllQuestions } from "../utils/saveAllQuestions";
 
-//import { exportQuestionsToJSON } from "../utils/exportJson_importJson.js";
-//import { importQuestionsFromJSON } from "../utils/exportJson_importJson.js";
 import { handleImportQuiz } from "../utils/importQuizJson";
 import { handleExportQuiz, handleConfirmExportQuiz } from "../utils/exportQuizJson";
 import ImportModeDialog from "../dialog/ImportModeDialog";
+import DeleteQuestionDialog from "../dialog/DeleteQuestionDialog";
 
 import DownloadIcon from "@mui/icons-material/Download";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
@@ -76,29 +73,32 @@ export default function TracNghiemGV() {
   // ⚙️ CẤU HÌNH ĐỀ THI – ĐÚNG CHUẨN FIRESTORE
   const savedConfig = JSON.parse(localStorage.getItem("teacherConfig") || "{}");
 
-const [selectedClass, setSelectedClass] = useState(savedConfig.selectedClass || "");
-const [schoolYear, setSchoolYear] = useState(savedConfig.schoolYear || "2025-2026");
-const [examLetter, setExamLetter] = useState(savedConfig.examLetter || "");
-const [dialogExamType, setDialogExamType] = useState("");
-const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
-const [filterYear, setFilterYear] = useState("Tất cả");
-const [semester, setSemester] = useState("Giữa kỳ I");
+  const [selectedClass, setSelectedClass] = useState(savedConfig.selectedClass || "");
+  const [schoolYear, setSchoolYear] = useState(savedConfig.schoolYear || "2025-2026");
+  const [examLetter, setExamLetter] = useState(savedConfig.examLetter || "");
+  const [dialogExamType, setDialogExamType] = useState("");
 
-// ⚙️ Dropdown cố định
-const semesters = ["Giữa kỳ I", "Cuối kỳ I", "Giữa kỳ II", "Cả năm"];
-const classes = ["Lớp 1", "Lớp 2", "Lớp 3", "Lớp 4", "Lớp 5"];
-const years = ["2025-2026", "2026-2027", "2027-2028", "2028-2029", "2029-2030"];
+  const [filterYear, setFilterYear] = useState("Tất cả");
+  const [semester, setSemester] = useState("Giữa kỳ I");
 
-const fileInputRef = React.useRef(null);
-const [fileName, setFileName] = useState("de_trac_nghiem");
-const [openExportDialog, setOpenExportDialog] = useState(false); // dialog export
+  // ⚙️ Dropdown cố định
+  const semesters = ["Giữa kỳ I", "Cuối kỳ I", "Giữa kỳ II", "Cả năm"];
+  const classes = ["Lớp 1", "Lớp 2", "Lớp 3", "Lớp 4", "Lớp 5"];
+  const years = ["2025-2026", "2026-2027", "2027-2028", "2028-2029", "2029-2030"];
 
-const [openExportSourceDialog, setOpenExportSourceDialog] = useState(false);
-const [openImportSourceDialog, setOpenImportSourceDialog] = useState(false);
-const [importData, setImportData] = useState([]);
-const [openImportModeDialog, setOpenImportModeDialog] = useState(false);
-const fileInputRefWord = React.useRef(null);
-const [lessonInput, setLessonInput] = useState("");
+  const fileInputRef = React.useRef(null);
+  const [fileName, setFileName] = useState("de_trac_nghiem");
+  const [openExportDialog, setOpenExportDialog] = useState(false); // dialog export
+
+  const [openExportSourceDialog, setOpenExportSourceDialog] = useState(false);
+  const [openImportSourceDialog, setOpenImportSourceDialog] = useState(false);
+  const [importData, setImportData] = useState([]);
+  const [openImportModeDialog, setOpenImportModeDialog] = useState(false);
+  const fileInputRefWord = React.useRef(null);
+  const [lessonInput, setLessonInput] = useState("");
+
+  const [deleteIndex, setDeleteIndex] = useState(null);
+  const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
 
   // ⚙️ Danh sách câu hỏi
   const [questions, setQuestions] = useState([]);
@@ -325,9 +325,22 @@ useEffect(() => {
   const handleAddQuestion = () => setQuestions((prev) => [...prev, createEmptyQuestion()]);
 
   const handleDeleteQuestion = (index) => {
-    if (window.confirm(`Bạn có chắc muốn xóa câu hỏi ${index + 1}?`)) {
-      setQuestions((prev) => prev.filter((_, i) => i !== index));
-    }
+    setDeleteIndex(index);
+    setOpenDeleteDialog(true);
+  };
+
+  const handleConfirmDelete = () => {
+    setQuestions((prev) =>
+      prev.filter((_, i) => i !== deleteIndex)
+    );
+
+    setOpenDeleteDialog(false);
+    setDeleteIndex(null);
+  };
+
+  const handleCloseDeleteDialog = () => {
+    setOpenDeleteDialog(false);
+    setDeleteIndex(null);
   };
 
   const updateQuestionAt = (index, patch) => {
@@ -1494,6 +1507,13 @@ const buildExportFileName = () => {
           open={openDeleteDialog}
           onClose={() => setOpenDeleteDialog(false)}
           onConfirm={confirmDeleteSelectedDoc}
+        />
+
+        <DeleteQuestionDialog
+          open={openDeleteDialog}
+          onClose={handleCloseDeleteDialog}
+          onConfirm={handleConfirmDelete}
+          index={deleteIndex ?? 0}
         />
 
       </Card>
