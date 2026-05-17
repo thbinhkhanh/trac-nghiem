@@ -1,3 +1,4 @@
+// src/dialog/DeleteConfirmDialog.jsx
 import React from "react";
 import {
   Dialog,
@@ -26,68 +27,47 @@ const DeleteConfirmDialog = ({ open, onClose, onConfirm }) => {
       }}
     >
       {/* HEADER */}
-      <DialogTitle sx={{ pb: 1 }}>
+      <DialogTitle>
         <Stack direction="row" spacing={1.5} alignItems="center">
           <Box
             sx={{
-              width: 38,
-              height: 38,
+              width: 36,
+              height: 36,
               borderRadius: "50%",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              bgcolor: "rgba(244, 67, 54, 0.12)",
+              bgcolor: "rgba(255, 152, 0, 0.12)",
             }}
           >
-            <WarningAmberRoundedIcon
-              sx={{
-                color: "#f44336",
-                fontSize: 22,
-              }}
-            />
+            <WarningAmberRoundedIcon sx={{ color: "#ff9800" }} />
           </Box>
 
-          <Typography
-            sx={{
-              fontWeight: 700,
-              fontSize: 18,
-              color: "#d32f2f",
-            }}
-          >
-            Xác nhận xóa
+          <Typography fontWeight={600}>
+            Xác nhận xoá
           </Typography>
         </Stack>
       </DialogTitle>
 
       {/* CONTENT */}
-      <DialogContent sx={{ pt: 1 }}>
+      <DialogContent>
         <Typography
           variant="body2"
           sx={{
             color: "text.secondary",
-            lineHeight: 1.7,
-            fontSize: 14,
+            lineHeight: 1.6,
+            mt: 1,
           }}
         >
-          Bạn có chắc chắn muốn xóa đề thi này?
+          Bạn có chắc chắn muốn xoá đề thi này?
           <br />
-          Hành động này{" "}
-          <Box
-            component="span"
-            sx={{
-              fontWeight: 700,
-              color: "#d32f2f",
-            }}
-          >
-            không thể hoàn tác
-          </Box>
-          .
+          Hành động này không thể hoàn tác.
         </Typography>
       </DialogContent>
 
       {/* ACTIONS */}
       <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Stack direction="row" spacing={1.5} width="100%">
+        <Stack direction="row" spacing={1} width="100%">
           <Button
             onClick={onClose}
             variant="outlined"
@@ -96,10 +76,9 @@ const DeleteConfirmDialog = ({ open, onClose, onConfirm }) => {
               borderRadius: 2,
               textTransform: "none",
               fontWeight: 600,
-              py: 1,
             }}
           >
-            Hủy
+            Huỷ
           </Button>
 
           <Button
@@ -111,11 +90,9 @@ const DeleteConfirmDialog = ({ open, onClose, onConfirm }) => {
               borderRadius: 2,
               textTransform: "none",
               fontWeight: 600,
-              py: 1,
-              boxShadow: "none",
             }}
           >
-            Xóa
+            Xoá
           </Button>
         </Stack>
       </DialogActions>

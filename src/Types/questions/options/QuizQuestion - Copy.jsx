@@ -210,251 +210,252 @@ export default function QuizQuestion({
   /* ===================== MATCHING ===================== */
 
   const renderMatching = () => (
-  <Box sx={{ width: "100%" }}>
-    {/* ================= HÌNH MINH HỌA ================= */}
-    {currentQuestion.questionImage && (
-      <Box sx={{ display: "flex", justifyContent: "center", mb: 2 }}>
+    <Box sx={{ width: "100%" }}>
+      {/* ================= HÌNH MINH HỌA DƯỚI CÂU HỎI ================= */}
+      {currentQuestion.questionImage && (
         <Box
           sx={{
-            display: "inline-flex",
-            alignItems: "center",
+            display: "flex",
             justifyContent: "center",
-            maxHeight: 150,
-            overflow: "hidden",
+            mb: 2,
           }}
         >
-          <img
-            src={currentQuestion.questionImage}
-            alt="Hình minh họa"
-            style={{
-              maxHeight: 150,
-              maxWidth: "100%",
-              height: "auto",
-              objectFit: "contain",
-              borderRadius: 8,
-              display: "block",
-              cursor: "zoom-in",
+          <Box
+            sx={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              maxHeight: 150, // 🔥 đổi 100 nếu bạn muốn
+              overflow: "hidden",
             }}
-            onClick={() => setZoomImage(currentQuestion.questionImage)}
-          />
+          >
+            <img
+              src={currentQuestion.questionImage}
+              alt="Hình minh họa"
+              style={{
+                maxHeight: 150,
+                maxWidth: "100%",
+                height: "auto",
+                objectFit: "contain",
+                borderRadius: 8,
+                display: "block",
+                cursor: "zoom-in",
+              }}
+              onClick={() => setZoomImage(currentQuestion.questionImage)}
+            />
+
+          </Box>
         </Box>
-      </Box>
-    )}
+      )}
 
-    {/* ================= MATCHING ================= */}
-    <DragDropContext
-      onDragEnd={(result) => {
-        if (!result.destination || submitted || !started) return;
+      {/* ================= MATCHING ================= */}
+      <DragDropContext
+        onDragEnd={(result) => {
+          if (!result.destination || submitted || !started) return;
 
-        const currentOrder =
-          answers[currentQuestion.id] ??
-          currentQuestion.pairs.map((_, idx) => idx);
-
-        const newOrder = reorder(
-          currentOrder,
-          result.source.index,
-          result.destination.index
-        );
-
-        setAnswers((prev) => ({
-          ...prev,
-          [currentQuestion.id]: newOrder,
-        }));
-      }}
-    >
-      <Stack spacing={1.5} sx={{ width: "100%", px: 1 }}>
-        {currentQuestion.pairs.map((pair, i) => {
-          const optionText = pair.left || "";
-          const optionImage =
-            pair.leftImage?.url || pair.leftIconImage?.url || null;
-
-          // ✅ FIX 1: luôn lấy order đúng
-          const userOrder =
+          const currentOrder =
             answers[currentQuestion.id] ??
-            currentQuestion.rightOptions.map((_, idx) => idx);
+            currentQuestion.pairs.map((_, idx) => idx);
 
-          const rightIdx = userOrder[i];
+          const newOrder = reorder(
+            currentOrder,
+            result.source.index,
+            result.destination.index
+          );
 
-          // ✅ FIX 2: map an toàn (tránh undefined khi reorder)
-          const rightVal =
-            currentQuestion.rightOptions?.[rightIdx] ??
-            currentQuestion.rightOptions?.[i];
+          setAnswers((prev) => ({
+            ...prev,
+            [currentQuestion.id]: newOrder,
+          }));
+        }}
+      >
+        <Stack spacing={1.5} sx={{ width: "100%", px: 1 }}>
+          {currentQuestion.pairs.map((pair, i) => {
+            const optionText = pair.left || "";
+            const optionImage =
+              pair.leftImage?.url || pair.leftIconImage?.url || null;
 
-          const rightText = typeof rightVal === "string" ? rightVal : "";
-          const rightImage =
-            typeof rightVal === "object" ? rightVal?.url : null;
+            const userOrder =
+              answers[currentQuestion.id] ??
+              currentQuestion.rightOptions.map((_, idx) => idx);
 
-          const isCorrect =
-            submitted && userOrder[i] === currentQuestion.correct[i];
+            const rightIdx = userOrder[i];
+            const rightVal = currentQuestion.rightOptions[rightIdx];
+            const rightText = typeof rightVal === "string" ? rightVal : "";
+            const rightImage =
+              typeof rightVal === "object" ? rightVal?.url : null;
 
-          return (
-            <Stack
-              key={i}
-              direction="row"
-              spacing={2}
-              alignItems="stretch"
-              sx={{ minHeight: 50 }}
-            >
-              {/* ================= LEFT ================= */}
-              <Paper
-                sx={{
-                  flexGrow: ratio.left,
-                  flexBasis: 0,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 1.5,
-                  px: 1,
-                  py: 0.5,
-                  border: "1px solid #64b5f6",
-                  borderRadius: 1,
-                  boxShadow: "none",
-                }}
+            const isCorrect =
+              submitted && userOrder[i] === currentQuestion.correct[i];
+
+            return (
+              <Stack
+                key={i}
+                direction="row"
+                spacing={2}
+                alignItems="stretch"
+                sx={{ minHeight: 50 }}
               >
-                {optionImage && (
-                  <Box
-                    sx={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      maxHeight: 40,
-                      mr: 1,
-                      flexShrink: 0,
-                      overflow: "hidden",
-                    }}
-                  >
-                    <img
-                      src={optionImage}
-                      alt={`left-${i}`}
-                      style={{
-                        maxHeight: 50,
-                        width: "auto",
-                        height: "auto",
-                        objectFit: "contain",
-                        borderRadius: 2,
-                        display: "block",
+                {/* ================= LEFT ================= */}
+                <Paper
+                  sx={{
+                    //flex: 1,
+                    flexGrow: ratio.left,
+                    flexBasis: 0,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1.5,
+                    px: 1,
+                    py: 0.5,
+                    border: "1px solid #64b5f6",
+                    borderRadius: 1,
+                    boxShadow: "none",
+                  }}
+                >
+                  {optionImage && (
+                    <Box
+                      sx={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        maxHeight: 40,      // khung tối đa 40
+                        mr: 1,
+                        flexShrink: 0,
+                        overflow: "hidden",
                       }}
-                    />
-                  </Box>
-                )}
-
-                {optionText && (
-                  <Typography
-                    component="div"
-                    sx={{
-                      fontSize: "1.1rem",
-                      flex: 1,
-                      wordBreak: "break-word",
-                      whiteSpace: "pre-wrap",
-                      lineHeight: 1.5,
-                      "& p": { margin: 0 },
-                    }}
-                    dangerouslySetInnerHTML={{ __html: optionText }}
-                  />
-                )}
-              </Paper>
-
-              {/* ================= RIGHT ================= */}
-              <Droppable droppableId={`right-${i}`} direction="vertical">
-                {(provided) => (
-                  <Stack
-                    ref={provided.innerRef}
-                    {...provided.droppableProps}
-                    sx={{ flexGrow: ratio.right, flexBasis: 0 }}
-                  >
-                    <Draggable
-                      key={rightIdx}
-                      draggableId={String(rightIdx)}
-                      index={i}
-                      isDragDisabled={submitted || !started}
                     >
-                      {(provided) => (
-                        <Paper
-                          ref={provided.innerRef}
-                          {...provided.draggableProps}
-                          {...provided.dragHandleProps}
-                          sx={{
-                            flex: 1,
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 1.5,
-                            px: 1,
-                            py: 0.5,
-                            border: "1px solid #90caf9",
-                            borderRadius: 1,
-                            boxShadow: "none",
-                            cursor:
-                              submitted || !started ? "default" : "grab",
-                            bgcolor:
-                              submitted && choXemDapAn
-                                ? isCorrect
-                                  ? "#c8e6c9"
-                                  : "#ffcdd2"
-                                : "transparent",
-                            transition:
-                              "background-color 0.2s ease, border-color 0.2s ease",
-                            "&:hover": {
-                              borderColor: "#1976d2",
-                              bgcolor: "#f5f5f5",
-                            },
-                          }}
-                        >
-                          {rightImage && (
-                            <Box
-                              sx={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                maxHeight: 40,
-                                mr: 1,
-                                flexShrink: 0,
-                              }}
-                            >
-                              <img
-                                src={rightImage}
-                                alt={`right-${rightIdx}`}
-                                style={{
+                      <img
+                        src={optionImage}
+                        alt={`left-${i}`}
+                        style={{
+                          maxHeight: 50,    // ⭐ QUAN TRỌNG: trùng với Box
+                          width: "auto",
+                          height: "auto",
+                          objectFit: "contain",
+                          borderRadius: 2,
+                          display: "block",
+                        }}
+                      />
+                    </Box>
+                  )}
+
+                  {optionText && (
+                    <Typography
+                      component="div"
+                      sx={{
+                        fontSize: "1.1rem",
+                        flex: 1,
+                        wordBreak: "break-word",
+                        whiteSpace: "pre-wrap",
+                        lineHeight: 1.5,
+                        "& p": { margin: 0 },
+                      }}
+                      dangerouslySetInnerHTML={{ __html: optionText }}
+                    />
+                  )}
+                </Paper>
+
+                {/* ================= RIGHT ================= */}
+                <Droppable droppableId={`right-${i}`} direction="vertical">
+                  {(provided) => (
+                    <Stack
+                      ref={provided.innerRef}
+                      {...provided.droppableProps}
+                      sx={{ flexGrow: ratio.right, flexBasis: 0, }}
+                    >
+                      <Draggable
+                        key={rightIdx}
+                        draggableId={String(rightIdx)}
+                        index={i}
+                        isDragDisabled={submitted || !started}
+                      >
+                        {(provided) => (
+                          <Paper
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            {...provided.dragHandleProps}
+                            sx={{
+                              flex: 1,
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 1.5,
+                              px: 1,
+                              py: 0.5,
+                              border: "1px solid #90caf9",
+                              borderRadius: 1,
+                              boxShadow: "none",
+                              cursor:
+                                submitted || !started ? "default" : "grab",
+                              bgcolor:
+                                submitted && choXemDapAn
+                                  ? isCorrect
+                                    ? "#c8e6c9"
+                                    : "#ffcdd2"
+                                  : "transparent",
+                              transition:
+                                "background-color 0.2s ease, border-color 0.2s ease",
+                              "&:hover": {
+                                borderColor: "#1976d2",
+                                bgcolor: "#f5f5f5",
+                              },
+                            }}
+                          >
+                            {rightImage && (
+                              <Box
+                                sx={{
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
                                   maxHeight: 40,
-                                  width: "auto",
-                                  height: "auto",
-                                  objectFit: "contain",
-                                  borderRadius: 2,
-                                  display: "block",
+                                  mr: 1,
+                                  flexShrink: 0,
+                                }}
+                              >
+                                <img
+                                  src={rightImage}
+                                  alt={`right-${rightIdx}`}
+                                  style={{
+                                    maxHeight: 40,
+                                    width: "auto",
+                                    height: "auto",
+                                    objectFit: "contain",
+                                    borderRadius: 2,
+                                    display: "block",
+                                  }}
+                                />
+                              </Box>
+                            )}
+
+                            {rightText && (
+                              <Typography
+                                component="div"
+                                sx={{
+                                  fontSize: "1.1rem",
+                                  flex: 1,
+                                  wordBreak: "break-word",
+                                  whiteSpace: "pre-wrap",
+                                  lineHeight: 1.5,
+                                  "& p": { margin: 0 },
+                                }}
+                                dangerouslySetInnerHTML={{
+                                  __html: rightText,
                                 }}
                               />
-                            </Box>
-                          )}
-
-                          {rightText && (
-                            <Typography
-                              component="div"
-                              sx={{
-                                fontSize: "1.1rem",
-                                flex: 1,
-                                wordBreak: "break-word",
-                                whiteSpace: "pre-wrap",
-                                lineHeight: 1.5,
-                                "& p": { margin: 0 },
-                              }}
-                              dangerouslySetInnerHTML={{
-                                __html: rightText,
-                              }}
-                            />
-                          )}
-                        </Paper>
-                      )}
-                    </Draggable>
-
-                    {provided.placeholder}
-                  </Stack>
-                )}
-              </Droppable>
-            </Stack>
-          );
-        })}
-      </Stack>
-    </DragDropContext>
-  </Box>
-);
+                            )}
+                          </Paper>
+                        )}
+                      </Draggable>
+                      {provided.placeholder}
+                    </Stack>
+                  )}
+                </Droppable>
+              </Stack>
+            );
+          })}
+        </Stack>
+      </DragDropContext>
+    </Box>
+  );
 
   /* ===================== SINGLE ===================== */
   const renderSingle = () => (
@@ -824,7 +825,7 @@ export default function QuizQuestion({
             dangerouslySetInnerHTML={{ __html: optionText }}
           />
 
-          <FormControl size="small" sx={{ width: 140 }}>
+          <FormControl size="small" sx={{ width: 90 }}>
             <Select
               value={selected}
               onChange={(e) => {
@@ -844,18 +845,10 @@ export default function QuizQuestion({
                 "& .MuiSelect-select": { py: 0.5 },
               }}
             >
-              {/* TRUE */}
-              <MenuItem value="Đ">
-                {currentQuestion.trueLabel || "Đúng"}
-              </MenuItem>
-
-              {/* FALSE */}
-              <MenuItem value="S">
-                {currentQuestion.falseLabel || "Sai"}
-              </MenuItem>
+              <MenuItem value="Đ">Đúng</MenuItem>
+              <MenuItem value="S">Sai</MenuItem>
             </Select>
           </FormControl>
-
         </Paper>
       );
     })}

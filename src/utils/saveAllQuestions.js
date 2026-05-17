@@ -254,14 +254,18 @@ for (let q of questions) {
     updatedQ.correct = q.correct || [];
   }
 
-  // =========================
-  // TRUEFALSE
-  // =========================
   if (q.type === "truefalse") {
-    updatedQ.correct =
-      q.correct?.length === q.options?.length
-        ? q.correct
-        : (q.options || []).map(() => "");
+    updatedQ = {
+      ...updatedQ, // ⭐ giữ toàn bộ field (trueLabel, falseLabel,...)
+
+      trueLabel: q.trueLabel ?? "Đúng",
+      falseLabel: q.falseLabel ?? "Sai",
+
+      correct:
+        q.correct?.length === q.options?.length
+          ? q.correct
+          : (q.options || []).map(() => ""),
+    };
   }
 
   // =========================

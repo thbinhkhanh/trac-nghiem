@@ -4,21 +4,17 @@ export const saveAllQuestions = async ({
   questions,
   db,
   selectedClass,
-  semester,
-  schoolYear,
-  examLetter,
-  quizConfig,
-  updateQuizConfig,
-  setQuizCache,
+  lesson,
   setSnackbar,
-  setIsEditingNewDoc,
+  collectionName,
 }) => {
   try {
-    if (!selectedClass || !semester || !schoolYear) {
-      throw new Error("Vui lòng chọn đầy đủ lớp, học kỳ và năm học");
+    if (!selectedClass || !lesson) {
+      throw new Error("Vui lòng chọn Lớp và Bài học");
     }
-
-    const SUBJECT = "Tin học";
+    if (!collectionName) {
+      throw new Error("Thiếu collectionName (lỗi năm học)");
+    }
 
     /* =========================
        UPLOAD IMAGE (THEO HÀM MẪU 1)
@@ -258,10 +254,17 @@ for (let q of questions) {
   // TRUEFALSE
   // =========================
   if (q.type === "truefalse") {
-    updatedQ.correct =
-      q.correct?.length === q.options?.length
-        ? q.correct
-        : (q.options || []).map(() => "");
+    updatedQ = {
+      ...updatedQ, // ⭐ giữ toàn bộ field (trueLabel, falseLabel,...)
+
+      trueLabel: q.trueLabel ?? "Đúng",
+      falseLabel: q.falseLabel ?? "Sai",
+
+      correct:
+        q.correct?.length === q.options?.length
+          ? q.correct
+          : (q.options || []).map(() => ""),
+    };
   }
 
   // =========================
@@ -277,7 +280,7 @@ for (let q of questions) {
       option: q.option || "",
       question: q.question || "",
 
-      image: q.questionImage || null,
+      image: updatedQ.questionImage || "",
 
       answers: [
         {
@@ -297,6 +300,8 @@ for (let q of questions) {
       correct: q.correct || [],
       score: q.score || 1,
     };
+    
+    delete updatedQ.image;    //khắc phục lỗi 2 hình trong Question Image
   }
 
   // =========================
@@ -305,84 +310,35 @@ for (let q of questions) {
   questionsToSave.push(updatedQ);
 }
 
-    /* =========================
-       ID ĐỀ
-    ========================== */
-    const semesterMap = {
-      "Giữa kỳ I": "GKI",
-      "Cuối kỳ I": "CKI",
-      "Giữa kỳ II": "GKII",
-      "Cả năm": "CN",
-    };
-
-    const shortSchoolYear = (year) => {
-      const [y1, y2] = year.split("-");
-      return `${y1.slice(2)}-${y2.slice(2)}`;
-    };
-
-    const docId = `quiz_${selectedClass}_${SUBJECT}_${
-      semesterMap[semester]
-    }_${shortSchoolYear(schoolYear)}${
-      examLetter ? ` (${examLetter})` : ""
-    }`;
-
-    /* =========================
-       FIRESTORE
-    ========================== */
-    const quizRef = doc(db, "NGANHANG_DE", docId);
+    // =========================
+    // SAVE FIRESTORE
+    // =========================
+    const quizRef = doc(db, collectionName, lesson);
 
     await setDoc(quizRef, {
       class: selectedClass,
-      subject: SUBJECT,
-      semester,
-      schoolYear,
-      examLetter,
+      lesson,
+      schemaVersion: 2, // 🔥 QUAN TRỌNG
       questions: questionsToSave,
       updatedAt: Date.now(),
     });
 
-    /* =========================
-       CONFIG
-    ========================== */
-    await setDoc(
-      doc(db, "CONFIG", "config"),
-      { deTracNghiem: docId },
-      { merge: true }
+    localStorage.setItem("teacherQuiz", JSON.stringify(questionsToSave));
+    localStorage.setItem(
+      "teacherConfig",
+      JSON.stringify({ selectedClass, lesson })
     );
 
-    /* =========================
-       CONTEXT
-    ========================== */
-    const newDoc = {
-      id: docId,
-      class: selectedClass,
-      subject: SUBJECT,
-      semester,
-      schoolYear,
-      examLetter,
-    };
-
-    const existed = quizConfig.quizList?.some((d) => d.id === docId);
-    if (!existed) {
-      updateQuizConfig({
-        quizList: [...(quizConfig.quizList || []), newDoc],
-      });
-    }
-
-    localStorage.setItem("teacherQuiz", JSON.stringify(questionsToSave));
-
     setSnackbar({
       open: true,
-      message: "✅ Đã lưu đề thành công!",
+      message: "✅ Lưu đề thành công",
       severity: "success",
     });
-
-    setIsEditingNewDoc(false);
   } catch (err) {
-    console.error("❌ Lỗi khi lưu đề:", err);
+    console.error(err);
     setSnackbar({
       open: true,
-      message: `❌ Lỗi khi lưu đề: ${err.message}`,
+      message: `❌ Lỗi khi lưu: ${err.message}`,
       severity: "error",
     });
   }
