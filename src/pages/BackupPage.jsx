@@ -124,7 +124,7 @@ export default function BackupPage({ open, onClose }) {
         : [];
 
     // =========================
-    // 📚 Cuối kỳ I + Cả năm
+    // 📚 Cuối kỳ I + Cuối năm
     // =========================
     const examDocs = [
       {
@@ -132,7 +132,7 @@ export default function BackupPage({ open, onClose }) {
         backupKey: "Cuoi_ky_I",
       },
       {
-        firestoreName: "Cả năm",
+        firestoreName: "Cuối năm",
         backupKey: "Ca_nam",
       },
     ];
@@ -261,7 +261,7 @@ export default function BackupPage({ open, onClose }) {
               backupKey: "Cuoi_ky_I",
             },
             {
-              firestoreName: "Cả năm",
+              firestoreName: "Cuối năm",
               backupKey: "Ca_nam",
             },
           ];

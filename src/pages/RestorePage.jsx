@@ -279,7 +279,7 @@ export default function RestorePage({
     }
 
     // =========================
-    // Cả năm
+    // Cuối năm
     // =========================
     if (lvb.Ca_nam) {
 
@@ -296,7 +296,7 @@ export default function RestorePage({
                 ref: doc(
                   db,
                   "LAMVANBEN",
-                  "Cả năm",
+                  "Cuối năm",
                   className,
                   studentId
                 ),

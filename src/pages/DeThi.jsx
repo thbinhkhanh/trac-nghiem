@@ -1,4 +1,8 @@
 import React, { useState, useEffect } from "react";
+
+// =========================
+// MUI COMPONENTS
+// =========================
 import {
   Box,
   Typography,
@@ -8,41 +12,95 @@ import {
   Button,
   Snackbar,
   Alert,
-  MenuItem,   
+  MenuItem,
   InputLabel,
   Checkbox,
   FormControl,
   Select,
 } from "@mui/material";
-import { ChevronRight, ChevronLeft } from "@mui/icons-material";
-import { collection, getDoc, getDocs, deleteDoc, setDoc, doc } from "firebase/firestore";
+
+// =========================
+// ICONS
+// =========================
+import {
+  ChevronRight,
+  ChevronLeft,
+} from "@mui/icons-material";
+
+// =========================
+// FIREBASE
+// =========================
+import {
+  collection,
+  getDoc,
+  getDocs,
+  deleteDoc,
+  setDoc,
+  doc,
+} from "firebase/firestore";
+
 import { db } from "../firebase";
+
+// =========================
+// CONTEXT
+// =========================
 import { useContext } from "react";
 import { ConfigContext } from "../context/ConfigContext";
-import DeleteConfirmDialog from "../dialog/DeleteConfirmDialog";
+
+// =========================
+// DIALOGS
+// =========================
+import DeleteExamDialog from "../dialog/DeleteExamDialog";
+
+// =========================
+// UTILITIES
+// =========================
 //import { exportWordFile } from "../utils/exportWordFile";
 import { exportQuestionsToWord } from "../utils/exportQuizWORD";
 
 
 export default function DeThi() {
+ // =========================
+  // ACCOUNT
+  // =========================
   const account = localStorage.getItem("account") || "";
 
+  // =========================
+  // STATE - EXAM DATA
+  // =========================
   const [examList, setExamList] = useState([]);
   const [selectedExam, setSelectedExam] = useState([]);
   const [pendingSelectedExam, setPendingSelectedExam] = useState(null);
 
+  // =========================
+  // STATE - DELETE EXAM
+  // =========================
   const [selectedExamToDelete, setSelectedExamToDelete] = useState(null);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
-  const [selectedExamsToCombine, setSelectedExamsToCombine] = useState([]); // các đề được chọn để kết hợp
+
+  // =========================
+  // STATE - COMBINE EXAMS
+  // =========================
+  const [selectedExamsToCombine, setSelectedExamsToCombine] = useState([]);
   const [selectedExamIds, setSelectedExamIds] = useState([]);
-  
+
+  // =========================
+  // STATE - SNACKBAR
+  // =========================
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
     severity: "success",
   });
 
+  // =========================
+  // CONTEXT
+  // =========================
   const { config } = useContext(ConfigContext);
+
+  // =========================
+  // STATE - FILTER
+  // =========================
   const [selectedYear, setSelectedYear] = useState(
     config?.namHoc || "2025-2026"
   );
@@ -348,238 +406,508 @@ export default function DeThi() {
   <Box
     sx={{
       minHeight: "100vh",
-      backgroundColor: "#e3f2fd",
-      pt: 3,
+      background: "#f1f5f9",
       px: 2,
+      py: 3,
       display: "flex",
       justifyContent: "center",
     }}
   >
     <Card
-      elevation={6}
+      elevation={0}
       sx={{
-        p: 3,
-        borderRadius: 3,
-        width: { xs: "95%", sm: "80%", md: "70%" },
-        maxWidth: 600,
-        height: "630px",
+        width: "100%",
+        maxWidth: 800,
+        borderRadius: "16px",
+        overflow: "hidden",
+        border: "1px solid #e2e8f0",
+        background: "#fff",
+        boxShadow: "0 10px 35px rgba(0,0,0,0.06)",
       }}
     >
-      <Typography
-        variant="h5"
-        fontWeight="bold"
-        color="primary"
-        sx={{ textAlign: "center", mb: 3 }}
+      {/* ===== HEADER ===== */}
+      <Box
+        sx={{
+          px: 3,
+          py: 1.6,
+          background: "#1976d2",
+          color: "#fff",
+        }}
       >
-        ĐỀ KIỂM TRA
-      </Typography>
-
-      <Box sx={{ display: "flex", justifyContent: "center", mb: 2 }}>
-        <FormControl sx={{ width: 150, height: 45 }}>
-          <InputLabel>Năm học</InputLabel>
-          <Select
-            value={selectedYear}
-            label="Năm học"
-            sx={{ height: 45 }}
-            onChange={(e) => setSelectedYear(e.target.value)}
+        <Stack
+          direction="row"
+          alignItems="center"
+          justifyContent="space-between"
+        >
+          <Typography
+            sx={{
+              fontSize: 18,
+              fontWeight: 700,
+              letterSpacing: 0.3,
+            }}
           >
-            <MenuItem value="2025-2026">2025-2026</MenuItem>
-            <MenuItem value="2026-2027">2026-2027</MenuItem>
-            <MenuItem value="2027-2028">2027-2028</MenuItem>
-            <MenuItem value="2028-2029">2028-2029</MenuItem>
-            <MenuItem value="2029-2030">2029-2030</MenuItem>
-          </Select>
-        </FormControl>
+            Quản lý đề kiểm tra
+          </Typography>
+
+          <FormControl size="small" sx={{ minWidth: 150 }}>
+            <InputLabel
+              sx={{
+                color: "#fff",
+                "&.Mui-focused": {
+                  color: "#fff",
+                },
+              }}
+            >
+              Năm học
+            </InputLabel>
+
+            <Select
+              value={selectedYear}
+              label="Năm học"
+              onChange={(e) => setSelectedYear(e.target.value)}
+              sx={{
+                height: 40,
+                color: "#fff",
+                bgcolor: "rgba(255,255,255,0.12)",
+                borderRadius: "10px",
+
+                "& .MuiOutlinedInput-notchedOutline": {
+                  borderColor: "rgba(255,255,255,0.25)",
+                },
+
+                "&:hover .MuiOutlinedInput-notchedOutline": {
+                  borderColor: "rgba(255,255,255,0.45)",
+                },
+
+                "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                  borderColor: "#fff",
+                },
+
+                "& .MuiSvgIcon-root": {
+                  color: "#fff",
+                },
+              }}
+            >
+              <MenuItem value="2025-2026">2025-2026</MenuItem>
+              <MenuItem value="2026-2027">2026-2027</MenuItem>
+              <MenuItem value="2027-2028">2027-2028</MenuItem>
+              <MenuItem value="2028-2029">2028-2029</MenuItem>
+              <MenuItem value="2029-2030">2029-2030</MenuItem>
+            </Select>
+          </FormControl>
+        </Stack>
       </Box>
 
-      <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-        {/* LEFT COLUMN */}
-        <Box sx={{ flex: 1 }}>
-          <Typography variant="subtitle1" fontWeight="bold" sx={{ mb: 1 }}>
-            Ngân hàng đề
-          </Typography>
+      {/* ===== CONTENT ===== */}
+      <Box
+        sx={{
+          p: 3,
+        }}
+      >
+        <Stack
+          direction={{ xs: "column", md: "row" }}
+          spacing={3}
+        >
+          {/* ================= LEFT ================= */}
+          <Box sx={{ flex: 1 }}>
+            <Typography
+              sx={{
+                mb: 1.5,
+                fontWeight: 700,
+                color: "#1e293b",
+                fontSize: 16,
+              }}
+            >
+              Ngân hàng đề
+            </Typography>
 
-          <Box
-            sx={{
-              maxHeight: 420,
-              overflowY: "auto",
-              border: "1px solid #ccc",
-              borderRadius: 2,
-            }}
-          >
-            {examList.length === 0 ? (
-              <Typography sx={{ p: 2 }}>Chưa có đề</Typography>
-            ) : (
-              sortExamList(examList).map((ex) => {
-                const checked = selectedExamIds.includes(ex.id);
-
-                return (
-                  <Stack
-                    key={ex.id}
-                    direction="row"
-                    alignItems="center"
-                    justifyContent="space-between"
+            <Box
+              sx={{
+                border: "1px solid #e2e8f0",
+                borderRadius: "14px",
+                overflow: "hidden",
+                bgcolor: "#fff",
+              }}
+            >
+              <Box
+                sx={{
+                  maxHeight: 520,
+                  overflowY: "auto",
+                  p: 1.2,
+                }}
+              >
+                {examList.length === 0 ? (
+                  <Box
                     sx={{
-                      px: 1,
-                      py: 0.5,
-                      cursor: "pointer",
-                      backgroundColor: checked ? "#bbdefb" : "transparent",
-                      "&:hover": { background: "#e3f2fd" },
+                      py: 8,
+                      textAlign: "center",
+                      color: "#94a3b8",
                     }}
-                    onClick={() => {
-                      setSelectedExamIds(prev =>
-                        prev.includes(ex.id) ? prev.filter(id => id !== ex.id) : [...prev, ex.id]
+                  >
+                    <Typography fontWeight={600}>
+                      Chưa có đề kiểm tra
+                    </Typography>
+                  </Box>
+                ) : (
+                  <Stack spacing={1}>
+                    {sortExamList(examList).map((ex) => {
+                      const checked =
+                        selectedExamIds.includes(ex.id);
+
+                      return (
+                        <Box
+                          key={ex.id}
+                          onClick={() => {
+                            setSelectedExamIds((prev) =>
+                              prev.includes(ex.id)
+                                ? prev.filter(
+                                    (id) => id !== ex.id
+                                  )
+                                : [...prev, ex.id]
+                            );
+
+                            setSelectedExamsToCombine(
+                              (prev) => {
+                                const has = prev.some(
+                                  (e) => e.id === ex.id
+                                );
+
+                                return has
+                                  ? prev.filter(
+                                      (e) => e.id !== ex.id
+                                    )
+                                  : [...prev, ex];
+                              }
+                            );
+                          }}
+                          sx={{
+                            p: 1.4,
+                            borderRadius: "12px",
+                            border: checked
+                              ? "2px solid #1976d2"
+                              : "1px solid #e2e8f0",
+                            bgcolor: checked
+                              ? "#f0f7ff"
+                              : "#fff",
+                            cursor: "pointer",
+                            transition: ".18s",
+
+                            "&:hover": {
+                              bgcolor: "#f8fbff",
+                              borderColor: "#90caf9",
+                            },
+                          }}
+                        >
+                          <Stack
+                            direction="row"
+                            alignItems="center"
+                            spacing={1.2}
+                          >
+                            <Checkbox
+                              checked={checked}
+                              size="small"
+                              onClick={(e) =>
+                                e.stopPropagation()
+                              }
+                              onMouseDown={(e) =>
+                                e.stopPropagation()
+                              }
+                              onChange={(e) => {
+                                e.stopPropagation();
+
+                                const willCheck =
+                                  e.target.checked;
+
+                                setSelectedExamIds(
+                                  (prev) =>
+                                    willCheck
+                                      ? [...prev, ex.id]
+                                      : prev.filter(
+                                          (id) =>
+                                            id !== ex.id
+                                        )
+                                );
+
+                                setSelectedExamsToCombine(
+                                  (prev) => {
+                                    const has =
+                                      prev.some(
+                                        (item) =>
+                                          item.id === ex.id
+                                      );
+
+                                    if (willCheck) {
+                                      return has
+                                        ? prev
+                                        : [...prev, ex];
+                                    }
+
+                                    return prev.filter(
+                                      (item) =>
+                                        item.id !== ex.id
+                                    );
+                                  }
+                                );
+                              }}
+                            />
+
+                            <Typography
+                              sx={{
+                                flex: 1,
+                                fontSize: 15,
+                                fontWeight: 500,
+                                color: "#1e293b",
+                                lineHeight: 1.5,
+                              }}
+                            >
+                              {formatExamTitle(
+                                ex.tenDe || ex.id
+                              )}
+                            </Typography>
+
+                            <IconButton
+                              size="small"
+                              onClick={async (e) => {
+                                e.stopPropagation();
+
+                                setSelectedExam((prev) => {
+                                  if (
+                                    prev.some(
+                                      (e) =>
+                                        e.id === ex.id
+                                    )
+                                  )
+                                    return prev;
+
+                                  return [...prev, ex];
+                                });
+
+                                await addExamToFirestore(
+                                  ex
+                                );
+                              }}
+                              sx={{
+                                color: "#1976d2",
+                                bgcolor: "#eff6ff",
+
+                                "&:hover": {
+                                  bgcolor: "#dbeafe",
+                                },
+                              }}
+                            >
+                              <ChevronRight />
+                            </IconButton>
+                          </Stack>
+                        </Box>
                       );
-                      setSelectedExamsToCombine(prev => {
-                        const has = prev.some(e => e.id === ex.id);
-                        return has ? prev.filter(e => e.id !== ex.id) : [...prev, ex];
-                      });
-                    }}
-                  >
-                    <Stack direction="row" alignItems="center" spacing={1} sx={{ flex: 1 }}>
-                      <Checkbox
-                        size="small"
-                        checked={checked}
-                        onClick={(e) => e.stopPropagation()}
-                        onMouseDown={(e) => e.stopPropagation()}
-                        onChange={(e) => {
-                          e.stopPropagation();
-                          const willCheck = e.target.checked;
-
-                          setSelectedExamIds(prev =>
-                            willCheck ? [...prev, ex.id] : prev.filter(id => id !== ex.id)
-                          );
-
-                          setSelectedExamsToCombine(prev => {
-                            const has = prev.some(item => item.id === ex.id);
-                            if (willCheck) {
-                              return has ? prev : [...prev, ex];
-                            } else {
-                              return prev.filter(item => item.id !== ex.id);
-                            }
-                          });
-                        }}
-                      />
-                      <Typography>
-                        {formatExamTitle(ex.tenDe || ex.id)}
-                      </Typography>
-                    </Stack>
-
-                    <IconButton
-                      size="small"
-                      color="primary"
-                      onClick={async (e) => {
-                        e.stopPropagation();
-                        setSelectedExam(prev => {
-                          if (prev.some(e => e.id === ex.id)) return prev;
-                          return [...prev, ex];
-                        });
-                        await addExamToFirestore(ex);
-                      }}
-                    >
-                      <ChevronRight />
-                    </IconButton>
+                    })}
                   </Stack>
-                );
-              })
-            )}
+                )}
+              </Box>
+            </Box>
+
+            <Stack
+              direction="row"
+              spacing={1.5}
+              sx={{ mt: 2 }}
+            >
+              <Button
+                variant="contained"
+                color="error"
+                fullWidth
+                onClick={handleDeleteExam}
+                sx={{
+                  textTransform: "none",
+                  borderRadius: "12px",
+                  height: 44,
+                  fontWeight: 700,
+                  boxShadow: "none",
+                }}
+              >
+                Xóa đề
+              </Button>
+
+              <Button
+                variant="contained"
+                fullWidth
+                onClick={handleExportWord}
+                sx={{
+                  textTransform: "none",
+                  borderRadius: "12px",
+                  height: 44,
+                  fontWeight: 700,
+                  boxShadow: "none",
+                }}
+              >
+                Xuất Word
+              </Button>
+            </Stack>
           </Box>
 
-
-          <Stack direction="row" spacing={2} sx={{ mt: 2 }}>
-            <Button
-              variant="contained"
-              color="error"
-              sx={{ flex: 1 }}
-              onClick={handleDeleteExam}
+          {/* ================= RIGHT ================= */}
+          <Box sx={{ flex: 1 }}>
+            <Typography
+              sx={{
+                mb: 1.5,
+                fontWeight: 700,
+                color: "#1e293b",
+                fontSize: 16,
+              }}
             >
-              Xóa đề
-            </Button>
+              Đề thi học kỳ
+            </Typography>
 
-            <Button
-              variant="contained"
-              color="info"
-              sx={{ flex: 1 }}
-              onClick={handleExportWord}
+            <Box
+              sx={{
+                border: "1px solid #e2e8f0",
+                borderRadius: "14px",
+                overflow: "hidden",
+                bgcolor: "#fff",
+              }}
             >
-              Xuất đề
-            </Button>
-          </Stack>
-        </Box>
-
-        {/* RIGHT COLUMN */}
-        <Box sx={{ flex: 1 }}>
-          <Typography variant="subtitle1" fontWeight="bold" sx={{ mb: 1 }}>
-            Đề thi học kì
-          </Typography>
-          
-          <Box
-            sx={{
-              maxHeight: { xs: 220, sm: 420 },
-              overflowY: "auto",
-              border: "1px solid #ccc",
-              borderRadius: 2,
-            }}
-          >
-            {filteredSelectedExam.length > 0 ? (
-              filteredSelectedExam.map((ex) => (
-                <Stack
-                  key={ex.id}
-                  direction="row"
-                  alignItems="center"
-                  justifyContent="space-between"
-                  sx={{
-                    px: 1,
-                    py: 0.5,
-                    cursor: "pointer",
-                    backgroundColor:
-                      pendingSelectedExam?.id === ex.id ? "#bbdefb" : "transparent",
-                    "&:hover": { background: "#e3f2fd" },
-                  }}
-                  onMouseEnter={() => setPendingSelectedExam(ex)}
-                  onMouseLeave={() => setPendingSelectedExam(null)}
-                >
-                  <Typography>
-                    {formatExamTitle(ex.tenDe || ex.id)}
-                  </Typography>
-
-                  <IconButton
-                    size="small"
-                    color="error"
-                    onClick={async () => {
-                      setSelectedExam(prev => prev.filter(e => e.id !== ex.id));
-                      await removeExamFromFirestore(ex);
+              <Box
+                sx={{
+                  maxHeight: 520,
+                  overflowY: "auto",
+                  p: 1.2,
+                }}
+              >
+                {filteredSelectedExam.length === 0 ? (
+                  <Box
+                    sx={{
+                      py: 8,
+                      textAlign: "center",
+                      color: "#94a3b8",
                     }}
                   >
-                    <ChevronLeft />
-                  </IconButton>
-                </Stack>
-              ))
-            ) : (
-              <Typography sx={{ p: 2 }}>Chưa chọn đề</Typography>
-            )}
-          </Box>
+                    <Typography fontWeight={600}>
+                      Chưa chọn đề
+                    </Typography>
+                  </Box>
+                ) : (
+                  <Stack spacing={1}>
+                    {filteredSelectedExam.map((ex) => (
+                      <Box
+                        key={ex.id}
+                        onMouseEnter={() =>
+                          setPendingSelectedExam(ex)
+                        }
+                        onMouseLeave={() =>
+                          setPendingSelectedExam(null)
+                        }
+                        sx={{
+                          p: 1.4,
+                          borderRadius: "12px",
+                          border:
+                            pendingSelectedExam?.id ===
+                            ex.id
+                              ? "2px solid #1976d2"
+                              : "1px solid #e2e8f0",
 
-        </Box>
-      </Stack>
+                          bgcolor:
+                            pendingSelectedExam?.id ===
+                            ex.id
+                              ? "#f0f7ff"
+                              : "#fff",
+
+                          transition: ".18s",
+
+                          "&:hover": {
+                            bgcolor: "#f8fbff",
+                            borderColor: "#90caf9",
+                          },
+                        }}
+                      >
+                        <Stack
+                          direction="row"
+                          alignItems="center"
+                          spacing={1.2}
+                        >
+                          <Typography
+                            sx={{
+                              flex: 1,
+                              fontSize: 15,
+                              fontWeight: 500,
+                              color: "#1e293b",
+                              lineHeight: 1.5,
+                            }}
+                          >
+                            {formatExamTitle(
+                              ex.tenDe || ex.id
+                            )}
+                          </Typography>
+
+                          <IconButton
+                            size="small"
+                            onClick={async () => {
+                              setSelectedExam((prev) =>
+                                prev.filter(
+                                  (e) => e.id !== ex.id
+                                )
+                              );
+
+                              await removeExamFromFirestore(
+                                ex
+                              );
+                            }}
+                            sx={{
+                              color: "#ef4444",
+                              bgcolor: "#fef2f2",
+
+                              "&:hover": {
+                                bgcolor: "#fee2e2",
+                              },
+                            }}
+                          >
+                            <ChevronLeft />
+                          </IconButton>
+                        </Stack>
+                      </Box>
+                    ))}
+                  </Stack>
+                )}
+              </Box>
+            </Box>
+          </Box>
+        </Stack>
+      </Box>
     </Card>
 
+    {/* ===== SNACKBAR ===== */}
     <Snackbar
       open={snackbar.open}
       autoHideDuration={3000}
-      onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
-      anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+      onClose={() =>
+        setSnackbar((s) => ({
+          ...s,
+          open: false,
+        }))
+      }
+      anchorOrigin={{
+        vertical: "bottom",
+        horizontal: "right",
+      }}
     >
       <Alert
         severity={snackbar.severity}
         variant="filled"
-        onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
+        onClose={() =>
+          setSnackbar((s) => ({
+            ...s,
+            open: false,
+          }))
+        }
+        sx={{
+          borderRadius: "12px",
+          fontWeight: 600,
+        }}
       >
         {snackbar.message}
       </Alert>
     </Snackbar>
 
-    <DeleteConfirmDialog
+    {/* ===== DELETE DIALOG ===== */}
+    <DeleteExamDialog
       open={openDeleteDialog}
       onClose={() => setOpenDeleteDialog(false)}
       onConfirm={confirmDeleteExam}

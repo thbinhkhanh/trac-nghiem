@@ -184,7 +184,7 @@ function AppContent() {
                 <option value="Giữa kỳ I">Giữa kỳ I</option>
                 <option value="Cuối kỳ I">Cuối kỳ I</option>
                 <option value="Giữa kỳ II">Giữa kỳ II</option>
-                <option value="Cả năm">Cả năm</option>
+                <option value="Cuối năm">Cuối năm</option>
               </select>
             </Box>
           )}

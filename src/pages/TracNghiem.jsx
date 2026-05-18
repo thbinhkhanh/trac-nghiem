@@ -1,115 +1,179 @@
-import React, { useState, useEffect } from "react";
+// =========================
+// ⚛️ REACT
+// =========================
+import React, { useState, useEffect, useContext } from "react";
+
+// =========================
+// 🎨 MATERIAL UI
+// =========================
 import {
   Box,
-  //Typography,
   Paper,
-  //Button,
-  //Stack,
-  //LinearProgress,
-  //IconButton,
-  //Tooltip,
-  //Snackbar, 
-  //Alert,
-  //Divider,
-  //Card, Grid,
+  useTheme,
+  useMediaQuery,
+  Stack,
+  Typography,
+  IconButton,
 } from "@mui/material";
-import { doc, getDoc, getDocs, setDoc, collection, updateDoc } from "firebase/firestore";
+
+// =========================
+// 🔥 FIREBASE
+// =========================
+import {
+  doc,
+  getDoc,
+  getDocs,
+  setDoc,
+  collection,
+  updateDoc
+} from "firebase/firestore";
 
 import { db } from "../firebase";
-import { useContext } from "react";
-import { ConfigContext } from "../context/ConfigContext";
-import { exportQuizPDF } from "../utils/exportQuizPDF"; 
-import { handleSubmitQuiz } from "../utils/submitQuiz";
-import { autoSubmitQuiz } from "../utils/autoSubmitQuiz";
-import ImageZoomDialog from "../dialog/ImageZoomDialog";
 
-//import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-//import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
-//import AccessTimeIcon from "@mui/icons-material/AccessTime";
-////import ChevronRightIcon from "@mui/icons-material/ChevronRight";
-import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
-
+// =========================
+// 🌐 ROUTER
+// =========================
 import { useLocation } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 
+// =========================
+// 🎯 CONTEXT
+// =========================
+import { ConfigContext } from "../context/ConfigContext";
+
+// =========================
+// 🎨 ICONS
+// =========================
+import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
+
+// =========================
+// 💬 DIALOGS
+// =========================
+import ImageZoomDialog from "../dialog/ImageZoomDialog";
 import IncompleteAnswersDialog from "../dialog/IncompleteAnswersDialog";
 import ExitConfirmDialog from "../dialog/ExitConfirmDialog";
 import ResultDialog from "../dialog/ResultDialog";
-import QuizQuestion from "../Types/questions/options/QuizQuestion";
-import { buildRuntimeQuestions } from "../utils/buildRuntimeQuestions";
-//import { getQuestionStatus } from "../utils/questionStatus";
-import { useTheme, useMediaQuery } from "@mui/material";
 
-import { processQuestions } from "../utils/processQuestions";
-import { getQuizDocId } from "../utils/getQuizDocId";
-import { useQuizTimer } from "../utils/useQuizTimer";
+// =========================
+// 🧩 COMPONENTS
+// =========================
+import QuizQuestion from "../Types/questions/options/QuizQuestion";
 
 import QuizHeader from "../components/quiz/QuizHeader";
 import QuizSidebar from "../components/quiz/QuizSidebar";
 import QuizNavigation from "../components/quiz/QuizNavigation";
 import QuizLoading from "../components/quiz/QuizLoading";
-//import QuizDialogs from "../components/quiz/QuizDialogs";
+
+// =========================
+// 🛠️ UTILITIES
+// =========================
+import { exportQuizPDF } from "../utils/exportQuizPDF";
+import { handleSubmitQuiz } from "../utils/submitQuiz";
+import { autoSubmitQuiz } from "../utils/autoSubmitQuiz";
+
+import { buildRuntimeQuestions } from "../utils/buildRuntimeQuestions";
+import { processQuestions } from "../utils/processQuestions";
+import { getQuizDocId } from "../utils/getQuizDocId";
+import { useQuizTimer } from "../utils/useQuizTimer";
+
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
+import AccessTimeIcon from "@mui/icons-material/AccessTime"; // ✅ THÊM DÒNG NÀY
+import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 
 export default function TracNghiem() {
+  //
+  // =========================
+  // ❓ QUIZ DATA
+  // =========================
   const [questions, setQuestions] = useState([]);
   const [answers, setAnswers] = useState({});
   const [submitted, setSubmitted] = useState(false);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [quizClass, setQuizClass] = useState("");
   const [score, setScore] = useState(0);
 
-  const [openAlertDialog, setOpenAlertDialog] = useState(false);
-  const [dialogMode, setDialogMode] = useState(""); 
-  const [unansweredQuestions, setUnansweredQuestions] = useState([]);
+  // =========================
+  // 📍 QUIZ NAVIGATION
+  // =========================
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [started, setStarted] = useState(false);
+  const [showSidebar, setShowSidebar] = useState(true);
 
-  const [zoomImage, setZoomImage] = useState(null);
-
+  // =========================
+  // ⏱️ TIMER / LOADING
+  // =========================
   const [loading, setLoading] = useState(true);
   const [progress, setProgress] = useState(0);
-  //const { config } = useContext(ConfigContext);
   const [saving, setSaving] = useState(false);
-  const [openExitConfirm, setOpenExitConfirm] = useState(false);
 
-  const location = useLocation();
-  const navigate = useNavigate();
-  const [started, setStarted] = useState(false);
-  //const [timeLeft, setTimeLeft] = useState(0);
-  //const [startTime, setStartTime] = useState(null);
   const [timeLimitMinutes, setTimeLimitMinutes] = useState(0);
 
+  // =========================
+  // 🏫 QUIZ INFO
+  // =========================
+  const [quizClass, setQuizClass] = useState("");
   const [hocKi, setHocKi] = useState("");
   const [monHoc, setMonHoc] = useState("");
+
+  const [selectedExamType, setSelectedExamType] = useState("Giữa kỳ I");
+
   const [choXemDiem, setChoXemDiem] = useState(false);
   const [choXemDapAn, setChoXemDapAn] = useState(false);
 
+  // =========================
+  // 💬 DIALOG STATES
+  // =========================
+  const [openAlertDialog, setOpenAlertDialog] = useState(false);
+  const [openExitConfirm, setOpenExitConfirm] = useState(false);
   const [openResultDialog, setOpenResultDialog] = useState(false);
-  const [studentResult, setStudentResult] = useState(null);
-  const [fillBlankStatus, setFillBlankStatus] = useState({});
+
+  const [dialogMode, setDialogMode] = useState("");
   const [dialogMessage, setDialogMessage] = useState("");
 
-  const [notFoundMessage, setNotFoundMessage] = useState(""); 
-  const [selectedExamType, setSelectedExamType] = useState("Giữa kỳ I"); // mặc định
+  // =========================
+  // 🖼️ IMAGE / UI STATES
+  // =========================
+  const [zoomImage, setZoomImage] = useState(null);
+  const [fillBlankStatus, setFillBlankStatus] = useState({});
 
-  /*const locationState = location.state || {};
-  const [studentId, setStudentId] = useState(locationState.studentId || "HS001");
-  const [fullname, setFullname] = useState(locationState.fullname || "Test");
-  const [lop, setLop] = useState(locationState.lop || "4.1");
-  const [selectedWeek, setSelectedWeek] = useState(locationState.selectedWeek || 13);
-  const [mon, setMon] = useState(locationState.mon || "Tin học");*/
+  // =========================
+  // 📊 RESULT STATES
+  // =========================
+  const [studentResult, setStudentResult] = useState(null);
+  const [unansweredQuestions, setUnansweredQuestions] = useState([]);
+  const [notFoundMessage, setNotFoundMessage] = useState("");
+
+  // =========================
+  // 🌐 ROUTER
+  // =========================
+  const location = useLocation();
+  const navigate = useNavigate();
+
   const locationState = location.state || {};
+
+  // =========================
+  // 👨‍🎓 STUDENT INFO
+  // =========================
   const [studentId] = useState(locationState.studentId || "HS001");
   const [fullname] = useState(locationState.fullname || "Test");
   const [lop] = useState(locationState.lop || "4.1");
   const [selectedWeek] = useState(locationState.selectedWeek || 13);
   const [mon] = useState(locationState.mon || "Tin học");
+
+  // =========================
+  // ⚙️ CONFIG
+  // =========================
   const { config, setConfig } = useContext(ConfigContext);
   const [configData, setConfigData] = useState(null);
 
-  
+  // =========================
+  // 🎨 THEME / RESPONSIVE
+  // =========================
   const theme = useTheme();
   const isBelow1024 = useMediaQuery("(max-width:1023px)");
-  const [showSidebar, setShowSidebar] = useState(true);
-  
+
+  // =========================
+  // 👨‍🎓 DERIVED STUDENT DATA
+  // =========================
   const studentInfo = {
     id: studentId,
     name: fullname,
@@ -118,19 +182,20 @@ export default function TracNghiem() {
     mon: mon || config.mon || "Tin học",
   };
 
-// Khi cần lấy lớp học sinh
-const studentClass = location.state?.lop || "";
+  const studentClass = location.state?.lop || "";
+  const studentName = studentInfo.name;
+  const hocKiDisplay =
+    config?.hocKy || "Cuối kỳ I";
 
-const studentName = studentInfo.name;
-const hocKiDisplay = config?.hocKy || "Cuối kỳ I"; // fallback nếu chưa có config
-const monHocDisplay = studentInfo.mon || config?.mon || "Tin học";
+  const monHocDisplay =
+    studentInfo.mon || config?.mon || "Tin học";
 
-// Kiểm tra dữ liệu học sinh
-useEffect(() => {
-  if (!studentId || !fullname || !lop) {
-    navigate("/hoc-sinh");
-  }
-}, [studentId, fullname, lop, navigate]);
+  // Kiểm tra dữ liệu học sinh
+  useEffect(() => {
+    if (!studentId || !fullname || !lop) {
+      navigate("/hoc-sinh");
+    }
+  }, [studentId, fullname, lop, navigate]);
 
   const handleMatchSelect = (questionId, leftIndex, rightIndex) => {
     setAnswers(prev => {
@@ -260,7 +325,7 @@ useEffect(() => {
       case "Giữa kỳ I": return "GKI";
       case "Cuối kỳ I": return "CKI";
       case "Giữa kỳ II": return "GKII";
-      case "Cả năm": return "CN";
+      case "Cuối năm": return "CN";
       default:
         console.warn("❌ Loại kiểm tra không xác định:", loaiKT);
         return "UNKNOWN";
@@ -480,6 +545,13 @@ const sidebarConfig = React.useMemo(() => {
   };
 }, [isBelow1024]);
 
+const toTitleCase = (str = "") =>
+  str
+    .toLowerCase()
+    .split(" ")
+    .filter(Boolean)
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
 
 const hasSidebar = sidebarConfig && questions.length > 0;
 const isSidebarVisible = hasSidebar && showSidebar;
@@ -492,6 +564,16 @@ return (
       background: "linear-gradient(to bottom, #e3f2fd, #bbdefb)",
       pt: { xs: 2, sm: 3 },
       px: { xs: 1, sm: 2 },
+
+      ffontFamily: `
+        "Roboto",
+        "Inter",
+        "Segoe UI",
+        "Arial",
+        "Noto Sans",
+        "Helvetica",
+        sans-serif
+      `,
     }}
   >
     <Box
@@ -505,71 +587,179 @@ return (
       }}
     >
       {/* ===== LEFT ===== */}
-      <Box sx={{ flex: 1, minWidth: 0, maxWidth: 1000 }}>
+      <Box sx={{ flex: 1, minWidth: 0 }}>
         <Paper
           sx={{
-            p: { xs: 2, sm: 4 },
+            p: 0,                // 👈 QUAN TRỌNG: bỏ padding để header sát mép
             borderRadius: 3,
             minHeight: 650,
             display: "flex",
             flexDirection: "column",
             position: "relative",
+            overflow: "hidden",  // 👈 đảm bảo không tràn góc
           }}
         >
-          {/* HEADER */}
-          <QuizHeader
-            showSidebar={showSidebar}
-            setShowSidebar={setShowSidebar}
-            sidebarConfig={sidebarConfig}
-            studentInfo={studentInfo}
-            capitalizeName={capitalizeName}
-            loading={loading}
-            config={config}
-            hocKiDisplay={hocKiDisplay}
-            monHocDisplay={monHocDisplay}
-            started={started}
-            timeLeft={timeLeft}
-            formatTime={formatTime}
-          />
+          {/* ================= HEADER ================= */}
+          <Box
+            sx={{
+              px: 3,
+              py: 1.5,
+              background: "#1976d2",
+              color: "#fff",
 
-          {/* LOADING */}
-          <QuizLoading loading={loading} progress={progress} />
+              // 👇 QUAN TRỌNG: sát full width + không bị bo riêng header
+              borderTopLeftRadius: 12,
+              borderTopRightRadius: 12,
+              margin: 0,
+            }}
+          >
+            <Stack
+              direction="row"
+              alignItems="center"
+              justifyContent="space-between"
+              spacing={2}
+            >
+              {/* ===== LEFT ===== */}
+              <Box
+                sx={{
+                  minWidth: 200,
+                  fontFamily: `"Roboto", "Arial", sans-serif`,
+                  WebkitFontSmoothing: "antialiased",
+                  MozOsxFontSmoothing: "grayscale",
+                  textRendering: "optimizeLegibility",
+                }}
+              >
+                <Typography sx={{ fontSize: 18, fontWeight: 700 }}>
+                  {toTitleCase(studentInfo?.name || "Học sinh")}
+                </Typography>
 
-          {/* QUESTION */}
-          {!loading && currentQuestion && (
-            <QuizQuestion
-              currentQuestion={currentQuestion}
-              currentIndex={currentIndex}
-              answers={answers}
-              setAnswers={setAnswers}
-              submitted={submitted}
+                <Typography sx={{ fontSize: 15, opacity: 0.9 }}>
+                  Lớp: {studentInfo?.class || "4A"}
+                </Typography>
+              </Box>
+
+              {/* ===== CENTER ===== */}
+              <Box
+                sx={{
+                  textAlign: "center",
+                  flex: 1,
+                  fontFamily: `"Roboto", "Arial", sans-serif`,
+                  WebkitFontSmoothing: "antialiased",
+                  MozOsxFontSmoothing: "grayscale",
+                  textRendering: "optimizeLegibility",
+                }}
+              >
+                <Typography sx={{ fontSize: 18, fontWeight: 700 }}>
+                  KIỂM TRA ĐỊNH KÌ
+                </Typography>
+
+                <Typography sx={{ fontSize: 15, opacity: 0.9 }}>
+                  Cuối năm - {config?.namHoc || "2025-2026"}
+                </Typography>
+              </Box>
+
+              {/* ===== RIGHT ===== */}
+              <Box
+                sx={{
+                  minWidth: 160,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "flex-end",
+                  gap: 2,
+                }}
+              >
+                {started && (
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1,
+                      px: 2,
+                      py: 0.8,
+                      bgcolor: "#fff",
+                      color: "#d32f2f",
+                      borderRadius: 2,
+                      fontWeight: 800,
+                      fontSize: "1rem",
+                      minWidth: 90,
+                      justifyContent: "center",
+                    }}
+                  >
+                    <AccessTimeIcon sx={{ fontSize: 20 }} />
+                    <Typography sx={{ fontWeight: 800 }}>
+                      {formatTime(timeLeft)}
+                    </Typography>
+                  </Box>
+                )}
+
+                <IconButton
+                  onClick={() => setShowSidebar((p) => !p)}
+                  sx={{
+                    color: "#fff",
+                    bgcolor: "rgba(255,255,255,0.15)",
+                    width: 36,
+                    height: 36,
+                    borderRadius: 2,
+                    "&:hover": {
+                      bgcolor: "rgba(255,255,255,0.25)",
+                    },
+                  }}
+                >
+                  {showSidebar ? (
+                    <ChevronLeftIcon />
+                  ) : (
+                    <ChevronRightIcon />
+                  )}
+                </IconButton>
+              </Box>
+            </Stack>
+          </Box>
+
+          {/* ================= CONTENT ================= */}
+          <Box
+            sx={{
+              p: { xs: 2, sm: 3 },
+              display: "flex",
+              flexDirection: "column",
+              flex: 1,
+            }}
+          >
+            <QuizLoading loading={loading} progress={progress} />
+
+            {!loading && currentQuestion && (
+              <QuizQuestion
+                currentQuestion={currentQuestion}
+                currentIndex={currentIndex}
+                answers={answers}
+                setAnswers={setAnswers}
+                submitted={submitted}
+                started={started}
+                choXemDapAn={choXemDapAn}
+                setZoomImage={setZoomImage}
+                handleSingleSelect={handleSingleSelect}
+                handleMultipleSelect={handleMultipleSelect}
+                handleDragEnd={handleDragEnd}
+                reorder={reorder}
+                normalizeValue={normalizeValue}
+                ratio={ratio}
+              />
+            )}
+
+            <Box sx={{ flexGrow: 1 }} />
+
+            <QuizNavigation
               started={started}
-              choXemDapAn={choXemDapAn}
-              setZoomImage={setZoomImage}
-              handleSingleSelect={handleSingleSelect}
-              handleMultipleSelect={handleMultipleSelect}
-              handleDragEnd={handleDragEnd}
-              reorder={reorder}
-              normalizeValue={normalizeValue}
-              ratio={ratio}
+              loading={loading}
+              currentIndex={currentIndex}
+              questionsLength={questions.length}
+              handlePrev={handlePrev}
+              handleNext={handleNext}
+              handleSubmit={handleSubmit}
+              submitted={submitted}
+              isEmptyQuestion={isEmptyQuestion}
+              isSidebarVisible={isSidebarVisible}
             />
-          )}
-
-          <Box sx={{ flexGrow: 1 }} />
-
-          {/* NAVIGATION */}
-          <QuizNavigation
-            started={started}
-            loading={loading}
-            currentIndex={currentIndex}
-            questionsLength={questions.length}
-            handlePrev={handlePrev}
-            handleNext={handleNext}
-            handleSubmit={handleSubmit}
-            submitted={submitted}
-            isEmptyQuestion={isEmptyQuestion}
-            isSidebarVisible={isSidebarVisible}
-          />
+          </Box>
         </Paper>
       </Box>
 
@@ -589,20 +779,18 @@ return (
       )}
     </Box>
 
-    {/* ===== ALERT: CHƯA LÀM HẾT ===== */}
+    {/* DIALOGS */}
     <IncompleteAnswersDialog
       open={openAlertDialog}
       onClose={() => setOpenAlertDialog(false)}
       unansweredQuestions={unansweredQuestions}
     />
 
-    {/* ===== EXIT CONFIRM ===== */}
     <ExitConfirmDialog
       open={openExitConfirm}
       onClose={() => setOpenExitConfirm(false)}
     />
 
-    {/* ===== RESULT ===== */}
     <ResultDialog
       open={openResultDialog}
       onClose={() => setOpenResultDialog(false)}
@@ -614,7 +802,6 @@ return (
       convertPercentToScore={convertPercentToScore}
     />
 
-    {/* ===== IMAGE ZOOM ===== */}
     <ImageZoomDialog
       open={Boolean(zoomImage)}
       imageSrc={zoomImage}

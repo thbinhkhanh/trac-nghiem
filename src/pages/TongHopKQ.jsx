@@ -12,24 +12,44 @@ import { exportKetQuaExcel } from "../utils/exportKetQuaExcel";
 import CloseIcon from "@mui/icons-material/Close";
 
 export default function TongHopKQ() {
+  // =========================
+  // STATE - FILTER / SELECTION
+  // =========================
   const [classesList, setClassesList] = useState([]);
   const [selectedLop, setSelectedLop] = useState("");
   const [selectedMon, setSelectedMon] = useState("Tin học");
+  const [hocKi, setHocKi] = useState("");
+
+  // =========================
+  // STATE - DATA
+  // =========================
   const [results, setResults] = useState([]);
+
+  // =========================
+  // STATE - LOADING
+  // =========================
   const [loading, setLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [hocKi, setHocKi] = useState(""); 
 
+  // =========================
+  // STATE - SNACKBAR
+  // =========================
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [snackbarSeverity, setSnackbarSeverity] = useState("success");
 
+  // =========================
+  // STATE - DIALOG
+  // =========================
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogTitle, setDialogTitle] = useState("");
   const [dialogContent, setDialogContent] = useState("");
   const [dialogAction, setDialogAction] = useState(null);
 
-  const folder = "LAMVANBEN"; 
+  // =========================
+  // CONSTANTS
+  // =========================
+  const folder = "LAMVANBEN";
 
   // 🔹 Lấy học kỳ từ CONFIG/config
   useEffect(() => {
@@ -348,7 +368,7 @@ export default function TongHopKQ() {
             <MenuItem value="Giữa kỳ I">Giữa kỳ I</MenuItem>
             <MenuItem value="Cuối kỳ I">Cuối kỳ I</MenuItem>
             <MenuItem value="Giữa kỳ II">Giữa kỳ II</MenuItem>
-            <MenuItem value="Cả năm">Cả năm</MenuItem>
+            <MenuItem value="Cuối năm">Cuối năm</MenuItem>
           </TextField>
         </Box>
 
