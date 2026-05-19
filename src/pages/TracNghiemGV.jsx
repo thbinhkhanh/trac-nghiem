@@ -271,8 +271,6 @@ export default function TracNghiemGV() {
     fetchInitialQuiz();
   }, [location?.state?.school]);
 
-
-
 // -----------------------
 // Load dữ liệu khi mount
 // -----------------------
@@ -1439,7 +1437,7 @@ const moveQuestionBottom = (index) => {
               label="Học kỳ"
             >
               <MenuItem value="Cuối kỳ I">Học kỳ I</MenuItem>
-              <MenuItem value="Cuối năm">Học kỳ II</MenuItem>
+              <MenuItem value="Cả năm">Học kỳ II</MenuItem>
             </Select>
           </FormControl>
 
