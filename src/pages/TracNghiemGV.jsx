@@ -1324,10 +1324,17 @@ const moveQuestionBottom = (index) => {
             px: 2,
             py: 1,
             borderBottom: "1px solid rgba(0,0,0,0.06)",
+            flexWrap: "wrap", // 👈 cho phép xuống dòng trên mobile
+            gap: 1,
           }}
         >
           {/* LEFT ICONS */}
-          <Stack direction="row" spacing={1} alignItems="center">
+          <Stack
+            direction="row"
+            spacing={1}
+            alignItems="center"
+            sx={{ flexShrink: 0 }} // 👈 không bị co lại
+          >
             <Tooltip title="Soạn đề mới">
               <IconButton onClick={handleCreateNewQuiz} sx={{ color: "#1976d2" }}>
                 <AddIcon />
@@ -1372,14 +1379,23 @@ const moveQuestionBottom = (index) => {
               py: 0.5,
               borderRadius: 2,
               bgcolor: "rgba(25,118,210,0.08)",
+
+              flex: "1 1 auto",   // 👈 cho phép co giãn
+              minWidth: 0,        // 👈 bắt buộc để wrap hoạt động đúng
+              display: "flex",
+              justifyContent: "center",
             }}
           >
             <Typography
               sx={{
-                fontSize: "1.3rem",
+                fontSize: { xs: "1rem", sm: "1.3rem" }, // 👈 nhỏ hơn trên mobile
                 fontWeight: 700,
                 color: "#1976d2",
                 letterSpacing: 0.5,
+                textAlign: "center",
+
+                wordBreak: "break-word", // 👈 cho phép xuống dòng
+                lineHeight: 1.2,
               }}
             >
               TẠO ĐỀ KIỂM TRA
@@ -1388,7 +1404,16 @@ const moveQuestionBottom = (index) => {
         </Box>
 
         {/* ===== FORM ===== */}
-        <Stack direction={{ xs: "column", md: "row" }} spacing={2} sx={{ px: 2, py: 2 }}>
+        <Stack
+          direction="row"
+          spacing={2}
+          sx={{
+            px: 2,
+            py: 2,
+            flexWrap: "nowrap",
+            overflowX: "auto",
+          }}
+        >
 
           {/* LỚP */}
           <FormControl size="small" sx={{ flex: 1, minWidth: 120 }}>

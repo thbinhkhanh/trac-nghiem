@@ -332,7 +332,7 @@ export default function QuanTri() {
                 Cấu hình hệ thống
               </Typography>
 
-              <Typography
+              {/*<Typography
                 sx={{
                   fontSize: 13,
                   opacity: 0.92,
@@ -340,7 +340,7 @@ export default function QuanTri() {
                 }}
               >
                 Quản lý hệ thống kiểm tra
-              </Typography>
+              </Typography>*/}
             </Box>
 
             <Tooltip title="Đổi mật khẩu">

@@ -590,13 +590,13 @@ return (
       <Box sx={{ flex: 1, minWidth: 0 }}>
         <Paper
           sx={{
-            p: 0,                // 👈 QUAN TRỌNG: bỏ padding để header sát mép
+            p: 0,
             borderRadius: 3,
             minHeight: 650,
             display: "flex",
             flexDirection: "column",
             position: "relative",
-            overflow: "hidden",  // 👈 đảm bảo không tràn góc
+            overflow: "hidden",
           }}
         >
           {/* ================= HEADER ================= */}
@@ -606,8 +606,6 @@ return (
               py: 1.5,
               background: "#1976d2",
               color: "#fff",
-
-              // 👇 QUAN TRỌNG: sát full width + không bị bo riêng header
               borderTopLeftRadius: 12,
               borderTopRightRadius: 12,
               margin: 0,
@@ -638,7 +636,7 @@ return (
                 </Typography>
               </Box>
 
-              {/* ===== CENTER ===== */}
+              {/* ===== CENTER (GIỮ DESKTOP, CHỈ MOBILE BREAK LINE NHẸ) ===== */}
               <Box
                 sx={{
                   textAlign: "center",
@@ -649,16 +647,30 @@ return (
                   textRendering: "optimizeLegibility",
                 }}
               >
-                <Typography sx={{ fontSize: 18, fontWeight: 700 }}>
+                {/* 👇 LUÔN 1 HÀNG */}
+                <Typography
+                  sx={{
+                    fontSize: 18,
+                    fontWeight: 700,
+                    whiteSpace: "nowrap", // 👈 QUAN TRỌNG
+                  }}
+                >
                   KIỂM TRA ĐỊNH KÌ
                 </Typography>
 
-                <Typography sx={{ fontSize: 15, opacity: 0.9 }}>
+                {/* 👇 LUÔN 1 HÀNG */}
+                <Typography
+                  sx={{
+                    fontSize: 15,
+                    opacity: 0.9,
+                    whiteSpace: "nowrap", // 👈 QUAN TRỌNG
+                  }}
+                >
                   Cuối năm - {config?.namHoc || "2025-2026"}
                 </Typography>
               </Box>
 
-              {/* ===== RIGHT ===== */}
+              {/* ===== RIGHT (KHÔNG ĐỔI DESKTOP) ===== */}
               <Box
                 sx={{
                   minWidth: 160,
@@ -668,29 +680,28 @@ return (
                   gap: 2,
                 }}
               >
-                {started && (
-                  <Box
-                    sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 1,
-                      px: 2,
-                      py: 0.8,
-                      bgcolor: "#fff",
-                      color: "#d32f2f",
-                      borderRadius: 2,
-                      fontWeight: 800,
-                      fontSize: "1rem",
-                      minWidth: 90,
-                      justifyContent: "center",
-                    }}
-                  >
-                    <AccessTimeIcon sx={{ fontSize: 20 }} />
-                    <Typography sx={{ fontWeight: 800 }}>
-                      {formatTime(timeLeft)}
-                    </Typography>
-                  </Box>
-                )}
+                {/* ❌ TIMER sẽ KHÔNG render trong header mobile nữa */}
+                <Box
+                  sx={{
+                    display: { xs: "none", md: "flex" }, // 👈 ẩn trên mobile
+                    alignItems: "center",
+                    gap: 1,
+                    px: 2,
+                    py: 0.8,
+                    bgcolor: "#fff",
+                    color: "#d32f2f",
+                    borderRadius: 2,
+                    fontWeight: 800,
+                    fontSize: "1rem",
+                    minWidth: 90,
+                    justifyContent: "center",
+                  }}
+                >
+                  <AccessTimeIcon sx={{ fontSize: 20 }} />
+                  <Typography sx={{ fontWeight: 800 }}>
+                    {formatTime(timeLeft)}
+                  </Typography>
+                </Box>
 
                 <IconButton
                   onClick={() => setShowSidebar((p) => !p)}
@@ -705,14 +716,42 @@ return (
                     },
                   }}
                 >
-                  {showSidebar ? (
-                    <ChevronLeftIcon />
-                  ) : (
-                    <ChevronRightIcon />
-                  )}
+                  {showSidebar ? <ChevronLeftIcon /> : <ChevronRightIcon />}
                 </IconButton>
               </Box>
             </Stack>
+          </Box>
+
+          {/* ================= TIMER OUTSIDE HEADER (MOBILE ONLY) ================= */}
+          <Box
+            sx={{
+              display: { xs: "flex", md: "none" }, // 👈 chỉ mobile
+              justifyContent: "center",
+              mt: 1,
+            }}
+          >
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 1,
+                px: 2,
+                py: 0.8,
+                bgcolor: "#fff",
+                color: "#d32f2f",
+                borderRadius: 2,
+                fontWeight: 800,
+                fontSize: "1rem",
+                minWidth: 110,
+                justifyContent: "center",
+                boxShadow: "0 1px 4px rgba(0,0,0,0.15)",
+              }}
+            >
+              <AccessTimeIcon sx={{ fontSize: 20 }} />
+              <Typography sx={{ fontWeight: 800 }}>
+                {formatTime(timeLeft)}
+              </Typography>
+            </Box>
           </Box>
 
           {/* ================= CONTENT ================= */}
