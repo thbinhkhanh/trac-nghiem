@@ -706,6 +706,7 @@ return (
                 <IconButton
                   onClick={() => setShowSidebar((p) => !p)}
                   sx={{
+                    display: { xs: "none", md: "flex" }, // 👈 ẨN MOBILE
                     color: "#fff",
                     bgcolor: "rgba(255,255,255,0.15)",
                     width: 36,
