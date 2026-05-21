@@ -1,7 +1,7 @@
 // =========================
 // ⚛️ REACT
 // =========================
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useContext, useRef } from "react";
 
 // =========================
 // 🎨 MATERIAL UI
@@ -90,6 +90,7 @@ export default function TracNghiem() {
   const [answers, setAnswers] = useState({});
   const [submitted, setSubmitted] = useState(false);
   const [score, setScore] = useState(0);
+  const answersRef = useRef({});
 
   // =========================
   // 📍 QUIZ NAVIGATION
@@ -205,6 +206,10 @@ export default function TracNghiem() {
       return { ...prev, [questionId]: newAns };
     });
   };
+
+  useEffect(() => {
+    answersRef.current = answers;
+  }, [answers]);
 
   const showNotFoundDialog = (msg) => {
     setDialogMessage(msg);
@@ -387,32 +392,32 @@ export default function TracNghiem() {
       exportQuizPDF,
     });
 
-  const autoSubmit = () => {
-    autoSubmitQuiz({
+  const handleAutoSubmit = async () => {
+    await autoSubmitQuiz({
       studentName,
-        studentClass,
-        studentId,
-        studentInfo,
-        studentResult,
-        setStudentResult,
-        setSnackbar,
-        setSaving,
-        setSubmitted,
-        setOpenAlertDialog,
-        setUnansweredQuestions,
-        setOpenResultDialog,
-        questions,
-        answers,
-        startTime,
-        db,
-        config,
-        configData,
-        selectedWeek,
-        getQuestionMax,
-        capitalizeName,
-        mapHocKyToDocKey,
-        formatTime,
-        exportQuizPDF,
+      studentClass,
+      studentId,
+      studentInfo,
+      studentResult,
+      setStudentResult,
+      setSnackbar,
+      setSaving,
+      setSubmitted,
+      setOpenAlertDialog,
+      setUnansweredQuestions,
+      setOpenResultDialog,
+      questions,
+      answers: answersRef.current,
+      startTime,
+      db,
+      config,
+      configData,
+      selectedWeek,
+      getQuestionMax,
+      capitalizeName,
+      mapHocKyToDocKey,
+      formatTime,
+      exportQuizPDF,
     });
   };
 
@@ -425,7 +430,7 @@ export default function TracNghiem() {
     started,
     submitted,
     initialTime: timeLimitMinutes * 60,
-    onTimeUp: autoSubmit,
+    onTimeUp: handleAutoSubmit,
   });
 
   const handleNext = () => currentIndex < questions.length - 1 && setCurrentIndex(currentIndex + 1);
