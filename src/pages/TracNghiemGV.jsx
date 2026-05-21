@@ -1290,7 +1290,7 @@ const moveQuestionBottom = (index) => {
     <Box
       sx={{
         width: "100%",
-        maxWidth: 970,
+        maxWidth: 1000,
         display: "flex",
         flexDirection: "column",
         height: "100%",
@@ -1375,7 +1375,7 @@ const moveQuestionBottom = (index) => {
             sx={{
               px: 1.5,
               py: 0.5,
-              borderRadius: 2,
+              borderRadius: 1,
               bgcolor: "rgba(25,118,210,0.08)",
 
               flex: "1 1 auto",   // 👈 cho phép co giãn
@@ -1393,7 +1393,7 @@ const moveQuestionBottom = (index) => {
                 textAlign: "center",
 
                 wordBreak: "break-word", // 👈 cho phép xuống dòng
-                lineHeight: 1.2,
+                lineHeight: 1.5,
               }}
             >
               TẠO ĐỀ KIỂM TRA
