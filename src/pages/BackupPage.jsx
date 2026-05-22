@@ -411,220 +411,310 @@ export default function BackupPage({ open, onClose }) {
     <Dialog
       open={open}
       onClose={onClose}
-      maxWidth="xs"
-      fullWidth
+      maxWidth={false}
       PaperProps={{
         sx: {
-          borderRadius: 3,
-          p: 3,
-          bgcolor: "#fff",
+          width: "100%",
+          maxWidth: 450,
+          borderRadius: "14px",
+          overflow: "hidden",
+          background: "#f8fafc",
+          border: "1px solid #e2e8f0",
           boxShadow:
-            "0 4px 12px rgba(33,150,243,0.15)",
+            "0 10px 35px rgba(0,0,0,0.12)",
+          m: 0,
+        },
+      }}
+      sx={{
+        "& .MuiDialog-container": {
+          justifyContent: "center",
+          alignItems: "flex-start",
+          pt: 10,
+          px: 2,
+        },
+
+        "& .MuiBackdrop-root": {
+          background:
+            "rgba(15,23,42,0.45)",
+          backdropFilter: "blur(2px)",
         },
       }}
     >
+      {/* ===== HEADER ===== */}
       <Box
         sx={{
-          display: "flex",
-          alignItems: "center",
-          mb: 2,
+          px: 3,
+          py: 1.5,
+          background: "#1976d2",
+          color: "#fff",
         }}
       >
-        <Box
-          sx={{
-            bgcolor: "#42a5f5",
-            color: "#fff",
-            borderRadius: "50%",
-            width: 36,
-            height: 36,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            mr: 1.5,
-            fontWeight: "bold",
-            fontSize: 18,
-          }}
+        <Stack
+          direction="row"
+          alignItems="center"
+          justifyContent="space-between"
         >
-          🗄️
-        </Box>
+          <Box>
+            <Typography
+              sx={{
+                fontSize: 17,
+                fontWeight: 700,
+              }}
+            >
+              Sao lưu dữ liệu
+            </Typography>
 
-        <DialogTitle
-          sx={{
-            p: 0,
-            fontWeight: "bold",
-            color: "#1565c0",
-            flex: 1,
-          }}
-        >
-          SAO LƯU DỮ LIỆU
-        </DialogTitle>
+            {/*<Typography
+              sx={{
+                fontSize: 13,
+                opacity: 0.9,
+                mt: 0.3,
+              }}
+            >
+              Xuất dữ liệu hệ thống ra file JSON
+            </Typography>*/}
+          </Box>
 
-        <IconButton
-          onClick={onClose}
-          sx={{
-            ml: "auto",
-            color: "#f44336",
-            "&:hover": {
+          <IconButton
+            onClick={onClose}
+            sx={{
+              color: "#fff",
               bgcolor:
-                "rgba(244,67,54,0.1)",
-            },
-          }}
-        >
-          <CloseIcon />
-        </IconButton>
+                "rgba(255,255,255,0.12)",
+
+              "&:hover": {
+                bgcolor:
+                  "rgba(255,255,255,0.22)",
+              },
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </Stack>
       </Box>
 
-      <DialogContent dividers>
-        <Stack spacing={1.5}>
-
-          {/* ====== NHÓM 1 ====== */}
-          <Typography
-            sx={{
-              fontSize: "1rem",
-              fontWeight: "bold",
-              color: "error.main",
-            }}
-          >
-            Học sinh
-          </Typography>
-
+      {/* ===== CONTENT ===== */}
+      <DialogContent
+        sx={{
+          px: 3,
+          py: 2.5,
+          bgcolor: "#f8fafc",
+        }}
+      >
+        <Stack spacing={2}>
+          {/* ===== HỌC SINH ===== */}
           <Box
             sx={{
-              ml: 3,
-              display: "flex",
-              flexDirection: "column",
+              p: 1.8,
+              borderRadius: "5px",
+              bgcolor: "#fff",
+              border:
+                "1px solid #e2e8f0",
             }}
           >
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={
-                    backupOptions["LOP"]
-                  }
-                  onChange={() =>
-                    toggleOption("LOP")
-                  }
-                />
-              }
-              label="Danh sách lớp"
-            />
+            <Typography
+              sx={{
+                fontSize: 14,
+                fontWeight: 700,
+                mb: 1,
+                color: "#1e293b",
+              }}
+            >
+              Học sinh
+            </Typography>
 
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={
-                    backupOptions[
-                      "KETQUA"
-                    ]
-                  }
-                  onChange={() =>
-                    toggleOption(
-                      "KETQUA"
-                    )
-                  }
-                />
-              }
-              label="Kết quả đánh giá"
-            />
+            <Stack spacing={0.5}>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={
+                      backupOptions["LOP"]
+                    }
+                    onChange={() =>
+                      toggleOption("LOP")
+                    }
+                  />
+                }
+                label="Danh sách lớp"
+              />
+
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={
+                      backupOptions[
+                        "KETQUA"
+                      ]
+                    }
+                    onChange={() =>
+                      toggleOption(
+                        "KETQUA"
+                      )
+                    }
+                  />
+                }
+                label="Kết quả đánh giá"
+              />
+            </Stack>
           </Box>
 
-          <Divider sx={{ my: 1 }} />
-
-          {/* ====== NHÓM 2 ====== */}
-          <Typography
-            sx={{
-              fontSize: "1rem",
-              fontWeight: "bold",
-              color: "error.main",
-            }}
-          >
-            Ngân hàng đề
-          </Typography>
-
+          {/* ===== NGÂN HÀNG ĐỀ ===== */}
           <Box
             sx={{
-              ml: 3,
-              display: "flex",
-              flexDirection: "column",
+              p: 1.8,
+              borderRadius: "5px",
+              bgcolor: "#fff",
+              border:
+                "1px solid #e2e8f0",
             }}
           >
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={
-                    backupOptions[
-                      "NGANHANG_DE"
-                    ]
-                  }
-                  onChange={() =>
-                    toggleOption(
-                      "NGANHANG_DE"
-                    )
-                  }
-                />
-              }
-              label="Đề KTĐK"
-            />
+            <Typography
+              sx={{
+                fontSize: 14,
+                fontWeight: 700,
+                mb: 1,
+                color: "#1e293b",
+              }}
+            >
+              Ngân hàng đề
+            </Typography>
 
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={
-                    backupOptions["DETHI"]
-                  }
-                  onChange={() =>
-                    toggleOption("DETHI")
-                  }
-                />
-              }
-              label="Đề thi"
-            />
+            <Stack spacing={0.5}>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={
+                      backupOptions[
+                        "NGANHANG_DE"
+                      ]
+                    }
+                    onChange={() =>
+                      toggleOption(
+                        "NGANHANG_DE"
+                      )
+                    }
+                  />
+                }
+                label="Đề KTĐK"
+              />
+
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={
+                      backupOptions[
+                        "DETHI"
+                      ]
+                    }
+                    onChange={() =>
+                      toggleOption(
+                        "DETHI"
+                      )
+                    }
+                  />
+                }
+                label="Đề thi"
+              />
+            </Stack>
           </Box>
+
+          {/* ===== PROGRESS ===== */}
+          {loading && (
+            <Box
+              sx={{
+                p: 2,
+                borderRadius: "5px",
+                bgcolor: "#fff",
+                border:
+                  "1px solid #e2e8f0",
+              }}
+            >
+              <Typography
+                sx={{
+                  fontSize: 14,
+                  fontWeight: 600,
+                  mb: 1,
+                  color: "#1e293b",
+                }}
+              >
+                Đang sao lưu dữ liệu...
+              </Typography>
+
+              <LinearProgress
+                variant="determinate"
+                value={progress}
+                sx={{
+                  height: 8,
+                  borderRadius: 999,
+                }}
+              />
+
+              <Typography
+                sx={{
+                  mt: 1,
+                  fontSize: 13,
+                  color: "#64748b",
+                  textAlign:
+                    "center",
+                }}
+              >
+                {Math.round(progress)}%
+              </Typography>
+            </Box>
+          )}
         </Stack>
       </DialogContent>
 
-      {loading && (
-        <>
-          <Box
+      {/* ===== ACTIONS ===== */}
+      <Box
+        sx={{
+          px: 3,
+          py: 2,
+          borderTop:
+            "1px solid #e2e8f0",
+          bgcolor: "#fff",
+        }}
+      >
+        <Stack
+          direction="row"
+          spacing={1.5}
+          justifyContent="flex-end"
+        >
+          <Button
+            onClick={onClose}
             sx={{
-              width: "50%",
-              mx: "auto",
-              mt: 3,
+              textTransform:
+                "none",
             }}
           >
-            <LinearProgress
-              variant="determinate"
-              value={progress}
-            />
-          </Box>
+            Hủy
+          </Button>
 
-          <Typography
-            variant="body2"
-            align="center"
-            color="text.secondary"
-            sx={{ mt: 0.5 }}
+          <Button
+            variant="contained"
+            startIcon={<BackupIcon />}
+            onClick={handleBackup}
+            disabled={loading}
+            sx={{
+              textTransform:
+                "none",
+              borderRadius:
+                "12px",
+              fontWeight: 700,
+              boxShadow: "none",
+
+              "&:hover": {
+                boxShadow: "none",
+              },
+            }}
           >
-            Đang sao lưu... {progress}%
-          </Typography>
-        </>
-      )}
-
-      <DialogActions>
-        <Button onClick={onClose}>
-          Hủy
-        </Button>
-
-        <Button
-          variant="contained"
-          startIcon={<BackupIcon />}
-          onClick={handleBackup}
-          disabled={loading}
-        >
-          Sao lưu
-        </Button>
-      </DialogActions>
+            Sao lưu
+          </Button>
+        </Stack>
+      </Box>
     </Dialog>
 
+    {/* ===== Snackbar ===== */}
     <Snackbar
       open={snackbar.open}
       autoHideDuration={4000}

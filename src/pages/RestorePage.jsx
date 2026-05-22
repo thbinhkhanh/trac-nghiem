@@ -614,276 +614,370 @@ export default function RestorePage({
       fullWidth
       PaperProps={{
         sx: {
-          borderRadius: 3,
-          p: 3,
-          bgcolor: "#fff",
+          borderRadius: "14px",
+          overflow: "hidden",
+          background: "#f8fafc",
+          border: "1px solid #e2e8f0",
           boxShadow:
-            "0 4px 12px rgba(33,150,243,0.15)",
+            "0 10px 35px rgba(0,0,0,0.12)",
         },
       }}
     >
-      {/* HEADER */}
+      {/* ===== HEADER ===== */}
       <Box
         sx={{
-          display: "flex",
-          alignItems: "center",
-          mb: 2,
+          px: 3,
+          py: 1.5,
+          background: "#1976d2",
+          color: "#fff",
         }}
       >
-        <Box
-          sx={{
-            bgcolor: "#42a5f5",
-            color: "#fff",
-            borderRadius: "50%",
-            width: 36,
-            height: 36,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            mr: 1.5,
-          }}
+        <Stack
+          direction="row"
+          alignItems="center"
+          justifyContent="space-between"
         >
-          <RestorePageIcon fontSize="small" />
-        </Box>
+          <Box>
+            <Typography
+              sx={{
+                fontSize: 17,
+                fontWeight: 700,
+              }}
+            >
+              Phục hồi dữ liệu
+            </Typography>
 
-        <DialogTitle
-          sx={{
-            p: 0,
-            fontWeight: "bold",
-            color: "error.main",
-          }}
-        >
-          PHỤC HỒI DỮ LIỆU
-        </DialogTitle>
+            {/*<Typography
+              sx={{
+                fontSize: 13,
+                opacity: 0.9,
+                mt: 0.3,
+              }}
+            >
+              Khôi phục dữ liệu từ file JSON
+            </Typography>*/}
+          </Box>
 
-        <IconButton
-          onClick={onClose}
-          sx={{
-            ml: "auto",
-            color: "#f44336",
-          }}
-        >
-          <CloseIcon />
-        </IconButton>
+          <IconButton
+            onClick={onClose}
+            sx={{
+              color: "#fff",
+              bgcolor:
+                "rgba(255,255,255,0.12)",
+
+              "&:hover": {
+                bgcolor:
+                  "rgba(255,255,255,0.22)",
+              },
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </Stack>
       </Box>
 
-      {/* CHỌN FILE */}
-      <Button
-        variant="outlined"
-        startIcon={<UploadFileIcon />}
-        onClick={() =>
-          fileInputRef.current.click()
-        }
-        sx={{ mb: 1 }}
+      {/* ===== CONTENT ===== */}
+      <DialogContent
+        sx={{
+          px: 3,
+          py: 2.5,
+          bgcolor: "#f8fafc",
+        }}
       >
-        Chọn file phục hồi
-      </Button>
-
-      <input
-        hidden
-        type="file"
-        accept=".json"
-        ref={fileInputRef}
-        onChange={handleFileChange}
-      />
-
-      {selectedFile && (
-        <Typography
-          sx={{
-            color: "red",
-            fontWeight: "bold",
-            mb: 1,
-            wordBreak: "break-all",
-          }}
-        >
-          📄 {selectedFile.name}
-        </Typography>
-      )}
-
-      {/* CONTENT */}
-      <DialogContent dividers>
         <Stack spacing={2}>
-
-          {/* ===== HỌC SINH ===== */}
-          <Typography
-            sx={{
-              fontWeight: "bold",
-              color: "error.main",
-              fontSize: "1rem",
-            }}
-          >
-            Học sinh
-          </Typography>
-
+          {/* CHỌN FILE */}
           <Box
             sx={{
-              ml: 3,
-              display: "flex",
-              flexDirection: "column",
+              p: 2,
+              borderRadius: "5px",
+              bgcolor: "#fff",
+              border:
+                "1px solid #e2e8f0",
             }}
           >
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={
-                    restoreOptions[
-                      "LOP"
-                    ] || false
-                  }
-                  disabled={
-                    disabledOptions[
-                      "LOP"
-                    ]
-                  }
-                  onChange={() =>
-                    toggleOption(
-                      "LOP"
-                    )
-                  }
-                />
+            <Typography
+              sx={{
+                fontSize: 14,
+                fontWeight: 700,
+                mb: 1.5,
+                color: "#1e293b",
+              }}
+            >
+              File phục hồi
+            </Typography>
+
+            <Button
+              variant="outlined"
+              startIcon={
+                <UploadFileIcon />
               }
-              label="Danh sách lớp"
+              onClick={() =>
+                fileInputRef.current.click()
+              }
+              sx={{
+                textTransform:
+                  "none",
+                borderRadius:
+                  "10px",
+                fontWeight: 600,
+              }}
+            >
+              Chọn file JSON
+            </Button>
+
+            <input
+              hidden
+              type="file"
+              accept=".json"
+              ref={fileInputRef}
+              onChange={
+                handleFileChange
+              }
             />
 
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={
-                    restoreOptions[
-                      "KETQUA"
-                    ] || false
-                  }
-                  disabled={
-                    disabledOptions[
-                      "KETQUA"
-                    ]
-                  }
-                  onChange={() =>
-                    toggleOption(
-                      "KETQUA"
-                    )
-                  }
-                />
-              }
-              label="Kết quả đánh giá"
-            />
+            {selectedFile && (
+              <Typography
+                sx={{
+                  mt: 1.5,
+                  fontSize: 13,
+                  color: "#1976d2",
+                  fontWeight: 600,
+                  wordBreak:
+                    "break-all",
+                }}
+              >
+                📄{" "}
+                {
+                  selectedFile.name
+                }
+              </Typography>
+            )}
           </Box>
 
-          <Divider />
-
-          {/* ===== NGÂN HÀNG ĐỀ ===== */}
-          <Typography
-            sx={{
-              fontWeight: "bold",
-              color: "error.main",
-              fontSize: "1rem",
-            }}
-          >
-            Ngân hàng đề
-          </Typography>
-
+          {/* HỌC SINH */}
           <Box
             sx={{
-              ml: 3,
-              display: "flex",
-              flexDirection: "column",
+              p: 1.8,
+              borderRadius: "5px",
+              bgcolor: "#fff",
+              border:
+                "1px solid #e2e8f0",
             }}
           >
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={
-                    restoreOptions[
-                      "NGANHANG_DE"
-                    ] || false
-                  }
-                  disabled={
-                    disabledOptions[
-                      "NGANHANG_DE"
-                    ]
-                  }
-                  onChange={() =>
-                    toggleOption(
-                      "NGANHANG_DE"
-                    )
-                  }
-                />
-              }
-              label="Đề KTĐK"
-            />
+            <Typography
+              sx={{
+                fontSize: 14,
+                fontWeight: 700,
+                mb: 1,
+                color: "#1e293b",
+              }}
+            >
+              Học sinh
+            </Typography>
 
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={
-                    restoreOptions[
-                      "DETHI"
-                    ] || false
+            <Stack spacing={0.5}>
+              {[
+                "LOP",
+                "KETQUA",
+              ].map((key) => (
+                <FormControlLabel
+                  key={key}
+                  control={
+                    <Checkbox
+                      checked={
+                        restoreOptions[
+                          key
+                        ] || false
+                      }
+                      disabled={
+                        disabledOptions[
+                          key
+                        ]
+                      }
+                      onChange={() =>
+                        toggleOption(
+                          key
+                        )
+                      }
+                    />
                   }
-                  disabled={
-                    disabledOptions[
-                      "DETHI"
-                    ]
-                  }
-                  onChange={() =>
-                    toggleOption(
-                      "DETHI"
-                    )
+                  label={
+                    BACKUP_KEYS.find(
+                      (b) =>
+                        b.key ===
+                        key
+                    )?.label
                   }
                 />
-              }
-              label="Đề thi"
-            />
+              ))}
+            </Stack>
           </Box>
+
+          {/* NGÂN HÀNG ĐỀ */}
+          <Box
+            sx={{
+              p: 1.8,
+              borderRadius: "5px",
+              bgcolor: "#fff",
+              border:
+                "1px solid #e2e8f0",
+            }}
+          >
+            <Typography
+              sx={{
+                fontSize: 14,
+                fontWeight: 700,
+                mb: 1,
+                color: "#1e293b",
+              }}
+            >
+              Ngân hàng đề
+            </Typography>
+
+            <Stack spacing={0.5}>
+              {[
+                "NGANHANG_DE",
+                "DETHI",
+              ].map((key) => (
+                <FormControlLabel
+                  key={key}
+                  control={
+                    <Checkbox
+                      checked={
+                        restoreOptions[
+                          key
+                        ] || false
+                      }
+                      disabled={
+                        disabledOptions[
+                          key
+                        ]
+                      }
+                      onChange={() =>
+                        toggleOption(
+                          key
+                        )
+                      }
+                    />
+                  }
+                  label={
+                    BACKUP_KEYS.find(
+                      (b) =>
+                        b.key ===
+                        key
+                    )?.label
+                  }
+                />
+              ))}
+            </Stack>
+          </Box>
+
+          {/* PROGRESS */}
+          {loading && (
+            <Box
+              sx={{
+                p: 2,
+                borderRadius: "5px",
+                bgcolor: "#fff",
+                border:
+                  "1px solid #e2e8f0",
+              }}
+            >
+              <Typography
+                sx={{
+                  fontSize: 14,
+                  fontWeight: 600,
+                  mb: 1,
+                  color: "#1e293b",
+                }}
+              >
+                Đang phục hồi dữ
+                liệu...
+              </Typography>
+
+              <LinearProgress
+                variant="determinate"
+                value={progress}
+                sx={{
+                  height: 8,
+                  borderRadius: 999,
+                }}
+              />
+
+              <Typography
+                sx={{
+                  mt: 1,
+                  fontSize: 13,
+                  color: "#64748b",
+                  textAlign:
+                    "center",
+                }}
+              >
+                {Math.round(
+                  progress
+                )}
+                %
+              </Typography>
+            </Box>
+          )}
         </Stack>
       </DialogContent>
 
-      {/* PROGRESS */}
-      {loading && (
-        <>
-          <Box
+      {/* ===== ACTIONS ===== */}
+      <Box
+        sx={{
+          px: 3,
+          py: 2,
+          borderTop:
+            "1px solid #e2e8f0",
+          bgcolor: "#fff",
+        }}
+      >
+        <Stack
+          direction="row"
+          spacing={1.5}
+          justifyContent="flex-end"
+        >
+          <Button
+            onClick={onClose}
             sx={{
-              width: "50%",
-              mx: "auto",
-              mt: 3,
+              textTransform:
+                "none",
             }}
           >
-            <LinearProgress
-              variant="determinate"
-              value={progress}
-            />
-          </Box>
+            Hủy
+          </Button>
 
-          <Typography
-            variant="body2"
-            align="center"
-            sx={{ mt: 0.5 }}
+          <Button
+            variant="contained"
+            startIcon={
+              <RestoreIcon />
+            }
+            onClick={handleRestore}
+            disabled={
+              loading ||
+              !hasAnyChecked
+            }
+            sx={{
+              textTransform:
+                "none",
+              borderRadius:
+                "12px",
+              fontWeight: 700,
+              boxShadow: "none",
+
+              "&:hover": {
+                boxShadow: "none",
+              },
+            }}
           >
-            Đang phục hồi... {progress}%
-          </Typography>
-        </>
-      )}
-
-      {/* ACTIONS */}
-      <DialogActions>
-        <Button onClick={onClose}>
-          Hủy
-        </Button>
-
-        <Button
-          variant="contained"
-          startIcon={<RestoreIcon />}
-          onClick={handleRestore}
-          disabled={
-            loading || !hasAnyChecked
-          }
-        >
-          PHỤC HỒI
-        </Button>
-      </DialogActions>
+            Phục hồi
+          </Button>
+        </Stack>
+      </Box>
     </Dialog>
 
-    {/* SNACKBAR */}
+    {/* ===== Snackbar ===== */}
     <Snackbar
       open={snackbar.open}
       autoHideDuration={4000}

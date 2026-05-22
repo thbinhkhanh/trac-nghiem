@@ -1368,23 +1368,6 @@ const moveQuestionBottom = (index) => {
                 <UploadFileIcon />
               </IconButton>
             </Tooltip>
-
-            {/* ===== HIDDEN FILE INPUTS ===== */}
-            <input
-              type="file"
-              accept=".json"
-              ref={fileInputRef}
-              style={{ display: "none" }}
-              onChange={handleImportJSON}
-            />
-
-            <input
-              type="file"
-              accept=".doc,.docx"
-              ref={fileInputRefWord}
-              style={{ display: "none" }}
-              onChange={handleImportWord}
-            />
           </Stack>
 
           {/* TITLE */}

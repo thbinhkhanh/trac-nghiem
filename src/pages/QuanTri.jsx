@@ -294,7 +294,7 @@ export default function QuanTri() {
     <Box
       sx={{
         width: "100%",
-        maxWidth: 520,
+        maxWidth: 450,
       }}
     >
       <Card
