@@ -82,7 +82,7 @@ export default function Login({ setIsLoggedIn }) {
     <Box
       sx={{
         width: "100%",
-        maxWidth: 450,
+        maxWidth: 420,
       }}
     >
       <Card
