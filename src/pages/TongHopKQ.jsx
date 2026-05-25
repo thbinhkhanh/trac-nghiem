@@ -253,7 +253,16 @@ export default function TongHopKQ() {
   };
 
   return (
-    <Box sx={{ minHeight: "100vh", background: "linear-gradient(to bottom, #e3f2fd, #bbdefb)", pt: 3, px: 2, display: "flex", justifyContent: "center" }}>
+    <Box
+      sx={{
+        minHeight: "100vh",
+        background: "#f1f5f9",
+        pt: 3,
+        px: 2,
+        display: "flex",
+        justifyContent: "center",
+      }}
+    >
       <Paper sx={{ p: 4, borderRadius: 3, width: "100%", maxWidth: 700, bgcolor: "white" }} elevation={6}>
         <Box
           sx={{

@@ -1278,7 +1278,7 @@ const moveQuestionBottom = (index) => {
   <Box
     sx={{
       height: "90vh",
-      bgcolor: "#e3f2fd",
+      bgcolor: "#f1f5f9",
       display: "flex",
       justifyContent: "center",
       overflow: "hidden",

@@ -760,8 +760,7 @@ export default function QuanTri() {
                 p: 1.6,
                 borderRadius: "5px",
                 bgcolor: "#fff",
-                border:
-                  "1px solid #e2e8f0",
+                border: "1px solid #e2e8f0",
               }}
             >
               <Typography
@@ -776,103 +775,131 @@ export default function QuanTri() {
               </Typography>
 
               <Stack spacing={0.5}>
+
+                {/* KHÓA HỆ THỐNG */}
                 <Box
-                  display="flex"
-                  alignItems="center"
+                  onClick={() =>
+                    updateConfigField(
+                      "khoaHeThong",
+                      !config.khoaHeThong
+                    )
+                  }
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    cursor: "pointer",
+                    userSelect: "none",
+                  }}
                 >
                   <Checkbox
-                    checked={
-                      config.khoaHeThong ||
-                      false
-                    }
+                    checked={config.khoaHeThong || false}
                     onChange={(e) =>
                       updateConfigField(
                         "khoaHeThong",
                         e.target.checked
                       )
                     }
+                    onClick={(e) => e.stopPropagation()}
                     sx={{
-                      color:
-                        "#ef4444",
-
-                      "&.Mui-checked":
-                        {
-                          color:
-                            "#ef4444",
-                        },
+                      color: "#ef4444",
+                      "&.Mui-checked": {
+                        color: "#ef4444",
+                      },
                     }}
                   />
 
-                  <Typography
-                    fontWeight={700}
-                    color="#ef4444"
-                  >
+                  <Typography fontWeight={700} color="#ef4444">
                     Khóa hệ thống
                   </Typography>
                 </Box>
 
+                {/* CHO XEM ĐIỂM */}
                 <Box
-                  display="flex"
-                  alignItems="center"
+                  onClick={() =>
+                    updateConfigField(
+                      "choXemDiem",
+                      !config.choXemDiem
+                    )
+                  }
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    cursor: "pointer",
+                    userSelect: "none",
+                  }}
                 >
                   <Checkbox
-                    checked={
-                      config.choXemDiem
-                    }
+                    checked={config.choXemDiem || false}
                     onChange={(e) =>
                       updateConfigField(
                         "choXemDiem",
                         e.target.checked
                       )
                     }
+                    onClick={(e) => e.stopPropagation()}
                   />
 
-                  <Typography>
-                    Cho xem điểm
-                  </Typography>
+                  <Typography>Cho xem điểm</Typography>
                 </Box>
 
+                {/* CHO XEM ĐÁP ÁN */}
                 <Box
-                  display="flex"
-                  alignItems="center"
+                  onClick={() =>
+                    updateConfigField(
+                      "choXemDapAn",
+                      !config.choXemDapAn
+                    )
+                  }
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    cursor: "pointer",
+                    userSelect: "none",
+                  }}
                 >
                   <Checkbox
-                    checked={
-                      config.choXemDapAn
-                    }
+                    checked={config.choXemDapAn || false}
                     onChange={(e) =>
                       updateConfigField(
                         "choXemDapAn",
                         e.target.checked
                       )
                     }
+                    onClick={(e) => e.stopPropagation()}
                   />
 
-                  <Typography>
-                    Cho xem đáp án
-                  </Typography>
+                  <Typography>Cho xem đáp án</Typography>
                 </Box>
 
+                {/* XUẤT FILE BÀI LÀM */}
                 <Box
-                  display="flex"
-                  alignItems="center"
+                  onClick={() =>
+                    updateConfigField(
+                      "xuatFileBaiLam",
+                      !config.xuatFileBaiLam
+                    )
+                  }
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    cursor: "pointer",
+                    userSelect: "none",
+                  }}
                 >
                   <Checkbox
-                    checked={
-                      config.xuatFileBaiLam
-                    }
+                    checked={config.xuatFileBaiLam || false}
                     onChange={(e) =>
                       updateConfigField(
                         "xuatFileBaiLam",
                         e.target.checked
                       )
                     }
+                    onClick={(e) => e.stopPropagation()}
                   />
 
-                  <Typography>
-                    Xuất file bài làm
-                  </Typography>
+                  <Typography>Xuất file bài làm</Typography>
                 </Box>
+
               </Stack>
             </Box>
 

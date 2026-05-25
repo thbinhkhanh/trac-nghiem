@@ -71,7 +71,7 @@ export default function Login({ setIsLoggedIn }) {
     sx={{
       minHeight: "100vh",
       background: "#f1f5f9",
-      py: 10,
+      py: 5,
       px: 2,
       display: "flex",
       justifyContent: "center",

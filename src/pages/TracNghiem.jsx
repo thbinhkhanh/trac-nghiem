@@ -576,11 +576,11 @@ return (
     id="quiz-container"
     sx={{
       minHeight: "100vh",
-      background: "linear-gradient(to bottom, #e3f2fd, #bbdefb)",
+      background: "#f1f5f9",
       pt: { xs: 2, sm: 3 },
       px: { xs: 1, sm: 2 },
 
-      ffontFamily: `
+      fontFamily: `
         "Roboto",
         "Inter",
         "Segoe UI",

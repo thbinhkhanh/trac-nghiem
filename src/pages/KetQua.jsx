@@ -98,7 +98,7 @@ export default function KetQua() {
     <Box
       sx={{
         minHeight: "100vh",
-        backgroundColor: "#e3f2fd",
+        backgroundColor: "#f1f5f9",
         display: "flex",
         justifyContent: "center",
         pt: 4,

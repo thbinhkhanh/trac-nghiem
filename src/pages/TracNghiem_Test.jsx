@@ -765,7 +765,7 @@ return (
     id="quiz-container"
     sx={{
       minHeight: "100vh",
-      background: "#e3f2fd",
+      background: "#f1f5f9",
       display: "flex",
       justifyContent: "center",
       pt: 2,
