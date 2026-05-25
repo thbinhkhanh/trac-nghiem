@@ -798,122 +798,121 @@ return (
       >
         {/* ================= HEADER ================= */}
         <>
-  {/* ================= HEADER ================= */}
-  <Box
-    sx={{
-      px: 3,
-      py: 1.2,
-      background: "#1976d2",
-      color: "#fff",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
-      flexShrink: 0,
-    }}
-  >
-    {/* ===== TITLE ===== */}
-    <Typography
-      sx={{
-        fontSize: 18,
-        fontWeight: 700,
-        flex: 1,
-        textAlign: { xs: "center", md: "left" },
-      }}
-    >
-      TEST ĐỀ KIỂM TRA
-    </Typography>
-
-    {/* ===== DESKTOP SELECT + ICON ===== */}
-    <Box sx={{ display: { xs: "none", md: "block" } }}>
-      <Stack direction="row" spacing={1} alignItems="center">
-        <FormControl size="small" sx={{ minWidth: 180 }}>
-          <Select
-            value={selectedExam}
-            onChange={(e) => setSelectedExam(e.target.value)}
-            sx={{
-              bgcolor: "#fff",
-              borderRadius: 1,
-              height: 34,
-              fontSize: 15,
-            }}
-          >
-            {examList.map((exam) => (
-              <MenuItem key={exam} value={exam}>
-                {formatQuizTitle(exam)}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-
-        {hasSidebar && (
-          <IconButton
-            onClick={() => setShowSidebar((p) => !p)}
-            sx={{
-              color: "#fff",
-              bgcolor: "rgba(255,255,255,0.15)",
-              width: 36,
-              height: 36,
-              borderRadius: 2,
-              "&:hover": {
-                bgcolor: "rgba(255,255,255,0.25)",
-              },
-            }}
-          >
-            {showSidebar ? <ChevronLeftIcon /> : <ChevronRightIcon />}
-          </IconButton>
-        )}
-      </Stack>
-    </Box>
-
-    {/* ===== MOBILE ICON (KHÔNG MẤT) ===== */}
-    <Box sx={{ display: { xs: "block", md: "none" } }}>
-      {hasSidebar && (
-        <IconButton
-          onClick={() => setShowSidebar((p) => !p)}
+        <Box
           sx={{
+            px: 3,
+            py: 1.2,
+            background: "#1976d2",
             color: "#fff",
-            bgcolor: "rgba(255,255,255,0.15)",
-            width: 36,
-            height: 36,
-            borderRadius: 2,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexShrink: 0,
           }}
         >
-          {showSidebar ? <ChevronLeftIcon /> : <ChevronRightIcon />}
-        </IconButton>
-      )}
-    </Box>
-  </Box>
+          {/* ===== TITLE ===== */}
+          <Typography
+            sx={{
+              fontSize: 18,
+              fontWeight: 700,
+              flex: 1,
+              textAlign: { xs: "center", md: "left" },
+            }}
+          >
+            TEST ĐỀ KIỂM TRA
+          </Typography>
 
-  {/* ================= MOBILE SELECT (RA NGOÀI THANH XANH) ================= */}
-  <Box
-    sx={{
-      display: { xs: "flex", md: "none" },
-      justifyContent: "center",
-      px: 2,
-      py: 1,
-      background: "#f5f5f5", // 👈 tách khỏi thanh xanh để dễ nhìn
-    }}
-  >
-    <FormControl size="small" sx={{ minWidth: 240 }}>
-      <Select
-        value={selectedExam}
-        onChange={(e) => setSelectedExam(e.target.value)}
-        sx={{
-          bgcolor: "#fff",
-          borderRadius: 1,
-          height: 34,
-          fontSize: 15,
-        }}
-      >
-        {examList.map((exam) => (
-          <MenuItem key={exam} value={exam}>
-            {formatQuizTitle(exam)}
-          </MenuItem>
-        ))}
-      </Select>
-    </FormControl>
-  </Box>
-</>
+          {/* ===== DESKTOP SELECT + ICON ===== */}
+          <Box sx={{ display: { xs: "none", md: "block" } }}>
+            <Stack direction="row" spacing={1} alignItems="center">
+              <FormControl size="small" sx={{ minWidth: 180 }}>
+                <Select
+                  value={selectedExam}
+                  onChange={(e) => setSelectedExam(e.target.value)}
+                  sx={{
+                    bgcolor: "#fff",
+                    borderRadius: 1,
+                    height: 34,
+                    fontSize: 15,
+                  }}
+                >
+                  {examList.map((exam) => (
+                    <MenuItem key={exam} value={exam}>
+                      {formatQuizTitle(exam)}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+
+              {hasSidebar && (
+                <IconButton
+                  onClick={() => setShowSidebar((p) => !p)}
+                  sx={{
+                    color: "#fff",
+                    bgcolor: "rgba(255,255,255,0.15)",
+                    width: 36,
+                    height: 36,
+                    borderRadius: 2,
+                    "&:hover": {
+                      bgcolor: "rgba(255,255,255,0.25)",
+                    },
+                  }}
+                >
+                  {showSidebar ? <ChevronLeftIcon /> : <ChevronRightIcon />}
+                </IconButton>
+              )}
+            </Stack>
+          </Box>
+
+          {/* ===== MOBILE ICON (KHÔNG MẤT) ===== */}
+          <Box sx={{ display: { xs: "block", md: "none" } }}>
+            {hasSidebar && (
+              <IconButton
+                onClick={() => setShowSidebar((p) => !p)}
+                sx={{
+                  color: "#fff",
+                  bgcolor: "rgba(255,255,255,0.15)",
+                  width: 36,
+                  height: 36,
+                  borderRadius: 2,
+                }}
+              >
+                {showSidebar ? <ChevronLeftIcon /> : <ChevronRightIcon />}
+              </IconButton>
+            )}
+          </Box>
+        </Box>
+
+        {/* ================= MOBILE SELECT (RA NGOÀI THANH XANH) ================= */}
+        <Box
+          sx={{
+            display: { xs: "flex", md: "none" },
+            justifyContent: "center",
+            px: 2,
+            py: 1,
+            background: "#f5f5f5", // 👈 tách khỏi thanh xanh để dễ nhìn
+          }}
+        >
+          <FormControl size="small" sx={{ minWidth: 240 }}>
+            <Select
+              value={selectedExam}
+              onChange={(e) => setSelectedExam(e.target.value)}
+              sx={{
+                bgcolor: "#fff",
+                borderRadius: 1,
+                height: 34,
+                fontSize: 15,
+              }}
+            >
+              {examList.map((exam) => (
+                <MenuItem key={exam} value={exam}>
+                  {formatQuizTitle(exam)}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Box>
+      </>
 
         {/* ================= CONTENT ================= */}
         <Box
@@ -985,6 +984,8 @@ return (
           navigate={navigate}
           setOpenExitConfirm={setOpenExitConfirm}
           getQuestionStatus={getQuestionStatus}
+          choXemDiem={choXemDiem}
+          choXemDapAn={choXemDapAn}
         />
       )}
     </Box>

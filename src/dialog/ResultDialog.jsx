@@ -2,11 +2,12 @@
 import React from "react";
 import {
   Dialog,
-  DialogTitle,
   DialogContent,
+  DialogTitle,
   IconButton,
   Typography,
   Box,
+  Stack,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 
@@ -20,6 +21,27 @@ const ResultDialog = ({
   configData,
   convertPercentToScore,
 }) => {
+  const getScore = () => {
+    if (!choXemDiem) return null;
+
+    if (configData?.kiemTraDinhKi) {
+      return studentResult?.diem;
+    }
+
+    if (configData?.baiTapTuan) {
+      return convertPercentToScore(studentResult?.diemTN);
+    }
+
+    if (configData?.onTap) {
+      return studentResult?.diem;
+    }
+
+    return "";
+  };
+
+  const studentName =
+    (studentResult?.hoVaTen || "Học sinh").trim().normalize("NFC");
+
   return (
     <Dialog
       open={open}
@@ -32,99 +54,140 @@ const ResultDialog = ({
       fullWidth
       PaperProps={{
         sx: {
-          borderRadius: 3,
-          p: 3,
-          bgcolor: "#e3f2fd",
-          boxShadow: "0 4px 12px rgba(33, 150, 243, 0.15)",
+          borderRadius: "18px",
+          overflow: "hidden",
+          background: "#f8fafc",
+          boxShadow: "0 20px 60px rgba(0,0,0,0.18)",
         },
       }}
     >
-      {/* Header */}
-      <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
-        <Box
-          sx={{
-            bgcolor: "#42a5f5",
-            color: "#fff",
-            borderRadius: "50%",
-            width: 36,
-            height: 36,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            mr: 1.5,
-            fontWeight: "bold",
-            fontSize: 18,
-          }}
-        >
-          📊
-        </Box>
-        <DialogTitle sx={{ p: 0, fontWeight: "bold", color: "#1565c0" }}>
-          KẾT QUẢ
-        </DialogTitle>
+      {/* HEADER */}
+      <Box
+        sx={{
+          px: 3,
+          py: 2,
+          color: "#fff",
+          background: "linear-gradient(135deg, #1976d2, #42a5f5)",
+          position: "relative",
+        }}
+      >
+        <Stack direction="row" alignItems="center" spacing={1}>
+          <Box
+            sx={{
+              width: 34,
+              height: 34,
+              borderRadius: "50%",
+              bgcolor: "rgba(255,255,255,0.2)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 16,
+            }}
+          >
+            🎯
+          </Box>
+
+          <Typography sx={{ fontSize: 16, fontWeight: 700 }}>
+            KẾT QUẢ
+          </Typography>
+        </Stack>
+
         <IconButton
           onClick={onClose}
           sx={{
-            ml: "auto",
-            color: "#f44336",
-            "&:hover": { bgcolor: "rgba(244,67,54,0.1)" },
+            position: "absolute",
+            right: 10,
+            top: 10,
+            color: "#fff",
+            bgcolor: "rgba(255,255,255,0.15)",
           }}
         >
-          <CloseIcon />
+          <CloseIcon fontSize="small" />
         </IconButton>
       </Box>
 
-      {/* Nội dung */}
-      <DialogContent sx={{ textAlign: "center" }}>
+      {/* CONTENT */}
+      <DialogContent sx={{ px: 3, py: 4, textAlign: "center" }}>
         {dialogMode === "notFound" ? (
-          <Typography
-            sx={{
-              fontSize: "1.15rem",
-              fontWeight: 700,
-              color: "red",
-              textAlign: "center",
-            }}
-          >
+          <Typography sx={{ fontSize: 16, fontWeight: 700, color: "#ef4444" }}>
             {dialogMessage}
           </Typography>
         ) : (
-          <>
-            <Typography
-              sx={{ fontSize: 18, fontWeight: "bold", color: "#0d47a1", mb: 1 }}
+          <Stack spacing={2.5} alignItems="center">
+            {/* ICON */}
+            <Box
+              sx={{
+                width: 85,
+                height: 85,
+                borderRadius: "50%",
+                background: "#4caf50",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#fff",
+                fontSize: 36,
+              }}
             >
-              {studentResult?.hoVaTen?.toUpperCase() || "HỌC SINH"}
+              {choXemDiem ? "🏆" : "✓"}
+            </Box>
+
+            {/* NAME */}
+            <Typography
+              sx={{
+                fontSize: 22,
+                fontWeight: 700,
+                color: "#0f172a",
+                textTransform: "uppercase",
+              }}
+            >
+              {studentName}
             </Typography>
 
-            <Typography sx={{ fontSize: 16, color: "#1565c0", mb: 1 }}>
-              Lớp: <span style={{ fontWeight: 600 }}>{studentResult?.lop}</span>
+            {/* CLASS */}
+            <Typography sx={{ fontSize: 15, color: "#1565c0", fontWeight: 600 }}>
+              Lớp: {studentResult?.lop}
             </Typography>
 
-            {choXemDiem ? (
-              <Typography sx={{ fontSize: 16, color: "#0d47a1", mt: 2 }}>
-                Điểm:&nbsp;
-                <span style={{ fontWeight: 700, color: "red" }}>
-                  {configData?.kiemTraDinhKi === true
-                    ? studentResult?.diem
-                    : configData?.baiTapTuan === true
-                    ? convertPercentToScore(studentResult?.diemTN)
-                    : configData?.onTap === true
-                    ? studentResult?.diem // 👉 nhánh Ôn tập
-                    : ""}
-                </span>
+            {/* STATUS */}
+            <Typography
+              sx={{
+                fontSize: 16,
+                fontWeight: 600,
+                color: choXemDiem ? "#16a34a" : "#dc2626",
+              }}
+            >
+              Đã hoàn thành bài kiểm tra
+            </Typography>
+
+            {/* SCORE BOX */}
+            <Box
+              sx={{
+                mt: 1,
+                px: 3,
+                py: 2,
+                borderRadius: "14px",
+                background: "#fff",
+                border: "1px solid #e2e8f0",
+                minWidth: 160,
+              }}
+            >
+              <Typography sx={{ fontSize: 13, color: "#64748b" }}>
+                Điểm của bạn
               </Typography>
-            ) : (
+
               <Typography
                 sx={{
-                  fontSize: 16,
-                  mt: 2,
-                  textAlign: "center",
-                  fontWeight: 700,
-                  color: "red",
+                  fontSize: 30,
+                  fontWeight: 900,
+                  color: "#1976d2",
+                  minHeight: 40,
+                  lineHeight: 1,
                 }}
               >
-                ĐÃ HOÀN THÀNH BÀI KIỂM TRA
+                {choXemDiem ? getScore() : "\u200B"}
               </Typography>
-            )}
-          </>
+            </Box>
+          </Stack>
         )}
       </DialogContent>
     </Dialog>

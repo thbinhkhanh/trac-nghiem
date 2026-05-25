@@ -364,9 +364,8 @@ export default function TracNghiem() {
   const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "info" });
   const handleCloseSnackbar = (event, reason) => { if (reason === "clickaway") return; setSnackbar(prev => ({ ...prev, open: false })); };
 
-  const handleSubmit = async () => {
-  try {
-    await handleSubmitQuiz({
+  const handleSubmit = () =>
+    handleSubmitQuiz({
       studentName,
       studentClass,
       studentId,
@@ -380,11 +379,11 @@ export default function TracNghiem() {
       setUnansweredQuestions,
       setOpenResultDialog,
       questions,
-      answers: answersRef.current,
+      answers,
       startTime,
       db,
       config,
-      configData: config,
+      configData,
       selectedWeek,
       getQuestionMax,
       capitalizeName,
@@ -392,15 +391,6 @@ export default function TracNghiem() {
       formatTime,
       exportQuizPDF,
     });
-  } catch (err) {
-    console.error("❌ Submit error:", err);
-    setSnackbar({
-      open: true,
-      message: "❌ Lỗi khi nộp bài",
-      severity: "error",
-    });
-  }
-};
 
   const handleAutoSubmit = async () => {
     await autoSubmitQuiz({
@@ -647,7 +637,7 @@ return (
                 </Typography>
 
                 <Typography sx={{ fontSize: 15, opacity: 0.9 }}>
-                  Lớp: {studentInfo?.className || "4A"}
+                  Lớp: {studentInfo?.class || "4A"}
                 </Typography>
               </Box>
 
@@ -830,8 +820,6 @@ return (
           handleSubmit={handleSubmit}
           navigate={navigate}
           setOpenExitConfirm={setOpenExitConfirm}
-          choXemDiem={choXemDiem}
-          choXemDapAn={choXemDapAn}
         />
       )}
     </Box>
