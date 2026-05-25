@@ -297,18 +297,17 @@ export default function QuanTri() {
         maxWidth: 450,
       }}
     >
-      {!openBackup && !openRestore && (
-        <Card
-          elevation={0}
-          sx={{
-            borderRadius: "14px",
-            overflow: "hidden",
-            background: "#f8fafc",
-            border: "1px solid #e2e8f0",
-            boxShadow:
-              "0 10px 35px rgba(0,0,0,0.12)",
-          }}
-        >
+      <Card
+        elevation={0}
+        sx={{
+          borderRadius: "14px",
+          overflow: "hidden",
+          background: "#f8fafc",
+          border: "1px solid #e2e8f0",
+          boxShadow:
+            "0 10px 35px rgba(0,0,0,0.12)",
+        }}
+      >
         {/* ===== HEADER ===== */}
         <Box
           sx={{
@@ -922,27 +921,6 @@ export default function QuanTri() {
           </Stack>
         </Box>
       </Card>
-      
-      )}
-      {/* Backup */}
-      {openBackup && (
-        <BackupPage
-          open={openBackup}
-          onClose={() =>
-            setOpenBackup(false)
-          }
-        />
-      )}
-
-      {/* Restore */}
-      {openRestore && (
-        <RestorePage
-          open={openRestore}
-          onClose={() =>
-            setOpenRestore(false)
-          }
-        />
-      )}
     </Box>
 
     {/* Snackbar */}
@@ -1099,6 +1077,21 @@ export default function QuanTri() {
       </DialogContent>
     </Dialog>
 
+    {/* Backup */}
+    <BackupPage
+      open={openBackup}
+      onClose={() =>
+        setOpenBackup(false)
+      }
+    />
+
+    {/* Restore */}
+    <RestorePage
+      open={openRestore}
+      onClose={() =>
+        setOpenRestore(false)
+      }
+    />
   </Box>
 );
 }

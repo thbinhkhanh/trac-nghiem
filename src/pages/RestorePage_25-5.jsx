@@ -1,10 +1,10 @@
 import React, { useEffect, useRef, useState } from "react";
 
 import {
-  //Dialog,
-  //DialogTitle,
-  //DialogContent,
-  //DialogActions,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
   IconButton,
   Button,
   Stack,
@@ -16,7 +16,6 @@ import {
   Alert,
   Divider,
   Box,
-  Card,
 } from "@mui/material";
 
 import CloseIcon from "@mui/icons-material/Close";
@@ -608,16 +607,20 @@ export default function RestorePage({
 
   return (
   <>
-    <Card
-      elevation={0}
-      sx={{
-        width: "100%",
-        borderRadius: "14px",
-        overflow: "hidden",
-        background: "#f8fafc",
-        border: "1px solid #e2e8f0",
-        boxShadow:
-          "0 10px 35px rgba(0,0,0,0.12)",
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="xs"
+      fullWidth
+      PaperProps={{
+        sx: {
+          borderRadius: "14px",
+          overflow: "hidden",
+          background: "#f8fafc",
+          border: "1px solid #e2e8f0",
+          boxShadow:
+            "0 10px 35px rgba(0,0,0,0.12)",
+        },
       }}
     >
       {/* ===== HEADER ===== */}
@@ -674,7 +677,7 @@ export default function RestorePage({
       </Box>
 
       {/* ===== CONTENT ===== */}
-      <Box
+      <DialogContent
         sx={{
           px: 3,
           py: 2.5,
@@ -918,7 +921,7 @@ export default function RestorePage({
             </Box>
           )}
         </Stack>
-      </Box>
+      </DialogContent>
 
       {/* ===== ACTIONS ===== */}
       <Box
@@ -972,7 +975,7 @@ export default function RestorePage({
           </Button>
         </Stack>
       </Box>
-    </Card>
+    </Dialog>
 
     {/* ===== Snackbar ===== */}
     <Snackbar
