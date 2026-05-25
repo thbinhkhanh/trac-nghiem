@@ -25,15 +25,14 @@ const QuestionCard = ({
 }) => {
   return (
     <Paper
-      elevation={3}
       sx={{
         p: 2,
-        position: "relative",
-        borderRadius: 3,
-        overflow: "visible", // ⭐ quan trọng để không bị cắt toolbar
-        "&:hover": {
-          boxShadow: 6,
+        pt: {
+          xs: 7, // tạo chỗ cho toolbar mobile
+          md: 2,
         },
+        position: "relative",
+        overflow: "visible",
       }}
     >
       {/* ===== MODERN TOOLBAR ===== */}
@@ -41,12 +40,21 @@ const QuestionCard = ({
         sx={{
           position: "absolute",
 
-          top: 17,
-          right: 140,
+          top: {
+            xs: 8,   // nằm trong card
+            md: 17,
+          },
+
+          right: {
+            xs: 8,
+            md: 140,
+          },
 
           display: "flex",
           flexDirection: "row",
           alignItems: "center",
+          justifyContent: "center",
+
           gap: 0.3,
 
           background: "transparent",
