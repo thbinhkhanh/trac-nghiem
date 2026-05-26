@@ -9,19 +9,27 @@ export const ConfigProvider = ({ children }) => {
     tuan: 1,
     mon: "Tin học",
     login: false,
+
     hocKy: "Giữa kỳ I",
     namHoc: "2025-2026",
     lop: "",
+
+    // ===== LOẠI ĐỀ =====
+    examType: "ktdk",
+
+    // ===== CŨ =====
     kiemTraDinhKi: false,
     baiTapTuan: false,
     danhGiaTuan: false,
-    onTap: false,        // ✅ thêm dòng này
-    timeLimit: 1, 
-    choXemDiem: false, 
-    choXemDapAn: false,      
-    xuatFileBaiLam: false,  
-    hienThiTenGanDay: false, 
-    khoaHeThong: false, 
+    onTap: false,
+
+    // ===== HỆ THỐNG =====
+    timeLimit: 1,
+    choXemDiem: false,
+    choXemDapAn: false,
+    xuatFileBaiLam: false,
+    hienThiTenGanDay: false,
+    khoaHeThong: false,
   };
 
   const storedConfig = JSON.parse(localStorage.getItem("appConfig") || "{}");

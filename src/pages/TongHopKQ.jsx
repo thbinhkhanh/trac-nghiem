@@ -10,6 +10,7 @@ import { collection, getDocs, doc, getDoc, writeBatch, deleteDoc } from "firebas
 import { Delete, DeleteForever, FileDownload } from "@mui/icons-material";
 import { exportKetQuaExcel } from "../utils/exportKetQuaExcel";
 import CloseIcon from "@mui/icons-material/Close";
+import ConfirmDialog from "../dialog/ConfirmDialog";
 
 export default function TongHopKQ() {
   // =========================
@@ -231,7 +232,7 @@ export default function TongHopKQ() {
   const openConfirmDialog = (title, content, onConfirm) => {
     setDialogTitle(title);
     setDialogContent(content);
-    setDialogAction(() => () => { setDialogOpen(false); setTimeout(() => onConfirm(), 0); });
+    setDialogAction(() => onConfirm);
     setDialogOpen(true);
   };
 
@@ -522,98 +523,18 @@ export default function TongHopKQ() {
 
       </Paper>
       
-      <Dialog
+      <ConfirmDialog
         open={dialogOpen}
-        onClose={(_, reason) => {
-          if (reason === "backdropClick" || reason === "escapeKeyDown") return;
+        title={dialogTitle}
+        content={dialogContent}
+        onClose={() => setDialogOpen(false)}
+        onConfirm={() => {
           setDialogOpen(false);
+          setTimeout(() => {
+            if (dialogAction) dialogAction();
+          }, 0);
         }}
-        maxWidth="xs"
-        fullWidth
-        PaperProps={{
-          sx: {
-            borderRadius: 3,
-            p: 3,
-            bgcolor: "#fff",
-            boxShadow: "0 4px 12px rgba(33,150,243,0.15)",
-          },
-        }}
-      >
-        {/* Header */}
-        <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
-          <Box
-            sx={{
-              bgcolor: "#42a5f5",
-              color: "#fff",
-              borderRadius: "50%",
-              width: 36,
-              height: 36,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              mr: 1.5,
-              fontWeight: "bold",
-              fontSize: 18,
-            }}
-          >
-            ❓
-          </Box>
-
-          <DialogTitle
-            sx={{
-              p: 0,
-              fontWeight: "bold",
-              color: "#1565c0",
-              flex: 1,
-            }}
-          >
-            {dialogTitle}
-          </DialogTitle>
-
-          {/* Nút X */}
-          <IconButton
-            onClick={() => setDialogOpen(false)}
-            sx={{
-              ml: "auto",
-              color: "#f44336",
-              "&:hover": { bgcolor: "rgba(244,67,54,0.1)" },
-            }}
-          >
-            <CloseIcon />
-          </IconButton>
-        </Box>
-
-        {/* Nội dung */}
-        <DialogContent dividers>
-          <Typography
-            sx={{
-              fontSize: 16,
-              color: "#333",
-              whiteSpace: "pre-line",
-              mb: 2, // ⬅️ chỉ tăng khoảng cách text ↔ divider
-            }}
-          >
-            {dialogContent}
-          </Typography>
-        </DialogContent>
-
-
-        {/* Actions */}
-        <DialogActions>
-          <Button onClick={() => setDialogOpen(false)}>
-            Hủy
-          </Button>
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={dialogAction}
-            sx={{ fontWeight: "bold" }}
-          >
-            Xác nhận
-          </Button>
-
-        </DialogActions>
-      </Dialog>
+      />
 
 
     </Box>

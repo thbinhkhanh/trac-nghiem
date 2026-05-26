@@ -21,9 +21,6 @@ import {
   Dialog,
   DialogContent,
   Tooltip,
-  RadioGroup,
-  FormControlLabel,
-  Radio,
 } from "@mui/material";
 
 // =========================
@@ -90,9 +87,6 @@ export default function QuanTri() {
   const [selectedSemester, setSelectedSemester] = useState(
     config.hocKy || "Cuối kỳ I"
   );
-  const [examType, setExamType] = useState(
-    config.examType || "ktdk"
-  );
 
   const [addingClass, setAddingClass] = useState(false);
   const [newClass, setNewClass] = useState("");
@@ -140,11 +134,9 @@ export default function QuanTri() {
           timeLimit: data.timeLimit ?? 20,
           xuatFileBaiLam: data.xuatFileBaiLam ?? true,
           khoaHeThong: data.khoaHeThong ?? false,
-          examType: data.examType ?? "ktdk",
         });
 
         setSelectedSemester(data.hocKy ?? "Cuối kỳ I");
-        setExamType(data.examType ?? "ktdk");
         setTimeInput(data.timeLimit ?? 20);
       }
 
@@ -168,7 +160,6 @@ export default function QuanTri() {
     if (field === "hocKy") setSelectedSemester(value);
     if (field === "timeLimit") setTimeInput(value);
     if (field === "namHoc") ;
-    if (field === "examType") setExamType(value);
   };
 
   // ===== Thêm / xóa lớp =====
@@ -764,7 +755,6 @@ export default function QuanTri() {
             </Box>
 
             {/* TÙY CHỌN */}
-            {/* ===== LOẠI ĐỀ ===== */}
             <Box
               sx={{
                 p: 1.6,
@@ -777,173 +767,11 @@ export default function QuanTri() {
                 sx={{
                   fontSize: 14,
                   fontWeight: 700,
-                  mb: 1.5,
+                  mb: 1,
                   color: "#1e293b",
                 }}
               >
-                Loại đề
-              </Typography>
-
-              <RadioGroup
-                row
-                value={config.examType || "ktdk"}
-                onChange={(e) =>
-                  updateConfigField(
-                    "examType",
-                    e.target.value
-                  )
-                }
-              >
-                <FormControlLabel
-                  value="ktdk"
-                  control={<Radio size="small" />}
-                  label="KTĐK"
-                />
-
-                <FormControlLabel
-                  value="on_tap"
-                  control={<Radio size="small" />}
-                  label="Ôn tập"
-                />
-              </RadioGroup>
-            </Box>
-
-            {/* ===== HIỂN THỊ KẾT QUẢ ===== */}
-            <Box
-              sx={{
-                p: 1.6,
-                borderRadius: "5px",
-                bgcolor: "#fff",
-                border: "1px solid #e2e8f0",
-              }}
-            >
-              <Typography
-                sx={{
-                  fontSize: 14,
-                  fontWeight: 700,
-                  mb: 1.5,
-                  color: "#1e293b",
-                }}
-              >
-                Hiển thị kết quả
-              </Typography>
-
-              <Stack spacing={0.5}>
-
-                {/* CHO XEM ĐIỂM */}
-                <Box
-                  onClick={() =>
-                    updateConfigField(
-                      "choXemDiem",
-                      !config.choXemDiem
-                    )
-                  }
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    cursor: "pointer",
-                    userSelect: "none",
-                  }}
-                >
-                  <Checkbox
-                    checked={config.choXemDiem || false}
-                    onChange={(e) =>
-                      updateConfigField(
-                        "choXemDiem",
-                        e.target.checked
-                      )
-                    }
-                    onClick={(e) => e.stopPropagation()}
-                  />
-
-                  <Typography>
-                    Cho xem điểm
-                  </Typography>
-                </Box>
-
-                {/* CHO XEM ĐÁP ÁN */}
-                <Box
-                  onClick={() =>
-                    updateConfigField(
-                      "choXemDapAn",
-                      !config.choXemDapAn
-                    )
-                  }
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    cursor: "pointer",
-                    userSelect: "none",
-                  }}
-                >
-                  <Checkbox
-                    checked={config.choXemDapAn || false}
-                    onChange={(e) =>
-                      updateConfigField(
-                        "choXemDapAn",
-                        e.target.checked
-                      )
-                    }
-                    onClick={(e) => e.stopPropagation()}
-                  />
-
-                  <Typography>
-                    Cho xem đáp án
-                  </Typography>
-                </Box>
-
-                {/* XUẤT FILE BÀI LÀM */}
-                <Box
-                  onClick={() =>
-                    updateConfigField(
-                      "xuatFileBaiLam",
-                      !config.xuatFileBaiLam
-                    )
-                  }
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    cursor: "pointer",
-                    userSelect: "none",
-                  }}
-                >
-                  <Checkbox
-                    checked={config.xuatFileBaiLam || false}
-                    onChange={(e) =>
-                      updateConfigField(
-                        "xuatFileBaiLam",
-                        e.target.checked
-                      )
-                    }
-                    onClick={(e) => e.stopPropagation()}
-                  />
-
-                  <Typography>
-                    Xuất file bài làm
-                  </Typography>
-                </Box>
-
-              </Stack>
-            </Box>
-
-            {/* ===== HỆ THỐNG ===== */}
-            <Box
-              sx={{
-                p: 1.6,
-                borderRadius: "5px",
-                bgcolor: "#fff",
-                border: "1px solid #e2e8f0",
-              }}
-            >
-              <Typography
-                sx={{
-                  fontSize: 14,
-                  fontWeight: 700,
-                  mb: 1.5,
-                  color: "#1e293b",
-                }}
-              >
-                Hệ thống
+                Tùy chọn hệ thống
               </Typography>
 
               <Stack spacing={0.5}>
@@ -980,12 +808,96 @@ export default function QuanTri() {
                     }}
                   />
 
-                  <Typography
-                    fontWeight={700}
-                    color="#ef4444"
-                  >
+                  <Typography fontWeight={700} color="#ef4444">
                     Khóa hệ thống
                   </Typography>
+                </Box>
+
+                {/* CHO XEM ĐIỂM */}
+                <Box
+                  onClick={() =>
+                    updateConfigField(
+                      "choXemDiem",
+                      !config.choXemDiem
+                    )
+                  }
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    cursor: "pointer",
+                    userSelect: "none",
+                  }}
+                >
+                  <Checkbox
+                    checked={config.choXemDiem || false}
+                    onChange={(e) =>
+                      updateConfigField(
+                        "choXemDiem",
+                        e.target.checked
+                      )
+                    }
+                    onClick={(e) => e.stopPropagation()}
+                  />
+
+                  <Typography>Cho xem điểm</Typography>
+                </Box>
+
+                {/* CHO XEM ĐÁP ÁN */}
+                <Box
+                  onClick={() =>
+                    updateConfigField(
+                      "choXemDapAn",
+                      !config.choXemDapAn
+                    )
+                  }
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    cursor: "pointer",
+                    userSelect: "none",
+                  }}
+                >
+                  <Checkbox
+                    checked={config.choXemDapAn || false}
+                    onChange={(e) =>
+                      updateConfigField(
+                        "choXemDapAn",
+                        e.target.checked
+                      )
+                    }
+                    onClick={(e) => e.stopPropagation()}
+                  />
+
+                  <Typography>Cho xem đáp án</Typography>
+                </Box>
+
+                {/* XUẤT FILE BÀI LÀM */}
+                <Box
+                  onClick={() =>
+                    updateConfigField(
+                      "xuatFileBaiLam",
+                      !config.xuatFileBaiLam
+                    )
+                  }
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    cursor: "pointer",
+                    userSelect: "none",
+                  }}
+                >
+                  <Checkbox
+                    checked={config.xuatFileBaiLam || false}
+                    onChange={(e) =>
+                      updateConfigField(
+                        "xuatFileBaiLam",
+                        e.target.checked
+                      )
+                    }
+                    onClick={(e) => e.stopPropagation()}
+                  />
+
+                  <Typography>Xuất file bài làm</Typography>
                 </Box>
 
               </Stack>

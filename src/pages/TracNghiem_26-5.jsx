@@ -191,8 +191,6 @@ export default function TracNghiem() {
   const monHocDisplay =
     studentInfo.mon || config?.mon || "Tin học";
 
-  const examType = configData?.examType || "ktdk";
-
   // Kiểm tra dữ liệu học sinh
   useEffect(() => {
     if (!studentId || !fullname || !lop) {
@@ -255,56 +253,20 @@ export default function TracNghiem() {
 
         // ===== LẤY DOC ID  =====
         // ================= TỰ TÌM ĐỀ (GIỐNG BẢN CŨ) =================
-        const examType = configData?.examType || "ktdk";
+        const deThiSnap = await getDocs(collection(db, "DETHI"));
 
-        let docId = "";
-        let collectionName = "NGANHANG_DE";
+        const matchedDoc = deThiSnap.docs.find(d =>
+          d.id.includes(classLabel)
+        );
 
-        // ================= ÔN TẬP =================
-        if (examType === "on_tap") {
-          collectionName = "DE_ONTAP";
-
-          const deThiSnap = await getDocs(
-            collection(db, collectionName)
-          );
-
-          const matchedDoc = deThiSnap.docs.find((d) =>
-            d.id.includes(classLabel)
-          );
-
-          if (!matchedDoc) {
-            setNotFoundMessage(
-              `❌ Không tìm thấy đề ôn tập cho ${classLabel}`
-            );
-
-            setLoading(false);
-            return;
-          }
-
-          docId = matchedDoc.id;
+        if (!matchedDoc) {
+          setNotFoundMessage(`❌ Không tìm thấy đề cho ${classLabel}`);
+          setLoading(false);
+          return;
         }
 
-        // ================= KTĐK (LOGIC CŨ) =================
-        else {
-          const deThiSnap = await getDocs(
-            collection(db, "DETHI")
-          );
-
-          const matchedDoc = deThiSnap.docs.find((d) =>
-            d.id.includes(classLabel)
-          );
-
-          if (!matchedDoc) {
-            setNotFoundMessage(
-              `❌ Không tìm thấy đề cho ${classLabel}`
-            );
-
-            setLoading(false);
-            return;
-          }
-
-          docId = matchedDoc.id;
-        }
+        const docId = matchedDoc.id;
+        const collectionName = "NGANHANG_DE"; // hoặc giữ cố định như bạn đang dùng
 
         // ===== LOAD ĐỀ =====
         setTimeLeft(timeLimitMinutes * 60);
@@ -705,10 +667,10 @@ return (
                   sx={{
                     fontSize: 18,
                     fontWeight: 700,
-                    whiteSpace: "nowrap",
+                    whiteSpace: "nowrap", // 👈 QUAN TRỌNG
                   }}
                 >
-                  {examType === "on_tap" ? "ÔN TẬP TIN HỌC" : "KIỂM TRA ĐỊNH KÌ"}
+                  KIỂM TRA ĐỊNH KÌ
                 </Typography>
 
                 {/* 👇 LUÔN 1 HÀNG */}

@@ -1,8 +1,5 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 
-// =========================
-// MUI COMPONENTS
-// =========================
 import {
   Box,
   Typography,
@@ -19,17 +16,11 @@ import {
   Select,
 } from "@mui/material";
 
-// =========================
-// ICONS
-// =========================
 import {
   ChevronRight,
   ChevronLeft,
 } from "@mui/icons-material";
 
-// =========================
-// FIREBASE
-// =========================
 import {
   collection,
   getDoc,
@@ -40,143 +31,164 @@ import {
 } from "firebase/firestore";
 
 import { db } from "../firebase";
-
-// =========================
-// CONTEXT
-// =========================
-import { useContext } from "react";
 import { ConfigContext } from "../context/ConfigContext";
-
-// =========================
-// DIALOGS
-// =========================
 import DeleteExamDialog from "../dialog/DeleteExamDialog";
-
-// =========================
-// UTILITIES
-// =========================
-//import { exportWordFile } from "../utils/exportWordFile";
+import OverwriteConfirmDialog from "../dialog/OverwriteConfirmDialog";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import { createOnTapExam, normalizeOnTapId, checkDuplicateOnTap } from "../utils/createOnTapExam";
 import { exportQuestionsToWord } from "../utils/exportQuizWORD";
 
-
 export default function DeThi() {
- // =========================
-  // ACCOUNT
-  // =========================
-  const account = localStorage.getItem("account") || "";
+  // ================= IMPORT CONTEXT =================
+  const { config } = useContext(ConfigContext);
 
-  // =========================
-  // STATE - EXAM DATA
-  // =========================
+  // ================= STATE: EXAM / DATA LIST =================
   const [examList, setExamList] = useState([]);
+  const [onTapList, setOnTapList] = useState([]);
+
+  // ================= STATE: SELECTION =================
   const [selectedExam, setSelectedExam] = useState([]);
   const [pendingSelectedExam, setPendingSelectedExam] = useState(null);
-
-  // =========================
-  // STATE - DELETE EXAM
-  // =========================
   const [selectedExamToDelete, setSelectedExamToDelete] = useState(null);
-  const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
-
-  // =========================
-  // STATE - COMBINE EXAMS
-  // =========================
   const [selectedExamsToCombine, setSelectedExamsToCombine] = useState([]);
   const [selectedExamIds, setSelectedExamIds] = useState([]);
 
-  // =========================
-  // STATE - SNACKBAR
-  // =========================
+  // ================= STATE: DELETE =================
+  const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+  const [onTapToDelete, setOnTapToDelete] = useState(null);
+  const [openOverwriteDialog, setOpenOverwriteDialog] = useState(false);
+  const [pendingOnTapPayload, setPendingOnTapPayload] = useState(null);
+
+  // ================= STATE: UI HOVER =================
+  const [hoveredExamId, setHoveredExamId] = useState(null);
+  const [hoveredSelectedId, setHoveredSelectedId] = useState(null);
+  const [hoveredOnTapId, setHoveredOnTapId] = useState(null);
+
+  // ================= STATE: SNACKBAR =================
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
     severity: "success",
   });
 
-  // =========================
-  // CONTEXT
-  // =========================
-  const { config } = useContext(ConfigContext);
-
-  // =========================
-  // STATE - FILTER
-  // =========================
+  // ================= STATE: CONFIG =================
   const [selectedYear, setSelectedYear] = useState(
     config?.namHoc || "2025-2026"
   );
 
+  // ================= UTILS =================
   const getYearKey = (namHoc) => {
     if (!namHoc) return "";
     const [start, end] = namHoc.split("-");
     return `${start.slice(-2)}-${end.slice(-2)}`;
   };
 
-
+  // =========================
+  // LOAD NGÂN HÀNG ĐỀ
+  // =========================
   useEffect(() => {
     const fetchExams = async () => {
       try {
-        const snap = await getDocs(collection(db, "NGANHANG_DE"));
-
-        const yearKey = getYearKey(selectedYear);
+        const snap =
+          await getDocs(
+            collection(
+              db,
+              "NGANHANG_DE"
+            )
+          );
+        const yearKey =
+          getYearKey(selectedYear);
 
         const list = snap.docs
           .map((d) => ({
             id: d.id,
             ...d.data(),
           }))
-          .filter((ex) => ex.id.includes(yearKey));
-
+          .filter((ex) =>
+            ex.id.includes(yearKey)
+          );
         setExamList(list);
       } catch (err) {
-        console.error("Lỗi lấy danh sách đề:", err);
+        console.error(
+          "Lỗi lấy danh sách đề:",
+          err
+        );
       }
     };
-
     fetchExams();
   }, [selectedYear]);
 
-  // Lấy danh sách đề đã chọn
+  // =========================
+  // LOAD DETHI
+  // =========================
+
   useEffect(() => {
-    const fetchSelected = async () => {
-      try {
-        const snap = await getDocs(collection(db, "DETHI"));
-        const list = snap.docs.map((d) => ({
-          id: d.id,
-          tenDe: d.data().name || d.id,
-        }));
 
-        setSelectedExam(list);
-      } catch (err) {
-        console.error("Lỗi lấy đề đã chọn:", err);
-      }
-    };
+    const fetchSelected =
+      async () => {
+        try {
+          const snap =
+            await getDocs(
+              collection(
+                db,
+                "DETHI"
+              )
+            );
+          const list =
+            snap.docs.map((d) => ({
+              id: d.id,
+              tenDe:
+                d.data().name ||
+                d.id,
+            }));
+          setSelectedExam(list);
+        } catch (err) {
 
+          console.error(
+            "Lỗi lấy đề đã chọn:",
+            err
+          );
+        }
+      };
     fetchSelected();
   }, []);
 
-  /*useEffect(() => {
-    const fetchCombinedExams = async () => {
+  // =========================
+  // LOAD DE_ONTAP
+  // =========================
+
+  useEffect(() => {
+    const fetchOnTap = async () => {
       try {
-        const snap = await getDocs(collection(db, "TRACNGHIEM_ONTAP"));
-
-        const list = snap.docs.map((d) => ({
-          id: d.id,
-          ...d.data(),
-        }));
-
-        setCombinedExams(list); // đổ vào state để hiển thị
+        const snap = await getDocs(
+          collection(db, "DE_ONTAP")
+        );
+        const yearKey = getYearKey(selectedYear);
+        const list = snap.docs
+          .map((d) => ({
+            id: d.id,
+            ...d.data(),
+          }))
+          .filter((ex) =>
+            ex.id.includes(yearKey)
+          );
+        setOnTapList(list);
       } catch (err) {
-        console.error("Lỗi load đề kết hợp:", err);
+        console.error("Lỗi lấy đề ôn tập:", err);
       }
     };
+    fetchOnTap();
+  }, [selectedYear]);
 
-    fetchCombinedExams();
-  }, []);*/
-
+  // =========================
+  // LƯU DETHI
+  // =========================
 
   const addExamToFirestore = async (ex) => {
     try {
-      await setDoc(doc(db, "DETHI", ex.id), { name: ex.tenDe || ex.id });
+      await setDoc(doc(db, "DETHI", ex.id), {
+        name: ex.tenDe || ex.id,
+      });
     } catch (err) {
       console.error("Lỗi lưu đề:", err);
     }
@@ -190,8 +202,11 @@ export default function DeThi() {
     }
   };
 
+  // =========================
+  // XÓA ĐỀ
+  // =========================
+
   const handleDeleteExam = () => {
-    // Ưu tiên: đã chọn cụ thể -> đang hover -> danh sách kết hợp
     const target =
       selectedExamToDelete ||
       pendingSelectedExam ||
@@ -200,13 +215,15 @@ export default function DeThi() {
     if (!target?.id) {
       setSnackbar({
         open: true,
-        message: "Vui lòng chọn một đề để xóa!",
+        message:
+          "Vui lòng chọn một đề để xóa!",
         severity: "warning",
       });
       return;
     }
-
-    setSelectedExamToDelete(target);
+    setSelectedExamToDelete(
+      target
+    );
     setOpenDeleteDialog(true);
   };
 
@@ -214,15 +231,25 @@ export default function DeThi() {
     try {
       await deleteDoc(doc(db, "NGANHANG_DE", selectedExamToDelete.id));
 
-      setExamList((prev) => prev.filter((e) => e.id !== selectedExamToDelete.id));
-      setSelectedExam((prev) => prev.filter((e) => e.id !== selectedExamToDelete.id));
+      setExamList(prev =>
+        prev.filter(e => e.id !== selectedExamToDelete.id)
+      );
+
+      setSelectedExam(prev =>
+        prev.filter(e => e.id !== selectedExamToDelete.id)
+      );
 
       await removeExamFromFirestore(selectedExamToDelete);
 
       setSelectedExamToDelete(null);
       setOpenDeleteDialog(false);
 
-      setSnackbar({ open: true, message: "🗑️ Đã xóa đề!", severity: "success" });
+      setSnackbar({
+        open: true,
+        message: "🗑️ Đã xóa đề!",
+        severity: "success",
+      });
+
     } catch (err) {
       console.error("Lỗi xóa đề:", err);
       setSnackbar({
@@ -315,514 +342,429 @@ export default function DeThi() {
     }
   };
 
-  // Hàm format tên đề
+  const handleCreateOnTap = async () => {
+    try {
+      const { docId, docData } = await createOnTapExam({
+        selectedExams: selectedExamsToCombine,
+        db,
+        selectedYear,
+        formatExamTitle,
+      });
+
+      // 👉 DÙNG HÀM RIÊNG
+      const isExist = await checkDuplicateOnTap(db, docId);
+
+      if (isExist) {
+        setPendingOnTapPayload({ docId, docData });
+        setOpenOverwriteDialog(true);
+        return;
+      }
+
+      await setDoc(doc(db, "DE_ONTAP", docId), docData);
+
+      setOnTapList((prev) => [
+        ...prev,
+        { id: docId, ...docData },
+      ]);
+
+      setSnackbar({
+        open: true,
+        message: "✅ Đã tạo đề ôn tập!",
+        severity: "success",
+      });
+
+    } catch (err) {
+      setSnackbar({
+        open: true,
+        message: err.message || "❌ Lỗi tạo đề ôn tập!",
+        severity: "error",
+      });
+    }
+  };
+
+const handleOverwriteOnTap = async () => {
+  try {
+    if (!pendingOnTapPayload) return;
+
+    await setDoc(
+      doc(db, "DE_ONTAP", pendingOnTapPayload.docId),
+      pendingOnTapPayload.docData
+    );
+
+    setOnTapList((prev) => [
+      ...prev.filter((x) => x.id !== pendingOnTapPayload.docId),
+      { id: pendingOnTapPayload.docId, ...pendingOnTapPayload.docData },
+    ]);
+
+    setSnackbar({
+      open: true,
+      message: "♻️ Đã ghi đè đề ôn tập!",
+      severity: "success",
+    });
+
+    setOpenOverwriteDialog(false);
+    setPendingOnTapPayload(null);
+
+  } catch (err) {
+    setSnackbar({
+      open: true,
+      message: "❌ Lỗi ghi đè đề ôn tập!",
+      severity: "error",
+    });
+  }
+};
+
+const handleDeleteOnTap = (exam) => {
+  setOnTapToDelete(exam);
+  setOpenDeleteDialog(true);
+};
+
+const confirmDeleteOnTap = async () => {
+  try {
+    if (!onTapToDelete) return;
+
+    await deleteDoc(doc(db, "DE_ONTAP", onTapToDelete.id));
+
+    setOnTapList(prev =>
+      prev.filter(e => e.id !== onTapToDelete.id)
+    );
+
+    setSnackbar({
+      open: true,
+      message: "🗑️ Đã xóa đề ôn tập!",
+      severity: "success",
+    });
+
+    setOpenDeleteDialog(false);
+    setOnTapToDelete(null);
+
+  } catch (err) {
+    console.error(err);
+    setSnackbar({
+      open: true,
+      message: "❌ Lỗi xóa đề ôn tập!",
+      severity: "error",
+    });
+  }
+};
+  
+  // =========================
+  // FORMAT TÊN ĐỀ
+  // =========================
+
   const formatExamTitle = (examName = "") => {
     if (!examName) return "";
 
-    // 1. Loại bỏ prefix "quiz_" nếu có
-    let name = examName.startsWith("quiz_") ? examName.slice(5) : examName;
-
-    // 2. Tách các phần theo dấu "_"
+    const name = examName.startsWith("quiz_") ? examName.slice(5) : examName;
     const parts = name.split("_");
 
-    // 3. Tìm lớp
+    const classPart = parts.find(p => p.toLowerCase().includes("lớp")) || "";
+    const classNumber = classPart.match(/\d+/)?.[0] || "";
+    const classIndex = parts.indexOf(classPart);
+
+    let subjectPart = "", extraPart = "";
+
+    for (let i = classIndex + 1; i < parts.length; i++) {
+      const p = parts[i];
+
+      if (!subjectPart &&
+          !p.toLowerCase().includes("cki") &&
+          !p.toLowerCase().includes("cn") &&
+          !/\d{2}-\d{2}/.test(p)
+      ) subjectPart = p;
+
+      if (!extraPart &&
+          (p.toLowerCase().includes("cki") || p.toLowerCase() === "cn")
+      ) extraPart = p.toUpperCase();
+
+      if (subjectPart && extraPart) break;
+    }
+
+    const examLetter = examName.match(/\(([^)]+)\)/)?.[1] || "";
+
+    return `${subjectPart} ${classNumber}${extraPart ? ` - ${extraPart}` : ""} ${examLetter ? `(${examLetter})` : ""}`.trim();
+  };
+  
+  const formatOnTapTitle = (id = "") => {
+    if (!id) return "";
+
+    let name = id.startsWith("quiz_") ? id.slice(5) : id;
+
+    const parts = name.split("_");
+
     const classPart = parts.find(p => p.toLowerCase().includes("lớp")) || "";
     const classNumber = classPart.match(/\d+/)?.[0] || "";
 
-    // 4. Tìm chỉ số lớp trong mảng để lấy môn
-    const classIndex = parts.indexOf(classPart);
+    const subject = parts.find(
+      (p) =>
+        p !== classPart &&
+        !p.match(/CKI|CKII|CN/i) &&
+        !p.match(/\d{2}-\d{2}/)
+    );
 
-    // 5. Tìm môn: phần ngay sau lớp (hoặc phần đầu nếu lớp là đầu)
-    let subjectPart = "";
-    for (let i = classIndex + 1; i < parts.length; i++) {
-      // bỏ qua CKI, CKII, CN, năm học cuối, chỉ lấy môn
-      const p = parts[i];
-      if (!p.toLowerCase().includes("cki") && !p.toLowerCase().includes("cn") && !/\d{2}-\d{2}/.test(p)) {
-        subjectPart = p;
-        break;
-      }
-    }
+    const examType = parts.find((p) =>
+      /CKI|CKII|CN/i.test(p)
+    );
 
-    // 6. Tìm phần mở rộng (CKI/CKII/CN) sau môn và lớp
-    let extraPart = "";
-    for (let i = classIndex + 1; i < parts.length; i++) {
-      const p = parts[i];
-      if (p.toLowerCase().includes("cki") || p.toLowerCase() === "cn") {
-        extraPart = p.toUpperCase();
-        break;
-      }
-    }
+    const year = parts.find((p) => /\d{2}-\d{2}/.test(p));
 
-    // 7. Tìm ký hiệu đề (A, B, ...) trong ngoặc
-    const match = examName.match(/\(([^)]+)\)/);
-    const examLetter = match ? match[1] : "";
-
-    // 8. Kết hợp lại
-    return `${subjectPart} ${classNumber}${extraPart ? ` - ${extraPart}` : ""} ${examLetter ? `(${examLetter})` : ""}`.trim();
+    return `Ôn tập ${subject} ${classNumber}${
+      examType ? ` - ${examType.toUpperCase()}` : ""
+    } (${year})`.replace(/\s+/g, " ").trim();
   };
 
-  const yearKey = getYearKey(selectedYear);
-  const filteredSelectedExam = selectedExam.filter(ex =>
-    ex.id.includes(yearKey)
-  );
+  const yearKey =
+    getYearKey(selectedYear);
 
-  // Hàm sort đề thi sau khi format tên, theo regex
+  const filteredSelectedExam =
+    selectedExam.filter((ex) =>
+      ex.id.includes(yearKey)
+    );
+
+  // =========================
+  // SORT
+  // =========================
+
   const sortExamList = (list) => {
+    const regex = /(Công nghệ|Tin học) (\d+)(?: - (CKI|CKII|CN))? ?\(?([A-Z])?\)?/i;
+    const subjectOrder = ["Công nghệ", "Tin học"];
+    const extraOrder = ["CKI", "CKII", "CN"];
+
     return [...list].sort((a, b) => {
-      const regex = /(Công nghệ|Tin học) (\d+)(?: - (CKI|CKII|CN))? ?\(?([A-Z])?\)?/i;
+      const [subjectA, classA, extraA, letterA] =
+        (formatExamTitle(a.tenDe || a.id).match(regex) || []).slice(1);
 
-      const titleA = formatExamTitle(a.tenDe || a.id);
-      const titleB = formatExamTitle(b.tenDe || b.id);
+      const [subjectB, classB, extraB, letterB] =
+        (formatExamTitle(b.tenDe || b.id).match(regex) || []).slice(1);
 
-      const matchA = titleA.match(regex);
-      const matchB = titleB.match(regex);
+      if (!subjectA || !subjectB) return 0;
 
-      if (!matchA || !matchB) return 0;
+      const idxA = subjectOrder.indexOf(subjectA);
+      const idxB = subjectOrder.indexOf(subjectB);
+      if (idxA !== idxB) return idxA - idxB;
 
-      const [_, subjectA, classA, extraA, letterA] = matchA;
-      const [__, subjectB, classB, extraB, letterB] = matchB;
+      const cA = parseInt(classA);
+      const cB = parseInt(classB);
+      if (cA !== cB) return cA - cB;
 
-      // 1️⃣ Sắp môn: Công nghệ trước Tin học
-      const subjectOrder = ["Công nghệ", "Tin học"];
-      const indexA = subjectOrder.indexOf(subjectA);
-      const indexB = subjectOrder.indexOf(subjectB);
-      if (indexA !== indexB) return indexA - indexB;
-
-      // 2️⃣ Sắp lớp
-      if (parseInt(classA) !== parseInt(classB)) return parseInt(classA) - parseInt(classB);
-
-      // 3️⃣ Sắp CKI < CKII < CN
-      const extraOrder = ["CKI", "CKII", "CN"];
       const eA = extraOrder.indexOf(extraA || "") === -1 ? 99 : extraOrder.indexOf(extraA || "");
       const eB = extraOrder.indexOf(extraB || "") === -1 ? 99 : extraOrder.indexOf(extraB || "");
       if (eA !== eB) return eA - eB;
 
-      // 4️⃣ Sắp chữ cái đề
       return (letterA || "").localeCompare(letterB || "");
     });
   };
 
   return (
-  <Box
-    sx={{
-      minHeight: "100vh",
-      background: "#f1f5f9",
-      px: 2,
-      py: 3,
-      display: "flex",
-      justifyContent: "center",
-    }}
-  >
-    <Card
-      elevation={0}
+    <Box
       sx={{
-        width: "100%",
-        maxWidth: 800,
-        borderRadius: "16px",
-        overflow: "hidden",
-        border: "1px solid #e2e8f0",
-        background: "#fff",
-        boxShadow: "0 10px 35px rgba(0,0,0,0.06)",
+        minHeight: "100vh",
+        bgcolor: "#f1f5f9",
+        px: { xs: 1.5, sm: 3 },
+        py: 3,
+        display: "flex",
+        justifyContent: "center",
       }}
     >
-      {/* ===== HEADER ===== */}
-      <Box
+      <Card
         sx={{
-          px: 3,
-          py: 1.6,
-          background: "#1976d2",
-          color: "#fff",
+          width: "100%",
+          maxWidth: 800,
+          borderRadius: "10px",
+          overflow: "hidden",
+          boxShadow: "0 10px 35px rgba(0,0,0,0.08)",
+          background: "#fff",
         }}
       >
-        <Stack
-          direction="row"
-          alignItems="center"
-          justifyContent="space-between"
-        >
-          <Typography
-            sx={{
-              fontSize: 18,
-              fontWeight: 700,
-              letterSpacing: 0.3,
-            }}
-          >
-            Quản lý đề kiểm tra
-          </Typography>
 
-          <FormControl size="small" sx={{ minWidth: 150 }}>
-            <InputLabel
-              sx={{
-                color: "#fff",
-                "&.Mui-focused": {
-                  color: "#fff",
-                },
-              }}
-            >
-              Năm học
-            </InputLabel>
+      {/* HEADER */}
+      <Box sx={{ px: 3, py: 1, background: "#1976d2", color: "#fff" }}>
+        <Typography sx={{ fontSize: 17, fontWeight: 700 }}>Quản lý đề kiểm tra</Typography>
+      </Box>
 
+      {/* FILTER */}
+      <Box sx={{ px: 3, py: 2.5, borderBottom: "1px solid #e2e8f0" }}>
+        <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={2}>
+
+          <FormControl size="small" sx={{ width: 180 }}>
+            <InputLabel>Năm học</InputLabel>
             <Select
               value={selectedYear}
               label="Năm học"
               onChange={(e) => setSelectedYear(e.target.value)}
               sx={{
-                height: 40,
-                color: "#fff",
-                bgcolor: "rgba(255,255,255,0.12)",
-                borderRadius: "10px",
-
-                "& .MuiOutlinedInput-notchedOutline": {
-                  borderColor: "rgba(255,255,255,0.25)",
-                },
-
-                "&:hover .MuiOutlinedInput-notchedOutline": {
-                  borderColor: "rgba(255,255,255,0.45)",
-                },
-
-                "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                  borderColor: "#fff",
-                },
-
-                "& .MuiSvgIcon-root": {
-                  color: "#fff",
-                },
+                bgcolor: "#fff", borderRadius: "5px",
+                "& .MuiOutlinedInput-notchedOutline": { borderColor: "#dbe2ea" },
+                "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "#1976d2", borderWidth: 2 },
               }}
             >
-              <MenuItem value="2025-2026">2025-2026</MenuItem>
-              <MenuItem value="2026-2027">2026-2027</MenuItem>
-              <MenuItem value="2027-2028">2027-2028</MenuItem>
-              <MenuItem value="2028-2029">2028-2029</MenuItem>
-              <MenuItem value="2029-2030">2029-2030</MenuItem>
+              {["2025-2026","2026-2027","2027-2028","2028-2029","2029-2030"].map((y) => (
+                <MenuItem key={y} value={y}>{y}</MenuItem>
+              ))}
             </Select>
           </FormControl>
+
+          <Stack direction="row" spacing={1.5}>
+            <Box
+              sx={{
+                px: 2,
+                py: 0.8,
+                borderRadius: "999px",
+                bgcolor: "#e3f2fd",
+                color: "#1976d2",
+                fontWeight: 700,
+                fontSize: 14,
+              }}
+            >
+              {examList.length} đề ngân hàng
+            </Box>
+
+            <Box
+              sx={{
+                px: 2,
+                py: 0.8,
+                borderRadius: "999px",
+                bgcolor: "#fef3c7",
+                color: "#92400e",
+                fontWeight: 700,
+                fontSize: 14,
+              }}
+            >
+              {filteredSelectedExam.length} đề thi
+            </Box>
+
+            <Box
+              sx={{
+                px: 2,
+                py: 0.8,
+                borderRadius: "999px",
+                bgcolor: "#dcfce7",
+                color: "#166534",
+                fontWeight: 700,
+                fontSize: 14,
+              }}
+            >
+              {onTapList.length} đề ôn tập
+            </Box>
+          </Stack>
+
         </Stack>
       </Box>
 
-      {/* ===== CONTENT ===== */}
-      <Box
-        sx={{
-          p: 3,
-        }}
-      >
-        <Stack
-          direction={{ xs: "column", md: "row" }}
-          spacing={3}
-        >
-          {/* ================= LEFT ================= */}
+      {/* CONTENT */}
+      <Box sx={{ p: 3 }}>
+        <Stack direction={{ xs: "column", lg: "row" }} spacing={3}>
+
+          {/* LEFT */}
           <Box sx={{ flex: 1 }}>
-            <Typography
-              sx={{
-                mb: 1.5,
-                fontWeight: 700,
-                color: "#1e293b",
-                fontSize: 16,
-              }}
-            >
+            <Typography sx={{ fontWeight: 700, fontSize: 16, mb: 1.5, color: "#1e293b" }}>
               Ngân hàng đề
             </Typography>
 
-            <Box
-              sx={{
-                border: "1px solid #e2e8f0",
-                borderRadius: "14px",
-                overflow: "hidden",
-                bgcolor: "#fff",
-              }}
-            >
-              <Box
-                sx={{
-                  maxHeight: 520,
-                  overflowY: "auto",
-                  p: 1.2,
-                }}
-              >
-                {examList.length === 0 ? (
-                  <Box
+            <Box sx={{
+              height: 620, overflowY: "auto", borderRadius: "5px",
+              border: "1px solid #e2e8f0", bgcolor: "#f8fafc", p: 1.2,
+              "&::-webkit-scrollbar": { width: 6 },
+              "&::-webkit-scrollbar-thumb": { background: "#cbd5e1", borderRadius: 999 },
+            }}>
+
+              {examList.length === 0 ? (
+                <Box
+                  sx={{
+                    height: "100%",
+                    minHeight: 260,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexDirection: "column",
+                    color: "#94a3b8",
+                  }}
+                >
+                  <Typography
                     sx={{
-                      py: 8,
-                      textAlign: "center",
+                      fontSize: 46,
+                      mb: 1,
+                    }}
+                  >
+                    📂
+                  </Typography>
+
+                  <Typography
+                    sx={{
+                      fontWeight: 600,
+                      fontSize: 16,
+                    }}
+                  >
+                    Hiện chưa có đề nào
+                  </Typography>
+
+                  <Typography
+                    sx={{
+                      fontSize: 13,
+                      mt: 0.5,
                       color: "#94a3b8",
                     }}
                   >
-                    <Typography fontWeight={600}>
-                      Chưa có đề kiểm tra
-                    </Typography>
-                  </Box>
-                ) : (
-                  <Stack spacing={1}>
-                    {sortExamList(examList).map((ex) => {
-                      const checked =
-                        selectedExamIds.includes(ex.id);
+                    Hãy thử thay đổi năm học hoặc tạo đề mới
+                  </Typography>
+                </Box>
+              ) : (
+                <Stack spacing={1}>
+                  {sortExamList(examList).map((ex) => {
+                    const checked = selectedExamIds.includes(ex.id);
 
-                      return (
-                        <Box
-                          key={ex.id}
-                          onClick={() => {
-                            setSelectedExamIds((prev) =>
-                              prev.includes(ex.id)
-                                ? prev.filter(
-                                    (id) => id !== ex.id
-                                  )
-                                : [...prev, ex.id]
-                            );
-
-                            setSelectedExamsToCombine(
-                              (prev) => {
-                                const has = prev.some(
-                                  (e) => e.id === ex.id
-                                );
-
-                                return has
-                                  ? prev.filter(
-                                      (e) => e.id !== ex.id
-                                    )
-                                  : [...prev, ex];
-                              }
-                            );
-                          }}
-                          sx={{
-                            p: 1.4,
-                            borderRadius: "12px",
-                            border: checked
-                              ? "2px solid #1976d2"
-                              : "1px solid #e2e8f0",
-                            bgcolor: checked
-                              ? "#f0f7ff"
-                              : "#fff",
-                            cursor: "pointer",
-                            transition: ".18s",
-
-                            "&:hover": {
-                              bgcolor: "#f8fbff",
-                              borderColor: "#90caf9",
-                            },
-                          }}
-                        >
-                          <Stack
-                            direction="row"
-                            alignItems="center"
-                            spacing={1.2}
-                          >
-                            <Checkbox
-                              checked={checked}
-                              size="small"
-                              onClick={(e) =>
-                                e.stopPropagation()
-                              }
-                              onMouseDown={(e) =>
-                                e.stopPropagation()
-                              }
-                              onChange={(e) => {
-                                e.stopPropagation();
-
-                                const willCheck =
-                                  e.target.checked;
-
-                                setSelectedExamIds(
-                                  (prev) =>
-                                    willCheck
-                                      ? [...prev, ex.id]
-                                      : prev.filter(
-                                          (id) =>
-                                            id !== ex.id
-                                        )
-                                );
-
-                                setSelectedExamsToCombine(
-                                  (prev) => {
-                                    const has =
-                                      prev.some(
-                                        (item) =>
-                                          item.id === ex.id
-                                      );
-
-                                    if (willCheck) {
-                                      return has
-                                        ? prev
-                                        : [...prev, ex];
-                                    }
-
-                                    return prev.filter(
-                                      (item) =>
-                                        item.id !== ex.id
-                                    );
-                                  }
-                                );
-                              }}
-                            />
-
-                            <Typography
-                              sx={{
-                                flex: 1,
-                                fontSize: 15,
-                                fontWeight: 500,
-                                color: "#1e293b",
-                                lineHeight: 1.5,
-                              }}
-                            >
-                              {formatExamTitle(
-                                ex.tenDe || ex.id
-                              )}
-                            </Typography>
-
-                            <IconButton
-                              size="small"
-                              onClick={async (e) => {
-                                e.stopPropagation();
-
-                                setSelectedExam((prev) => {
-                                  if (
-                                    prev.some(
-                                      (e) =>
-                                        e.id === ex.id
-                                    )
-                                  )
-                                    return prev;
-
-                                  return [...prev, ex];
-                                });
-
-                                await addExamToFirestore(
-                                  ex
-                                );
-                              }}
-                              sx={{
-                                color: "#1976d2",
-                                bgcolor: "#eff6ff",
-
-                                "&:hover": {
-                                  bgcolor: "#dbeafe",
-                                },
-                              }}
-                            >
-                              <ChevronRight />
-                            </IconButton>
-                          </Stack>
-                        </Box>
-                      );
-                    })}
-                  </Stack>
-                )}
-              </Box>
-            </Box>
-
-            <Stack
-              direction="row"
-              spacing={1.5}
-              sx={{ mt: 2 }}
-            >
-              <Button
-                variant="contained"
-                color="error"
-                fullWidth
-                onClick={handleDeleteExam}
-                sx={{
-                  textTransform: "none",
-                  borderRadius: "12px",
-                  height: 44,
-                  fontWeight: 700,
-                  boxShadow: "none",
-                }}
-              >
-                Xóa đề
-              </Button>
-
-              <Button
-                variant="contained"
-                fullWidth
-                onClick={handleExportWord}
-                sx={{
-                  textTransform: "none",
-                  borderRadius: "12px",
-                  height: 44,
-                  fontWeight: 700,
-                  boxShadow: "none",
-                }}
-              >
-                Xuất Word
-              </Button>
-            </Stack>
-          </Box>
-
-          {/* ================= RIGHT ================= */}
-          <Box sx={{ flex: 1 }}>
-            <Typography
-              sx={{
-                mb: 1.5,
-                fontWeight: 700,
-                color: "#1e293b",
-                fontSize: 16,
-              }}
-            >
-              Đề thi học kỳ
-            </Typography>
-
-            <Box
-              sx={{
-                border: "1px solid #e2e8f0",
-                borderRadius: "14px",
-                overflow: "hidden",
-                bgcolor: "#fff",
-              }}
-            >
-              <Box
-                sx={{
-                  maxHeight: 520,
-                  overflowY: "auto",
-                  p: 1.2,
-                }}
-              >
-                {filteredSelectedExam.length === 0 ? (
-                  <Box
-                    sx={{
-                      py: 8,
-                      textAlign: "center",
-                      color: "#94a3b8",
-                    }}
-                  >
-                    <Typography fontWeight={600}>
-                      Chưa chọn đề
-                    </Typography>
-                  </Box>
-                ) : (
-                  <Stack spacing={1}>
-                    {filteredSelectedExam.map((ex) => (
+                    return (
                       <Box
                         key={ex.id}
-                        onMouseEnter={() =>
-                          setPendingSelectedExam(ex)
-                        }
-                        onMouseLeave={() =>
-                          setPendingSelectedExam(null)
-                        }
+                        onMouseEnter={() => setHoveredExamId(ex.id)}
+                        onMouseLeave={() => setHoveredExamId(null)}
+                        onClick={() => {
+                          setSelectedExamIds(prev =>
+                            prev.includes(ex.id)
+                              ? prev.filter(id => id !== ex.id)
+                              : [...prev, ex.id]
+                          );
+
+                          setSelectedExamsToCombine(prev => {
+                            const has = prev.some(e => e.id === ex.id);
+                            return has
+                              ? prev.filter(e => e.id !== ex.id)
+                              : [...prev, ex];
+                          });
+                        }}
                         sx={{
-                          p: 1.4,
-                          borderRadius: "12px",
-                          border:
-                            pendingSelectedExam?.id ===
-                            ex.id
-                              ? "2px solid #1976d2"
-                              : "1px solid #e2e8f0",
-
-                          bgcolor:
-                            pendingSelectedExam?.id ===
-                            ex.id
-                              ? "#f0f7ff"
-                              : "#fff",
-
+                          py: 0.7,
+                          px: 1.2,
+                          borderRadius: "5px",
+                          cursor: "pointer",
                           transition: ".18s",
-
-                          "&:hover": {
-                            bgcolor: "#f8fbff",
-                            borderColor: "#90caf9",
-                          },
+                          border: checked ? "2px solid #1976d2" : "1px solid #e2e8f0",
+                          bgcolor: checked ? "#f0f7ff" : "#fff",
+                          "&:hover": { bgcolor: "#f8fbff", borderColor: "#90caf9" },
                         }}
                       >
-                        <Stack
-                          direction="row"
-                          alignItems="center"
-                          spacing={1.2}
-                        >
+                        <Stack direction="row" alignItems="center" spacing={1.5}>
+
+                          <Checkbox
+                            checked={checked}
+                            onClick={(e) => e.stopPropagation()}
+                            onChange={(e) => {
+                              const willCheck = e.target.checked;
+
+                              setSelectedExamIds(prev =>
+                                willCheck
+                                  ? [...prev, ex.id]
+                                  : prev.filter(id => id !== ex.id)
+                              );
+
+                              setSelectedExamsToCombine(prev => {
+                                const has = prev.some(item => item.id === ex.id);
+                                if (willCheck) return has ? prev : [...prev, ex];
+                                return prev.filter(item => item.id !== ex.id);
+                              });
+                            }}
+                          />
+
                           <Typography
                             sx={{
                               flex: 1,
@@ -832,35 +774,223 @@ export default function DeThi() {
                               lineHeight: 1.5,
                             }}
                           >
-                            {formatExamTitle(
-                              ex.tenDe || ex.id
-                            )}
+                            {formatExamTitle(ex.tenDe || ex.id)}
                           </Typography>
 
-                          <IconButton
-                            size="small"
-                            onClick={async () => {
-                              setSelectedExam((prev) =>
-                                prev.filter(
-                                  (e) => e.id !== ex.id
-                                )
-                              );
-
-                              await removeExamFromFirestore(
-                                ex
-                              );
-                            }}
+                          <Stack
+                            direction="row"
+                            spacing={1}
+                            alignItems="center"
                             sx={{
-                              color: "#ef4444",
-                              bgcolor: "#fef2f2",
-
-                              "&:hover": {
-                                bgcolor: "#fee2e2",
-                              },
+                              opacity: hoveredExamId === ex.id ? 1 : 0,
+                              transition: ".18s",
                             }}
                           >
-                            <ChevronLeft />
-                          </IconButton>
+                            <IconButton
+                              size="small"
+                              color="error"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedExamToDelete(ex);
+                                setOpenDeleteDialog(true);
+                              }}
+                              sx={{
+                                bgcolor: "#fee2e2",
+                                "&:hover": { bgcolor: "#fecaca" },
+                              }}
+                            >
+                              <DeleteOutlineIcon fontSize="small" />
+                            </IconButton>
+
+                            <IconButton
+                              size="small"
+                              color="primary"
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                setSelectedExam(prev =>
+                                  prev.some(i => i.id === ex.id)
+                                    ? prev
+                                    : [...prev, ex]
+                                );
+                                await addExamToFirestore(ex);
+                              }}
+                              sx={{
+                                bgcolor: "#e3f2fd",
+                                "&:hover": { bgcolor: "#bbdefb" },
+                              }}
+                            >
+                              <ChevronRight />
+                            </IconButton>
+                          </Stack>
+
+                        </Stack>
+                      </Box>
+                    );
+                  })}
+                </Stack>
+              )}
+
+            </Box>
+
+            <Stack direction="row" spacing={2} sx={{ mt: 2, flexWrap: "wrap" }}>
+              <Button
+                variant="contained"
+                color="success"
+                onClick={handleCreateOnTap}
+                sx={{
+                  borderRadius: "12px",
+                  px: 3,
+                  py: 1.2,
+                  textTransform: "none",
+                  fontWeight: 700,
+                  boxShadow: "none",
+                }}
+              >
+                Tạo đề ôn tập
+              </Button>
+
+              {/* ⭐ NÚT XUẤT WORD */}
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={handleExportWord}
+                //disabled={selectedExamIds.length === 0}
+                sx={{
+                  borderRadius: "12px",
+                  px: 3,
+                  py: 1.2,
+                  textTransform: "none",
+                  fontWeight: 700,
+                  boxShadow: "none",
+                }}
+              >
+                Xuất Word
+              </Button>
+
+            </Stack>
+          </Box>
+
+          {/* RIGHT */}
+          <Stack sx={{ flex: 1 }} spacing={3}>
+            {/* ================= ĐỀ THI ================= */}
+            <Box>
+              <Typography
+                sx={{
+                  fontWeight: 700,
+                  fontSize: 16,
+                  mb: 1.5,
+                  color: "#1e293b",
+                }}
+              >
+                Đề thi học kì
+              </Typography>
+
+              <Box
+                sx={{
+                  maxHeight: 350,
+                  minHeight: 70,
+                  overflowY: "auto",
+                  borderRadius: "5px",
+                  border: "1px solid #e2e8f0",
+                  bgcolor: "#f8fafc",
+                  p: 1.2,
+                  "&::-webkit-scrollbar": { width: 6 },
+                  "&::-webkit-scrollbar-thumb": {
+                    background: "#cbd5e1",
+                    borderRadius: 999,
+                  },
+                }}
+              >
+                {filteredSelectedExam.length === 0 ? (
+                  <Box
+                    sx={{
+                      height: "100%",
+                      minHeight: 260,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexDirection: "column",
+                      color: "#94a3b8",
+                    }}
+                  >
+                    <Typography sx={{ fontSize: 46, mb: 1 }}>
+                      📂
+                    </Typography>
+
+                    <Typography sx={{ fontWeight: 600, fontSize: 16 }}>
+                      Hiện chưa có đề nào
+                    </Typography>
+
+                    <Typography sx={{ fontSize: 13, mt: 0.5 }}>
+                      Hãy chọn đề từ danh sách bên trái
+                    </Typography>
+                  </Box>
+                ) : (
+                  <Stack spacing={1}>
+                    {filteredSelectedExam.map((ex) => (
+                      <Box
+                        key={ex.id}
+                        onMouseEnter={() => {
+                          setPendingSelectedExam(ex);
+                          setHoveredSelectedId(ex.id);
+                        }}
+                        onMouseLeave={() => {
+                          setPendingSelectedExam(null);
+                          setHoveredSelectedId(null);
+                        }}
+                        sx={{
+                          p: 1.5,
+                          borderRadius: "5px",
+                          transition: ".18s",
+                          border:
+                            pendingSelectedExam?.id === ex.id
+                              ? "2px solid #1976d2"
+                              : "1px solid #e2e8f0",
+                          bgcolor:
+                            pendingSelectedExam?.id === ex.id
+                              ? "#f0f7ff"
+                              : "#fff",
+                          "&:hover": {
+                            bgcolor: "#f8fbff",
+                            borderColor: "#90caf9",
+                          },
+                        }}
+                      >
+                        <Stack direction="row" alignItems="center" spacing={1.5}>
+                          <Typography
+                            sx={{
+                              flex: 1,
+                              fontSize: 15,
+                              fontWeight: 500,
+                              color: "#1e293b",
+                            }}
+                          >
+                            {formatExamTitle(ex.tenDe || ex.id)}
+                          </Typography>
+
+                          <Box
+                            sx={{
+                              opacity: hoveredSelectedId === ex.id ? 1 : 0,
+                              transition: ".18s",
+                            }}
+                          >
+                            <IconButton
+                              size="small"
+                              color="error"
+                              onClick={async () => {
+                                setSelectedExam((prev) =>
+                                  prev.filter((e) => e.id !== ex.id)
+                                );
+                                await removeExamFromFirestore(ex);
+                              }}
+                              sx={{
+                                bgcolor: "#fee2e2",
+                                "&:hover": { bgcolor: "#fecaca" },
+                              }}
+                            >
+                              <ChevronLeft />
+                            </IconButton>
+                          </Box>
                         </Stack>
                       </Box>
                     ))}
@@ -868,12 +998,130 @@ export default function DeThi() {
                 )}
               </Box>
             </Box>
-          </Box>
+
+            {/* ================= ÔN TẬP ================= */}
+            <Box>
+              <Typography
+                sx={{
+                  fontSize: 16,
+                  mb: 1.5,
+                  color: "#1e293b",
+                  fontWeight: 700,
+                }}
+              >
+                Đề ôn tập
+              </Typography>
+
+              <Box
+                sx={{
+                  maxHeight: 350,
+                  minHeight: 70,
+                  overflowY: "auto",
+                  borderRadius: "5px",
+                  border: "1px solid #e2e8f0",
+                  bgcolor: "#f8fafc",
+                  p: 1.2,
+                  "&::-webkit-scrollbar": { width: 6 },
+                  "&::-webkit-scrollbar-thumb": {
+                    background: "#cbd5e1",
+                    borderRadius: 999,
+                  },
+                }}
+              >
+                {onTapList.length === 0 ? (
+                  <Box
+                    sx={{
+                      height: "100%",
+                      minHeight: 260,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexDirection: "column",
+                      color: "#94a3b8",
+                    }}
+                  >
+                    <Typography sx={{ fontSize: 46, mb: 1 }}>
+                      📂
+                    </Typography>
+
+                    <Typography sx={{ fontWeight: 600, fontSize: 16 }}>
+                      Hiện chưa có đề ôn tập
+                    </Typography>
+
+                    <Typography sx={{ fontSize: 13, mt: 0.5 }}>
+                      Hãy thêm đề ôn tập từ ngân hàng đề
+                    </Typography>
+                  </Box>
+                ) : (
+                  <Stack spacing={1}>
+                    {onTapList.map((ex) => (
+                      <Box
+                        key={ex.id}
+                        onMouseEnter={() => setHoveredOnTapId(ex.id)}
+                        onMouseLeave={() => setHoveredOnTapId(null)}
+                        sx={{
+                          p: 1.5,
+                          borderRadius: "5px",
+                          border: "1px solid #e2e8f0",
+                          bgcolor: "#fff",
+                          transition: ".18s",
+                          "&:hover": {
+                            borderColor: "#90caf9",
+                            bgcolor: "#f8fbff",
+                          },
+                        }}
+                      >
+                        <Stack direction="row" alignItems="center" spacing={1.5}>
+                          <Box sx={{ flex: 1 }}>
+                            <Typography sx={{ fontSize: 15, color: "#1e293b" }}>
+                              {formatOnTapTitle(ex.id)}
+                            </Typography>
+
+                            <Typography
+                              sx={{
+                                fontSize: 13,
+                                color: "#64748b",
+                                mt: 0.5,
+                              }}
+                            >
+                              {ex.questions?.length || 0} câu hỏi
+                            </Typography>
+                          </Box>
+
+                          <Box
+                            sx={{
+                              opacity: hoveredOnTapId === ex.id ? 1 : 0,
+                              transition: ".18s",
+                            }}
+                          >
+                            <IconButton
+                              size="small"
+                              color="error"
+                              onClick={() => handleDeleteOnTap(ex)}
+                              sx={{
+                                bgcolor: "#fee2e2",
+                                "&:hover": { bgcolor: "#fecaca" },
+                              }}
+                            >
+                              <DeleteOutlineIcon fontSize="small" />
+                            </IconButton>
+                          </Box>
+                        </Stack>
+                      </Box>
+                    ))}
+                  </Stack>
+                )}
+              </Box>
+            </Box>
+
+          </Stack>
         </Stack>
       </Box>
+
     </Card>
 
     {/* ===== SNACKBAR ===== */}
+
     <Snackbar
       open={snackbar.open}
       autoHideDuration={3000}
@@ -907,10 +1155,32 @@ export default function DeThi() {
     </Snackbar>
 
     {/* ===== DELETE DIALOG ===== */}
+
     <DeleteExamDialog
       open={openDeleteDialog}
-      onClose={() => setOpenDeleteDialog(false)}
-      onConfirm={confirmDeleteExam}
+      onClose={() => {
+        setOpenDeleteDialog(false);
+        setSelectedExamToDelete(
+          null
+        );
+        setOnTapToDelete(null);
+      }}
+      onConfirm={() => {
+        if (onTapToDelete) {
+          confirmDeleteOnTap();
+        } else {
+          confirmDeleteExam();
+        }
+      }}
+    />
+
+    <OverwriteConfirmDialog
+      open={openOverwriteDialog}
+      onClose={() => {
+        setOpenOverwriteDialog(false);
+        setPendingOnTapPayload(null);
+      }}
+      onConfirm={handleOverwriteOnTap}
     />
   </Box>
 );

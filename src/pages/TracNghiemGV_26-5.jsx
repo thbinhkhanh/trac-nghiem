@@ -108,7 +108,7 @@ export default function TracNghiemGV() {
 
   const [filterClass, setFilterClass] = useState("Tất cả");
   const [filterYear, setFilterYear] = useState("Tất cả");
-  const [dialogExamType, setDialogExamType] = useState("ktdk");
+  const [dialogExamType, setDialogExamType] = useState("");
 
   // =========================
   // ⚙️ DIALOG STATES
@@ -325,6 +325,8 @@ useEffect(() => {
   }
 }, []);
 
+
+
   // 🔹 Lưu config vào localStorage khi thay đổi
   useEffect(() => {
     const cfg = {
@@ -465,61 +467,37 @@ useEffect(() => {
   }
 
   // --- Hàm mở dialog và fetch danh sách document ---
+ // Mở dialog với mặc định loại đề "Bài tập tuần"
   const handleOpenDialog = () => {
     setSelectedDoc(null);
-
-    setFilterClass("Tất cả");
-    setFilterYear("Tất cả");
-
-    // 🔥 mặc định KTĐK
-    setDialogExamType("ktdk");
-
-    // 🔥 load collection KTĐK
-    fetchQuizList("ktdk");
+    setFilterClass("Tất cả"); // reset về "Tất cả"
+    
+    const defaultType = "bt";       // mặc định Bài tập tuần
+    fetchQuizList(defaultType);      // load danh sách đề
   };
 
 
   // 🔹 Hàm lấy danh sách đề trong Firestore
-  const fetchQuizList = async (type = "ktdk") => {
+  const fetchQuizList = async () => {
     setLoadingList(true);
     setFilterClass("Tất cả");
 
     try {
-      let allDocs = [];
+      const colRef = collection(db, "NGANHANG_DE");
+      const snap = await getDocs(colRef);
 
-      // 🔵 KTĐK
-      if (type === "ktdk") {
-        const snap1 = await getDocs(collection(db, "NGANHANG_DE"));
+      const docs = snap.docs.map((d) => ({
+        id: d.id,
+        name: d.id,
+        collection: "NGANHANG_DE",
+        ...d.data(),
+      }));
 
-        allDocs = snap1.docs.map((d) => ({
-          id: d.id,
-          ...d.data(),
-          collection: "NGANHANG_DE",
-          type: "ktdk",
-        }));
-      }
-
-      // 🟠 Ôn tập
-      if (type === "on_tap") {
-        const snap2 = await getDocs(collection(db, "DE_ONTAP"));
-
-        allDocs = snap2.docs.map((d) => ({
-          id: d.id,
-          ...d.data(),
-          collection: "DE_ONTAP",
-          type: "on_tap",
-        }));
-      }
-
-      setDocList(allDocs);
-
-      if (allDocs.length > 0) {
-        setSelectedDoc(allDocs[0].id);
-      }
+      setDocList(docs);
+      if (docs.length > 0) setSelectedDoc(docs[0].id);
 
     } catch (err) {
       console.error("❌ Lỗi khi lấy danh sách đề:", err);
-
       setSnackbar({
         open: true,
         message: "❌ Không thể tải danh sách đề!",
@@ -546,15 +524,8 @@ useEffect(() => {
     setOpenDialog(false);
 
     try {
-      // 🔥 Tìm doc trong list để biết loại đề
-      const selected = docList.find(d => d.id === selectedDoc);
-
-      const collectionName =
-        selected?.type === "on_tap"
-          ? "DE_ONTAP"
-          : "NGANHANG_DE";
-
-      const docRef = doc(db, collectionName, selectedDoc);
+      // ✅ CHỈ DÙNG 1 COLLECTION
+      const docRef = doc(db, "NGANHANG_DE", selectedDoc);
       const docSnap = await getDoc(docRef);
 
       if (!docSnap.exists()) {
@@ -646,7 +617,7 @@ useEffect(() => {
       return;
     }
 
-    setOpenDialog(true);
+    setOpenDialog(false);
     setOpenDeleteDialog(true);
   };
 
@@ -1369,10 +1340,7 @@ const moveQuestionBottom = (index) => {
             </Tooltip>
 
             <Tooltip title="Mở đề">
-              <IconButton
-                onClick={handleOpenDialog}
-                sx={{ color: "#1976d2" }}
-              >
+              <IconButton onClick={fetchQuizList} sx={{ color: "#1976d2" }}>
                 <FolderOpenIcon />
               </IconButton>
             </Tooltip>
@@ -1577,7 +1545,6 @@ const moveQuestionBottom = (index) => {
           setFilterClass={setFilterClass}
           filterYear={filterYear}          // thêm
           setFilterYear={setFilterYear}    // thêm
-          
           classes={classes}
           loadingList={loadingList}
           docList={docList}
@@ -1668,7 +1635,7 @@ const moveQuestionBottom = (index) => {
 
           onSelectFirestore={() => {
             setOpenImportSourceDialog(false);
-            fetchQuizList(dialogExamType);
+            fetchQuizList();
           }}
         />
 

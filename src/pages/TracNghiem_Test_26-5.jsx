@@ -323,208 +323,143 @@ export default function TracNghiem_Test() {
     if (!selectedExam) return;
 
     const fetchQuestions = async () => {
-  try {
-    setLoading(true);
-    let prog = 0;
+      try {
+        setLoading(true);
+        let prog = 0;
 
-    // =========================
-    // CONFIG
-    // =========================
-    const configSnap = await getDoc(doc(db, "CONFIG", "config"));
+        const collectionName =
+          examType === "kt" ? "NGANHANG_DE" : "BAITAP_TUAN";
 
-    if (!configSnap.exists()) {
-      setSnackbar({
-        open: true,
-        message: "❌ Không tìm thấy config!",
-        severity: "error",
-      });
-      return;
-    }
+        // ===== CONFIG =====
+        const configSnap = await getDoc(doc(db, "CONFIG", "config"));
 
-    prog += 30;
-    setProgress(prog);
+        if (!configSnap.exists()) {
+          setSnackbar({
+            open: true,
+            message: "❌ Không tìm thấy config!",
+            severity: "error",
+          });
+          return;
+        }
 
-    const configData = configSnap.data();
+        prog += 30;
+        setProgress(prog);
 
-    const hocKiFromConfig = configData.hocKy || "";
-    const monHocFromConfig = configData.mon || "";
-    const timeLimitMinutes = configData.timeLimit ?? 0;
+        const configData = configSnap.data();
 
-    setTimeLimitMinutes(timeLimitMinutes);
-    setChoXemDiem(configData.choXemDiem ?? false);
-    setChoXemDapAn(configData.choXemDapAn ?? false);
+        const hocKiFromConfig = configData.hocKy || "";
+        const monHocFromConfig = configData.mon || "";
+        const timeLimitMinutes = configData.timeLimit ?? 0;
 
-    // =========================
-    // DOC ID
-    // =========================
-    const docId = selectedExam;
+        setTimeLimitMinutes(timeLimitMinutes);
+        setChoXemDiem(configData.choXemDiem ?? false);
+        setChoXemDapAn(configData.choXemDapAn ?? false);
 
-    // =========================
-    // TIME
-    // =========================
-    setTimeLeft(timeLimitMinutes * 60);
+        // ===== DOC ID =====
+        const docId = selectedExam;
 
-    // =========================
-    // XÁC ĐỊNH COLLECTION (ĐÃ BỎ BÀI TẬP TUẦN)
-    // =========================
-    const examMeta = allExamList.find(x => x.id === selectedExam);
+        // ===== TIME =====
+        setTimeLeft(timeLimitMinutes * 60);
 
-    const collectionName =
-      examMeta?.type === "on_tap"
-        ? "DE_ONTAP"
-        : "NGANHANG_DE";
+        // ===== LOAD ĐỀ =====
+        const docSnap = await getDoc(doc(db, collectionName, docId));
 
-    // =========================
-    // LOAD ĐỀ
-    // =========================
-    const docSnap = await getDoc(doc(db, collectionName, docId));
+        if (!docSnap.exists()) {
+          setSnackbar({
+            open: true,
+            message: "❌ Không tìm thấy đề!",
+            severity: "error",
+          });
+          return;
+        }
 
-    if (!docSnap.exists()) {
-      setSnackbar({
-        open: true,
-        message: "❌ Không tìm thấy đề!",
-        severity: "error",
-      });
-      return;
-    }
+        prog += 30;
+        setProgress(prog);
 
-    prog += 30;
-    setProgress(prog);
+        const data = docSnap.data();
 
-    const data = docSnap.data();
+        // ===== META =====
+        setQuizClass(data.class || "");
 
-    // =========================
-    // META
-    // =========================
-    setQuizClass(data.class || "");
+        const hocKiFromDoc = data.semester || hocKiFromConfig;
+        const monHocFromDoc = data.subject || monHocFromConfig;
 
-    const hocKiFromDoc = data.semester || hocKiFromConfig;
-    const monHocFromDoc = data.subject || monHocFromConfig;
+        setHocKi(hocKiFromDoc);
+        setMonHoc(monHocFromDoc);
 
-    setHocKi(hocKiFromDoc);
-    setMonHoc(monHocFromDoc);
+        window.currentHocKi = hocKiFromDoc;
+        window.currentMonHoc = monHocFromDoc;
 
-    window.currentHocKi = hocKiFromDoc;
-    window.currentMonHoc = monHocFromDoc;
+        // ✅ DÙNG HÀM CHUNG
+        processQuestions({
+          data,
+          buildRuntimeQuestions,
+          setQuestions,
+          setStarted,
+          setProgress,
+          setAnswers,
+        });
 
-    // =========================
-    // PROCESS QUESTIONS
-    // =========================
-    processQuestions({
-      data,
-      buildRuntimeQuestions,
-      setQuestions,
-      setStarted,
-      setProgress,
-      setAnswers,
-    });
-
-  } catch (err) {
-    console.error("❌ Lỗi khi load câu hỏi:", err);
-    setQuestions([]);
-  } finally {
-    setLoading(false);
-  }
-};
+      } catch (err) {
+        console.error("❌ Lỗi khi load câu hỏi:", err);
+        setQuestions([]);
+      } finally {
+        setLoading(false);
+      }
+    };
 
     fetchQuestions();
   }, [selectedExam, examType]);
 
   const fetchQuizList = async (type) => {
     try {
-      // =========================
-      // KTĐK + ÔN TẬP
-      // =========================
-      if (type === "kt") {
-        const [ktSnap, onTapSnap] = await Promise.all([
-          getDocs(collection(db, "NGANHANG_DE")),
-          getDocs(collection(db, "DE_ONTAP")),
-        ]);
+      const colName = type === "bt" ? "BAITAP_TUAN" : "NGANHANG_DE";
 
-        // ===== KTĐK =====
-        const ktList = ktSnap.docs.map((d) => ({
-          id: d.id,
-          type: "kt",
-        }));
-
-        // ===== ÔN TẬP =====
-        const onTapList = onTapSnap.docs.map((d) => ({
-          id: d.id,
-          type: "on_tap",
-        }));
-
-        // ===== GỘP =====
-        const merged = [...ktList, ...onTapList];
-
-        // ===== SORT =====
-        merged.sort((a, b) => {
-          const isOnTapA = a.type === "on_tap";
-          const isOnTapB = b.type === "on_tap";
-
-          // 👉 Ôn tập luôn xuống cuối
-          if (isOnTapA !== isOnTapB) {
-            return isOnTapA ? 1 : -1;
-          }
-
-          const titleA = formatQuizTitle(a.id, a.type);
-          const titleB = formatQuizTitle(b.id, b.type);
-
-          return titleA.localeCompare(titleB, "vi");
-        });
-
-        setAllExamList(merged);
-        setExamList(merged);
-
-        if (merged.length > 0) {
-          setSelectedExam(merged[0].id);
-        }
-
-        return;
-      }
-
-      // =========================
-      // BÀI TẬP TUẦN
-      // =========================
-      const colRef = collection(db, "BAITAP_TUAN");
-
+      const colRef = collection(db, colName);
       const snap = await getDocs(colRef);
 
       const exams = snap.docs
-        .map((d) => ({
-          id: d.id,
-          type: "bt",
-        }))
+        .map((d) => d.id)
         .sort((a, b) => {
+          // ===== TÁCH TUẦN =====
           const getWeek = (str) => {
             const match = str.match(/_(\d+)$/);
             return match ? Number(match[1]) : 999;
           };
 
-          const titleA = formatQuizTitle(a.id, a.type);
-          const titleB = formatQuizTitle(b.id, b.type);
+          // ===== FORMAT TITLE =====
+          const titleA = formatQuizTitle(a);
+          const titleB = formatQuizTitle(b);
 
-          const baseA = titleA
-            .replace(/– Tuần \d+/i, "")
-            .trim();
+          // ===== TÊN KHÔNG CÓ TUẦN =====
+          const baseA = titleA.replace(/– Tuần \d+/i, "").trim();
+          const baseB = titleB.replace(/– Tuần \d+/i, "").trim();
 
-          const baseB = titleB
-            .replace(/– Tuần \d+/i, "")
-            .trim();
-
+          // ===== SORT THEO TÊN =====
           if (baseA !== baseB) {
             return baseA.localeCompare(baseB, "vi");
           }
 
-          return getWeek(a.id) - getWeek(b.id);
+          // ===== SORT THEO TUẦN =====
+          return getWeek(a) - getWeek(b);
         });
 
       setAllExamList(exams);
 
-      setExamList([]);
-      setSelectedExam("");
+      if (type === "bt") {
+        setExamList([]);       // chờ chọn lớp
+        setSelectedExam("");
+      } else {
+        setExamList(exams);    // KTĐK thì hiện hết
+        setSelectedExam(exams[0] || "");
+      }
+
+
+      if (exams.length > 0) {
+        setSelectedExam(exams[0]);
+      }
     } catch (err) {
       console.error("❌ Lỗi khi lấy danh sách đề:", err);
-
       setSnackbar({
         open: true,
         message: "❌ Không thể tải danh sách đề!",
@@ -551,38 +486,21 @@ export default function TracNghiem_Test() {
   }, [selectedClass, examType, allExamList]);
 
 
-  const formatQuizTitle = (
-    examName = "",
-    type = "kt"
-  ) => {
+  const formatQuizTitle = (examName = "") => {
     if (!examName) return "";
 
     // Bỏ prefix quiz_
-    let name = examName.startsWith("quiz_")
-      ? examName.slice(5)
-      : examName;
-
+    let name = examName.startsWith("quiz_") ? examName.slice(5) : examName;
     const parts = name.split("_");
 
     // ===== LỚP =====
-    const classPart =
-      parts.find((p) =>
-        p.toLowerCase().includes("lớp")
-      ) || "";
-
-    const classNumber =
-      classPart.match(/\d+/)?.[0] || "";
+    const classPart = parts.find(p => p.toLowerCase().includes("lớp")) || "";
+    const classNumber = classPart.match(/\d+/)?.[0] || "";
 
     // ===== MÔN =====
     let subjectPart = "";
-
-    for (
-      let i = parts.indexOf(classPart) + 1;
-      i < parts.length;
-      i++
-    ) {
+    for (let i = parts.indexOf(classPart) + 1; i < parts.length; i++) {
       const p = parts[i];
-
       if (
         !p.toLowerCase().includes("cki") &&
         !p.toLowerCase().includes("cn") &&
@@ -596,47 +514,25 @@ export default function TracNghiem_Test() {
     // ===== PHÂN BIỆT BT / KT =====
     const lastPart = parts[parts.length - 1];
 
-    // 👉 BÀI TẬP TUẦN
+    // 👉 BÀI TẬP TUẦN (kết thúc bằng số)
     if (/^\d+$/.test(lastPart)) {
       return `${subjectPart} ${classNumber} – Tuần ${lastPart}`.trim();
     }
 
-    // 👉 KIỂM TRA / ÔN TẬP
+    // 👉 KIỂM TRA ĐỊNH KỲ
     let extraPart = "";
-
-    for (
-      let i = parts.indexOf(classPart) + 1;
-      i < parts.length;
-      i++
-    ) {
+    for (let i = parts.indexOf(classPart) + 1; i < parts.length; i++) {
       const p = parts[i];
-
-      if (
-        p.toLowerCase().includes("cki") ||
-        p.toLowerCase() === "cn"
-      ) {
+      if (p.toLowerCase().includes("cki") || p.toLowerCase() === "cn") {
         extraPart = p.toUpperCase();
         break;
       }
     }
 
     const match = examName.match(/\(([^)]+)\)/);
+    const examLetter = match ? match[1] : "";
 
-    const examLetter = match
-      ? match[1]
-      : "";
-
-    // ===== PREFIX ÔN TẬP =====
-    const prefix =
-      type === "on_tap"
-        ? "Ôn tập "
-        : "";
-
-    return `${prefix}${subjectPart} ${classNumber}${
-      extraPart ? ` - ${extraPart}` : ""
-    }${
-      examLetter ? ` (${examLetter})` : ""
-    }`.trim();
+    return `${subjectPart} ${classNumber}${extraPart ? ` - ${extraPart}` : ""}${examLetter ? ` (${examLetter})` : ""}`.trim();
   };
   
   const studentClass = quizClass ?? detectedClass ?? studentInfo?.class ?? "Test";
@@ -941,14 +837,8 @@ return (
                   }}
                 >
                   {examList.map((exam) => (
-                    <MenuItem
-                      key={exam.id}
-                      value={exam.id}
-                    >
-                      {formatQuizTitle(
-                        exam.id,
-                        exam.type
-                      )}
+                    <MenuItem key={exam} value={exam}>
+                      {formatQuizTitle(exam)}
                     </MenuItem>
                   ))}
                 </Select>
@@ -1015,14 +905,8 @@ return (
               }}
             >
               {examList.map((exam) => (
-                <MenuItem
-                  key={exam.id}
-                  value={exam.id}
-                >
-                  {formatQuizTitle(
-                    exam.id,
-                    exam.type
-                  )}
+                <MenuItem key={exam} value={exam}>
+                  {formatQuizTitle(exam)}
                 </MenuItem>
               ))}
             </Select>

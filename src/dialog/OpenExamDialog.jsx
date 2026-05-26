@@ -16,10 +16,11 @@ import {
 } from "@mui/material";
 
 import CloseIcon from "@mui/icons-material/Close";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import FolderOpenOutlinedIcon from "@mui/icons-material/FolderOpenOutlined";
 
 /* ================== Helpers ================== */
 
-// Format tên đề (KTĐK)
 const formatExamTitle = (examName = "") => {
   if (!examName) return "";
 
@@ -30,7 +31,6 @@ const formatExamTitle = (examName = "") => {
   return name.replace(/_/g, " ");
 };
 
-// Lấy năm học từ ID: "26-27" -> "2026-2027"
 const getExamYearFromId = (examId) => {
   const match = examId.match(/(\d{2}-\d{2})/);
 
@@ -46,17 +46,27 @@ const getExamYearFromId = (examId) => {
 const OpenExamDialog = ({
   open,
   onClose,
+
+  dialogExamType,
+  setDialogExamType,
+
   filterClass,
   setFilterClass,
+
   filterYear,
   setFilterYear,
+
   classes,
   loadingList,
   docList,
+
   selectedDoc,
   setSelectedDoc,
+
   handleOpenSelectedDoc,
   handleDeleteSelectedDoc,
+
+  fetchQuizList, // 🔥 THÊM
 }) => {
   const years = [
     "2025-2026",
@@ -66,296 +76,398 @@ const OpenExamDialog = ({
     "2029-2030",
   ];
 
+  // 🔥 DEBUG
+  console.log("DOC LIST:", docList);
+
+  const filteredDocs = docList
+  .filter((doc) => {
+    const type = (doc.type || "")
+      .toString()
+      .toLowerCase()
+      .trim();
+
+    const normalized =
+      type.includes("ktdk") ||
+      type.includes("đề ktđk")
+        ? "ktdk"
+        : type.includes("on") ||
+          type.includes("ôn")
+        ? "on_tap"
+        : type;
+
+    return normalized === dialogExamType;
+  })
+
+  .filter((doc) =>
+    filterClass === "Tất cả"
+      ? true
+      : doc.class === filterClass
+  )
+
+  .filter((doc) =>
+    filterYear === "Tất cả"
+      ? true
+      : getExamYearFromId(doc.id) === filterYear
+  );
+
   return (
-  <Dialog
-    open={open}
-    onClose={onClose}
-    maxWidth="sm"
-    fullWidth
-    PaperProps={{
-      sx: {
-        height: "82vh",
-        borderRadius: "14px",
-        overflow: "hidden",
-        background: "#f8fafc",
-        boxShadow: "0 10px 35px rgba(0,0,0,0.12)",
-        display: "flex",
-        flexDirection: "column",
-      },
-    }}
-  >
-    {/* ===== HEADER ===== */}
-    <Box
-      sx={{
-        px: 3,
-        py: 1.4,
-        background: "#1976d2",
-        color: "#fff",
-        flexShrink: 0,
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="sm"
+      fullWidth
+      PaperProps={{
+        sx: {
+          height: "82vh",
+          borderRadius: "14px",
+          overflow: "hidden",
+          background: "#f8fafc",
+          display: "flex",
+          flexDirection: "column",
+        },
       }}
     >
-      <Stack direction="row" alignItems="center" justifyContent="space-between">
-        <Typography sx={{ fontSize: 17, fontWeight: 700 }}>
-          Danh sách đề kiểm tra
-        </Typography>
+      {/* ===== HEADER ===== */}
+      <Box sx={{ px: 3, py: 1.4, bgcolor: "#1976d2", color: "#fff" }}>
+        <Stack direction="row" justifyContent="space-between">
+          <Typography sx={{ fontSize: 17, fontWeight: 700 }}>
+            Danh sách đề kiểm tra
+          </Typography>
 
-        <IconButton
-          onClick={onClose}
-          sx={{
-            color: "#fff",
-            bgcolor: "rgba(255,255,255,0.12)",
-            "&:hover": { bgcolor: "rgba(255,255,255,0.2)" },
-          }}
-        >
-          <CloseIcon />
-        </IconButton>
-      </Stack>
-    </Box>
+          <IconButton onClick={onClose} sx={{ color: "#fff" }}>
+            <CloseIcon />
+          </IconButton>
+        </Stack>
+      </Box>
 
-    {/* ===== FILTER ===== */}
-    <Box
-      sx={{
-        px: 3,
-        pt: 2.5,
-        pb: 2,
-        flexShrink: 0,
-      }}
-    >
-      <Stack direction="row" spacing={2}>
+      {/* ===== FILTER ===== */}
+      <Box sx={{ px: 3, pt: 2.5, pb: 2 }}>
+        <Stack direction="row" spacing={2}>
 
-        {/* LỚP */}
-        <FormControl size="small" fullWidth>
-          <InputLabel>Lớp</InputLabel>
+          {/* ===== LOẠI ĐỀ ===== */}
+          <FormControl size="small" fullWidth>
+            <InputLabel>Loại đề</InputLabel>
 
-          <Select
-            value={filterClass}
-            label="Lớp"
-            onChange={(e) => setFilterClass(e.target.value)}
-            sx={{
-              bgcolor: "#fff",
-              borderRadius: "5px",
-              "& .MuiOutlinedInput-notchedOutline": {
-                borderColor: "#dbe2ea",
-              },
-              "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                borderColor: "#1976d2",
-                borderWidth: 2,
-              },
-            }}
-          >
-            <MenuItem value="Tất cả">Tất cả</MenuItem>
-            {classes.map((lop) => (
-              <MenuItem key={lop} value={lop}>
-                {lop}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+            <Select
+              value={dialogExamType}
+              label="Loại đề"
+              onChange={(e) => {
+                const value = e.target.value;
 
-        {/* NĂM HỌC */}
-        <FormControl size="small" fullWidth>
-          <InputLabel>Năm học</InputLabel>
+                setDialogExamType(value);
 
-          <Select
-            value={filterYear}
-            label="Năm học"
-            onChange={(e) => setFilterYear(e.target.value)}
-            sx={{
-              bgcolor: "#fff",
-              borderRadius: "5px",
-              "& .MuiOutlinedInput-notchedOutline": {
-                borderColor: "#dbe2ea",
-              },
-              "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                borderColor: "#1976d2",
-                borderWidth: 2,
-              },
-            }}
-          >
-            <MenuItem value="Tất cả">Tất cả</MenuItem>
-            {years.map((y) => (
-              <MenuItem key={y} value={y}>
-                {y}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+                // 🔥 FETCH LẠI FIRESTORE
+                fetchQuizList(value);
+              }}
+              sx={{ bgcolor: "#fff" }}
+            >
+              {/*<MenuItem value="Tất cả">Tất cả</MenuItem>*/}
+              <MenuItem value="ktdk">Đề KTĐK</MenuItem>
+              <MenuItem value="on_tap">Đề ôn tập</MenuItem>
+            </Select>
+          </FormControl>
 
-      </Stack>
-    </Box>
+          {/* ===== LỚP ===== */}
+          <FormControl size="small" fullWidth>
+            <InputLabel>Lớp</InputLabel>
 
-    {/* ===== CONTENT ===== */}
-    <DialogContent
-      sx={{
-        flex: 1,
-        overflow: "hidden",
-        px: 3,
-        pt: 0,
-        pb: 2,
-      }}
-    >
-      <Box
+            <Select
+              value={filterClass}
+              label="Lớp"
+              onChange={(e) => setFilterClass(e.target.value)}
+              sx={{ bgcolor: "#fff" }}
+            >
+              <MenuItem value="Tất cả">Tất cả</MenuItem>
+
+              {classes.map((lop) => (
+                <MenuItem key={lop} value={lop}>
+                  {lop}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          {/* ===== NĂM HỌC ===== */}
+          <FormControl size="small" fullWidth>
+            <InputLabel>Năm học</InputLabel>
+
+            <Select
+              value={filterYear}
+              label="Năm học"
+              onChange={(e) => setFilterYear(e.target.value)}
+              sx={{ bgcolor: "#fff" }}
+            >
+              <MenuItem value="Tất cả">Tất cả</MenuItem>
+
+              {years.map((y) => (
+                <MenuItem key={y} value={y}>
+                  {y}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+        </Stack>
+      </Box>
+
+      {/* ================= CONTENT ================= */}
+      <DialogContent
         sx={{
-          height: "100%",
-          overflowY: "auto",
-          borderRadius: "5px",
-          bgcolor: "#fff",
-          border: "1px solid #e2e8f0",
-          p: 1.2,
+          flex: 1,
+          overflow: "hidden",
+          px: 3,
+          pt: 0,
+          pb: 2,
         }}
       >
-        {loadingList ? (
-          <Box
-            sx={{
-              height: "100%",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <Typography color="text.secondary">
-              ⏳ Đang tải danh sách đề...
-            </Typography>
-          </Box>
-        ) : docList.length === 0 ? (
-          <Box
-            sx={{
-              height: "100%",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "#94a3b8",
-            }}
-          >
-            <Typography sx={{ fontWeight: 600 }}>
-              Không có đề nào
-            </Typography>
-          </Box>
-        ) : (
-          <Stack spacing={1}>
-            {docList
+        <Box
+          sx={{
+            height: "100%",
+            overflowY: "auto",
+            borderRadius: "10px",
+            bgcolor: "#fff",
+            border: "1px solid #e2e8f0",
+            p: 1.2,
+
+            "&::-webkit-scrollbar": {
+              width: 6,
+            },
+
+            "&::-webkit-scrollbar-thumb": {
+              background: "#cbd5e1",
+              borderRadius: 999,
+            },
+          }}
+        >
+          {loadingList ? (
+            <Box
+              sx={{
+                height: "100%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Typography>⏳ Đang tải...</Typography>
+            </Box>
+          ) : (() => {
+
+            // ================= FILTER =================
+            const filteredDocs = docList
+              .filter((doc) => {
+                const type = (doc.type || "")
+                  .toString()
+                  .toLowerCase()
+                  .trim();
+
+                const normalized =
+                  type.includes("ktdk") ||
+                  type.includes("đề ktđk")
+                    ? "ktdk"
+                    : type.includes("on") ||
+                      type.includes("ôn")
+                    ? "on_tap"
+                    : type;
+
+                return normalized === dialogExamType;
+              })
+
               .filter((doc) =>
                 filterClass === "Tất cả"
                   ? true
                   : doc.class === filterClass
               )
+
               .filter((doc) =>
                 filterYear === "Tất cả"
                   ? true
                   : getExamYearFromId(doc.id) === filterYear
-              )
-              .map((doc) => {
-                const isSelected = selectedDoc === doc.id;
+              );
 
-                return (
-                  <Box
-                    key={doc.id}
-                    onClick={() => setSelectedDoc(doc.id)}
-                    onDoubleClick={() => handleOpenSelectedDoc(doc.id)}
+            const hasDocs = filteredDocs.length > 0;
+
+            // ================= EMPTY =================
+            if (!filteredDocs.length) {
+              return (
+                <Box
+                  sx={{
+                    height: "100%",
+                    minHeight: 260,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexDirection: "column",
+                    color: "#94a3b8",
+                  }}
+                >
+                  <Typography
                     sx={{
-                      p: 1.6,
-                      borderRadius: "5px",
-                      cursor: "pointer",
-                      transition: ".18s",
-                      border: isSelected
-                        ? "2px solid #1976d2"
-                        : "1px solid #e2e8f0",
-                      bgcolor: isSelected ? "#f0f7ff" : "#fff",
-                      "&:hover": {
-                        bgcolor: "#f8fbff",
-                        borderColor: "#90caf9",
-                      },
+                      fontSize: 46,
+                      mb: 1,
                     }}
                   >
-                    <Stack direction="row" alignItems="center" spacing={1.5}>
-                      <Typography
-                        sx={{
-                          flex: 1,
-                          fontSize: 15,
-                          fontWeight: 500,
-                          color: "#1e293b",
-                          lineHeight: 1.5,
-                        }}
+                    📂
+                  </Typography>
+
+                  <Typography
+                    sx={{
+                      fontWeight: 600,
+                      fontSize: 16,
+                    }}
+                  >
+                    Hiện chưa có đề nào
+                  </Typography>
+
+                  <Typography
+                    sx={{
+                      fontSize: 13,
+                      mt: 0.5,
+                      color: "#94a3b8",
+                    }}
+                  >
+                    Hãy thử thay đổi bộ lọc hoặc tạo đề mới
+                  </Typography>
+                </Box>
+              );
+            }
+
+            // ================= LIST =================
+            return (
+              <Stack spacing={1}>
+                {filteredDocs.map((doc) => {
+                  const isSelected =
+                    selectedDoc === doc.id;
+
+                  return (
+                    <Box
+                      key={doc.id}
+                      onClick={() =>
+                        setSelectedDoc(doc.id)
+                      }
+                      onDoubleClick={() =>
+                        handleOpenSelectedDoc(doc.id)
+                      }
+                      sx={{
+                        p: 1.6,
+                        borderRadius: "10px",
+                        cursor: "pointer",
+                        transition: ".18s",
+
+                        border: isSelected
+                          ? "2px solid #1976d2"
+                          : "1px solid #e2e8f0",
+
+                        bgcolor: isSelected
+                          ? "#f0f7ff"
+                          : "#fff",
+
+                        "&:hover": {
+                          bgcolor: "#f8fbff",
+                          borderColor: "#90caf9",
+                        },
+                      }}
+                    >
+                      <Stack
+                        direction="row"
+                        alignItems="center"
+                        spacing={1.5}
                       >
-                        {formatExamTitle(doc.id)}
-                      </Typography>
+                        <Typography
+                          sx={{
+                            flex: 1,
+                            fontSize: 15,
+                            fontWeight: 500,
+                            color: "#1e293b",
+                            lineHeight: 1.5,
+                          }}
+                        >
+                          {formatExamTitle(doc.id)}
+                        </Typography>
 
-                      <Box
-                        sx={{
-                          width: 18,
-                          height: 18,
-                          borderRadius: "50%",
-                          border: isSelected
-                            ? "5px solid #1976d2"
-                            : "2px solid #cbd5e1",
-                          flexShrink: 0,
-                        }}
-                      />
-                    </Stack>
-                  </Box>
-                );
-              })}
-          </Stack>
-        )}
-      </Box>
-    </DialogContent>
+                        {/* radio selected */}
+                        <Box
+                          sx={{
+                            width: 18,
+                            height: 18,
+                            borderRadius: "50%",
 
-    {/* ===== FOOTER ===== */}
-    <DialogActions
-      sx={{
-        px: 3,
-        pb: 3,
-        pt: 1,
-        justifyContent: "space-between",
-        flexShrink: 0,
-      }}
-    >
-      <Button
-        onClick={onClose}
+                            border: isSelected
+                              ? "5px solid #1976d2"
+                              : "2px solid #cbd5e1",
+
+                            transition: ".2s",
+                            flexShrink: 0,
+                          }}
+                        />
+                      </Stack>
+                    </Box>
+                  );
+                })}
+              </Stack>
+            );
+          })()}
+        </Box>
+      </DialogContent>
+
+      {/* ===== FOOTER ===== */}
+      <DialogActions
         sx={{
-          textTransform: "none",
-          color: "#64748b",
-          fontWeight: 600,
+          px: 3,
+          pb: 3,
+          pt: 1,
+          justifyContent: "space-between",
+          flexShrink: 0,
         }}
       >
-        Đóng
-      </Button>
-
-      <Stack direction="row" spacing={1.5}>
         <Button
-          variant="contained"
-          disabled={!selectedDoc}
-          onClick={() => handleOpenSelectedDoc(selectedDoc)}
+          onClick={onClose}
           sx={{
             textTransform: "none",
-            borderRadius: "12px",
-            px: 3,
-            fontWeight: 700,
-            boxShadow: "none",
+            color: "#64748b",
+            fontWeight: 600,
           }}
         >
-          Mở đề
+          Đóng
         </Button>
 
-        <Button
-          variant="contained"
-          color="error"
-          disabled={!selectedDoc}
-          onClick={handleDeleteSelectedDoc}
-          sx={{
-            textTransform: "none",
-            borderRadius: "12px",
-            px: 3,
-            fontWeight: 700,
-            boxShadow: "none",
-          }}
-        >
-          Xóa đề
-        </Button>
-      </Stack>
-    </DialogActions>
-  </Dialog>
-);
+        <Stack direction="row" spacing={1.5}>
+          <Button
+            variant="outlined"
+            color="error"
+            disabled={!selectedDoc || filteredDocs.length === 0}
+            onClick={handleDeleteSelectedDoc}
+            startIcon={<DeleteOutlineIcon />}
+            sx={{
+              textTransform: "none",
+              borderRadius: "12px",
+              px: 2.5,
+              fontWeight: 700,
+            }}
+          >
+            Xóa đề
+          </Button>
+
+          <Button
+            variant="contained"
+            disabled={!selectedDoc || filteredDocs.length === 0}
+            onClick={() =>
+              handleOpenSelectedDoc(selectedDoc)
+            }
+            startIcon={<FolderOpenOutlinedIcon />}
+            sx={{
+              textTransform: "none",
+              borderRadius: "12px",
+              px: 3,
+              fontWeight: 700,
+              boxShadow: "none",
+            }}
+          >
+            Mở đề
+          </Button>
+        </Stack>
+      </DialogActions>
+    </Dialog>
+  );
 };
 
 export default OpenExamDialog;
