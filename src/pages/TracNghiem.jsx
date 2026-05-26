@@ -262,15 +262,40 @@ export default function TracNghiem() {
 
         // ================= ÔN TẬP =================
         if (examType === "on_tap") {
-          collectionName = "DE_ONTAP";
-
           const deThiSnap = await getDocs(
-            collection(db, collectionName)
+            collection(db, "DE_ONTAP")
           );
 
-          const matchedDoc = deThiSnap.docs.find((d) =>
-            d.id.includes(classLabel)
-          );
+          const hocKiMap = {
+            "Cuối kỳ I": "CKI",
+            "Giữa kỳ I": "GKI",
+            "Giữa kỳ II": "GKII",
+            "Cuối năm": "CN",
+          };
+
+          const yearMap = {
+            "2025-2026": "25-26",
+            "2024-2025": "24-25",
+            "2023-2024": "23-24",
+          };
+
+          const hocKiCode = hocKiMap[hocKiFromConfig];
+
+          const namHocRaw = configData.namHoc || "2025-2026";
+          const namHoc = yearMap[namHocRaw] || namHocRaw;
+
+          const classNumber = classLabel.match(/\d+/)?.[0];
+          const normalizedClass = `Lớp ${classNumber}`;
+
+          const matchedDoc = deThiSnap.docs.find((d) => {
+            const id = d.id;
+
+            return (
+              id.includes(normalizedClass) &&
+              id.includes(hocKiCode) &&
+              id.includes(namHoc)
+            );
+          });
 
           if (!matchedDoc) {
             setNotFoundMessage(
@@ -282,6 +307,7 @@ export default function TracNghiem() {
           }
 
           docId = matchedDoc.id;
+          collectionName = "DE_ONTAP";
         }
 
         // ================= KTĐK (LOGIC CŨ) =================
@@ -290,9 +316,36 @@ export default function TracNghiem() {
             collection(db, "DETHI")
           );
 
-          const matchedDoc = deThiSnap.docs.find((d) =>
-            d.id.includes(classLabel)
-          );
+          const hocKiMap = {
+            "Cuối kỳ I": "CKI",
+            "Giữa kỳ I": "GKI",
+            "Giữa kỳ II": "GKII",
+            "Cuối năm": "CN",
+          };
+
+          const yearMap = {
+            "2025-2026": "25-26",
+            "2024-2025": "24-25",
+            "2023-2024": "23-24",
+          };
+
+          const hocKiCode = hocKiMap[hocKiFromConfig];
+
+          const namHocRaw = configData.namHoc || "2025-2026";
+          const namHoc = yearMap[namHocRaw] || namHocRaw;
+
+          const classNumber = classLabel.match(/\d+/)?.[0];
+          const normalizedClass = `Lớp ${classNumber}`;
+
+          const matchedDoc = deThiSnap.docs.find((d) => {
+            const id = d.id;
+
+            return (
+              id.includes(normalizedClass) &&
+              id.includes(hocKiCode) &&
+              id.includes(namHoc)
+            );
+          });
 
           if (!matchedDoc) {
             setNotFoundMessage(
@@ -708,18 +761,19 @@ return (
                     whiteSpace: "nowrap",
                   }}
                 >
-                  {examType === "on_tap" ? "ÔN TẬP TIN HỌC" : "KIỂM TRA ĐỊNH KÌ"}
+                  {configData?.examType === "on_tap"
+                    ? `ÔN TẬP - ${(configData?.hocKy || "").toUpperCase()}`
+                    : `KTĐK - ${(configData?.hocKy || "").toUpperCase()}`}
                 </Typography>
 
-                {/* 👇 LUÔN 1 HÀNG */}
                 <Typography
                   sx={{
                     fontSize: 15,
                     opacity: 0.9,
-                    whiteSpace: "nowrap", // 👈 QUAN TRỌNG
+                    whiteSpace: "nowrap",
                   }}
                 >
-                  Cuối năm - {config?.namHoc || "2025-2026"}
+                  Năm học: {configData?.namHoc || "2025-2026"}
                 </Typography>
               </Box>
 

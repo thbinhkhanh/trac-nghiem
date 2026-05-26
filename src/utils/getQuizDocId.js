@@ -1,13 +1,10 @@
-// utils/getQuizDocId.js
-
-import { doc, getDoc, collection, getDocs } from "firebase/firestore";
+import { collection, getDocs, query, where } from "firebase/firestore";
 
 export const getQuizDocId = async ({
   db,
   configData,
   classLabel,
   hocKiFromConfig,
-  monHocFromConfig,
   studentInfo,
   setNotFoundMessage,
 }) => {
@@ -19,48 +16,50 @@ export const getQuizDocId = async ({
   };
 
   const hocKiCode = hocKiMap[hocKiFromConfig];
+  const mon = studentInfo.mon;
+  const namHoc = configData.namHoc || "25-26";
 
+  // ================= ÔN TẬP =================
   if (configData.onTap) {
-    const snap = await getDocs(collection(db, "NGANHANG_DE"));
-    const found = snap.docs.find(d =>
-      d.id.includes(classLabel) && d.id.includes(hocKiCode)
-    );
+    const expectedId = `quiz_${classLabel}_${mon}_${hocKiCode}_${namHoc}`;
+
+    const snap = await getDocs(collection(db, "DE_ONTAP"));
+
+    const found = snap.docs.find((d) => d.id === expectedId);
 
     if (!found) {
       setNotFoundMessage("❌ Không tìm thấy đề ôn tập");
       return null;
     }
 
-    return { docId: found.id, collectionName: "NGANHANG_DE" };
+    return {
+      docId: found.id,
+      collectionName: "DE_ONTAP",
+    };
   }
 
+  // ================= KTĐK =================
   if (configData.kiemTraDinhKi) {
-    const snap = await getDocs(collection(db, "DETHI"));
-    const found = snap.docs.find(d =>
-      d.id.includes(classLabel) &&
-      d.id.includes(hocKiCode) &&
-      d.id.includes(monHocFromConfig)
+    const q = query(
+      collection(db, "DETHI"),
+      where("class", "==", classLabel),
+      where("semester", "==", hocKiCode),
+      where("subject", "==", mon)
     );
 
-    if (!found) {
+    const snap = await getDocs(q);
+
+    if (snap.empty) {
       setNotFoundMessage("❌ Không tìm thấy đề KTĐK");
       return null;
     }
 
-    return { docId: found.id, collectionName: "NGANHANG_DE" };
-  }
+    const docSnap = snap.docs[0];
 
-  if (configData.baiTapTuan) {
-    const expectedId = `quiz_Lớp ${classLabel.match(/\d+/)[0]}_${studentInfo.mon}_${studentInfo.selectedWeek}`;
-    const snap = await getDocs(collection(db, "BAITAP_TUAN"));
-    const found = snap.docs.find(d => d.id === expectedId);
-
-    if (!found) {
-      setNotFoundMessage("❌ Không tìm thấy bài tập tuần");
-      return null;
-    }
-
-    return { docId: found.id, collectionName: "BAITAP_TUAN" };
+    return {
+      docId: docSnap.id,
+      collectionName: "DETHI",
+    };
   }
 
   setNotFoundMessage("❌ Không xác định loại đề");
