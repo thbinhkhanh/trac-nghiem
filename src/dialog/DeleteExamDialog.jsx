@@ -1,108 +1,141 @@
 import React from "react";
 import {
   Dialog,
-  DialogTitle,
   DialogContent,
-  DialogActions,
-  Button,
   Typography,
   Box,
   Stack,
+  Button,
+  IconButton,
 } from "@mui/material";
+import CloseIcon from "@mui/icons-material/Close";
 import WarningAmberRoundedIcon from "@mui/icons-material/WarningAmberRounded";
 
-const DeleteExamDialog = ({ open, onClose, onConfirm }) => {
+export default function DeleteExamDialog({
+  open,
+  onClose,
+  onConfirm,
+  title = "Xác nhận xóa",
+  content = "⚠️ Bạn có chắc chắn muốn xóa đề thi này?\nHành động này không thể hoàn tác.",
+}) {
   return (
     <Dialog
       open={open}
-      onClose={onClose}
+      onClose={(event, reason) => {
+        if (reason === "backdropClick" || reason === "escapeKeyDown") return;
+        onClose();
+      }}
+      disableEscapeKeyDown
       maxWidth="xs"
       fullWidth
       PaperProps={{
         sx: {
-          borderRadius: 3,
-          p: 1,
-          //bgcolor: "#e3f2fd", // giữ nền giống dialog hệ thống
+          borderRadius: "18px",
+          overflow: "hidden",
+          background: "#f8fafc",
+          boxShadow: "0 20px 60px rgba(0,0,0,0.18)",
         },
       }}
     >
       {/* HEADER */}
-      <DialogTitle>
-        <Stack direction="row" spacing={1.5} alignItems="center">
+      <Box
+        sx={{
+          px: 3,
+          py: 2,
+          color: "#fff",
+          background: "linear-gradient(135deg, #1976d2, #42a5f5)",
+          position: "relative",
+        }}
+      >
+        <Stack direction="row" alignItems="center" spacing={1}>
+          {/* 🔴 ICON ĐỎ + VÒNG TRÒN TRẮNG */}
           <Box
             sx={{
-              width: 36,
-              height: 36,
+              width: 34,
+              height: 34,
               borderRadius: "50%",
+              bgcolor: "#ffffff", // nền trắng
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              bgcolor: "rgba(244, 67, 54, 0.12)",
+              boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
             }}
           >
-            <WarningAmberRoundedIcon sx={{ color: "#f44336" }} />
+            ❓
           </Box>
 
-          <Typography fontWeight={600} color="#d32f2f">
-            Xác nhận xóa
+          <Typography sx={{ fontSize: 16, fontWeight: 700 }}>
+            {title}
           </Typography>
         </Stack>
-      </DialogTitle>
 
-      {/* CONTENT */}
-      <DialogContent>
-        <Typography
-          variant="body2"
+        <IconButton
+          onClick={onClose}
           sx={{
-            color: "text.secondary",
-            lineHeight: 1.6,
-            mt: 1,
+            position: "absolute",
+            right: 10,
+            top: 10,
+            color: "#fff",
+            bgcolor: "rgba(255,255,255,0.15)",
+            "&:hover": { bgcolor: "rgba(255,255,255,0.25)" },
           }}
         >
-          Bạn có chắc chắn muốn xóa đề thi này?
-          <br />
-          Hành động này{" "}
-          <Box component="span" sx={{ fontWeight: 600 }}>
-            không thể hoàn tác
-          </Box>
-          .
-        </Typography>
-      </DialogContent>
+          <CloseIcon fontSize="small" />
+        </IconButton>
+      </Box>
 
-      {/* ACTIONS */}
-      <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Stack direction="row" spacing={1} width="100%">
-          <Button
-            onClick={onClose}
-            variant="outlined"
-            fullWidth
+      {/* CONTENT */}
+      <DialogContent sx={{ px: 3, py: 4 }}>
+        <Stack spacing={2.5} alignItems="center">
+          <Typography
             sx={{
-              borderRadius: 2,
-              textTransform: "none",
-              fontWeight: 600,
+              fontSize: 15,
+              color: "#64748b",
+              maxWidth: 320,
+              lineHeight: 1.7,
+              whiteSpace: "pre-line",
             }}
           >
-            Hủy
-          </Button>
+            {content}
+          </Typography>
 
-          <Button
-            onClick={onConfirm}
-            variant="contained"
-            color="error"
-            fullWidth
-            sx={{
-              borderRadius: 2,
-              textTransform: "none",
-              fontWeight: 600,
-              boxShadow: "none",
-            }}
-          >
-            Xóa
-          </Button>
+          {/* ACTIONS */}
+          <Stack direction="row" spacing={2}>
+            <Button
+              variant="outlined"
+              onClick={onClose}
+              sx={{
+                minWidth: 110,
+                height: 42,
+                borderRadius: "12px",
+                textTransform: "none",
+                fontWeight: 600,
+              }}
+            >
+              Hủy
+            </Button>
+
+            <Button
+              variant="contained"
+              onClick={onConfirm}
+              sx={{
+                minWidth: 140,
+                height: 42,
+                borderRadius: "12px",
+                textTransform: "none",
+                fontWeight: 700,
+                background: "linear-gradient(135deg, #1976d2, #42a5f5)",
+                boxShadow: "0 10px 20px rgba(25,118,210,0.25)",
+                "&:hover": {
+                  background: "linear-gradient(135deg, #1565c0, #1976d2)",
+                },
+              }}
+            >
+              Xóa
+            </Button>
+          </Stack>
         </Stack>
-      </DialogActions>
+      </DialogContent>
     </Dialog>
   );
-};
-
-export default DeleteExamDialog;
+}

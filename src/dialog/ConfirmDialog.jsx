@@ -57,7 +57,7 @@ export default function ConfirmDialog({
               width: 34,
               height: 34,
               borderRadius: "50%",
-              bgcolor: "rgba(255,255,255,0.2)",
+              bgcolor: "#fff", // chỉ đổi chỗ này
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
