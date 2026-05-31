@@ -11,8 +11,6 @@ import { Delete, DeleteForever, FileDownload } from "@mui/icons-material";
 import { exportKetQuaExcel } from "../utils/exportKetQuaExcel";
 import CloseIcon from "@mui/icons-material/Close";
 import ConfirmDialog from "../dialog/ConfirmDialog";
-import { syncLamVanBenToKTDK } from "../utils/syncLamVanBenToKTDK";
-import SyncIcon from "@mui/icons-material/Sync";
 
 export default function TongHopKQ() {
   // =========================
@@ -22,15 +20,11 @@ export default function TongHopKQ() {
   const [selectedLop, setSelectedLop] = useState("");
   const [selectedMon, setSelectedMon] = useState("Tin học");
   const [hocKi, setHocKi] = useState("");
-  const [config, setConfig] = useState(null);
-
-  const [syncing, setSyncing] = useState(false);
 
   // =========================
   // STATE - DATA
   // =========================
   const [results, setResults] = useState([]);
-  const [loai, setLoai] = useState("ktdk"); // ktdk | ontap
 
   // =========================
   // STATE - LOADING
@@ -56,61 +50,7 @@ export default function TongHopKQ() {
   // =========================
   // CONSTANTS
   // =========================
-
-  const namHoc =
-    config?.namHoc ||
-    config?.schoolYear ||
-    "2025-2026";
-
-  const examType =
-    config?.examType ||
-    "ktdk";
-
-  const namHocKey = namHoc.replace(/-/g, "_");
-
-  const folder =
-    loai === "ktdk"
-      ? `DATA_KTDK_${namHocKey}`
-      : `DATA_ONTAP_${namHocKey}`;
-  
-  useEffect(() => {
-    const fetchConfig = async () => {
-      const snap = await getDoc(doc(db, "CONFIG", "config"));
-      if (snap.exists()) {
-        setConfig(snap.data());
-      }
-    };
-
-    fetchConfig();
-  }, []);
-
-  /*const handleSyncData = () => {
-    openConfirmDialog(
-      "Đồng bộ dữ liệu",
-      "Bạn có chắc muốn đồng bộ LAMVANBEN → DATA KTDK? Dữ liệu có thể bị ghi đè!",
-      async () => {
-        try {
-          setSyncing(true);
-
-          await syncLamVanBenToKTDK({
-            db,
-            namHoc: "2025-2026",
-          });
-
-          setSnackbarSeverity("success");
-          setSnackbarMessage("✅ Đồng bộ dữ liệu thành công!");
-          setSnackbarOpen(true);
-        } catch (err) {
-          console.error(err);
-          setSnackbarSeverity("error");
-          setSnackbarMessage("❌ Đồng bộ thất bại!");
-          setSnackbarOpen(true);
-        } finally {
-          setSyncing(false);
-        }
-      }
-    );
-  };*/
+  const folder = "LAMVANBEN";
 
   // 🔹 Lấy học kỳ từ CONFIG/config
   useEffect(() => {
@@ -133,34 +73,25 @@ export default function TongHopKQ() {
   useEffect(() => {
     const fetchClasses = async () => {
       try {
-        const lopSnap = await getDoc(doc(db, "LAMVANBEN", "lop"));
-
-        const classList = lopSnap.exists()
-          ? lopSnap.data().list ?? []
-          : [];
-
+        const lopSnap = await getDoc(doc(db, folder, "lop"));
+        const classList = lopSnap.exists() ? lopSnap.data().list ?? [] : [];
         classList.sort((a, b) => a.localeCompare(b));
-
         setClassesList(classList);
         setSelectedLop(classList[0] || "");
       } catch (err) {
-        console.error("Lỗi load lớp:", err);
+        console.error(err);
       }
     };
-
     fetchClasses();
   }, []);
 
   // Load kết quả
   const loadResults = async () => {
-    if (!selectedLop || !hocKi || !loai) return;
-
+    if (!selectedLop || !selectedMon || !hocKi) return;
     setLoading(true);
-
     try {
       const colRef = collection(db, `${folder}/${hocKi}/${selectedLop}`);
       const snapshot = await getDocs(colRef);
-
       if (snapshot.empty) {
         setResults([]);
         setSnackbarSeverity("warning");
@@ -170,29 +101,21 @@ export default function TongHopKQ() {
         return;
       }
 
-      let data = snapshot.docs.map((docSnap) => {
+      const data = snapshot.docs.map((docSnap) => {
         const d = docSnap.data();
-
         let ngayHienThi = "";
         if (d.ngayKiemTra?.seconds) {
           ngayHienThi = new Date(d.ngayKiemTra.seconds * 1000).toLocaleDateString("vi-VN");
         } else if (typeof d.ngayKiemTra === "string") {
           ngayHienThi = d.ngayKiemTra;
         }
-        
-        return {
-          docId: docSnap.id,
-          ...d,
-          soLanLam: d.soLanLam ?? "",   // ⭐ THÊM DÒNG NÀY
-          ngayHienThi,
-        };
+        return { docId: docSnap.id, ...d, ngayHienThi };
       });
 
       const compareVietnameseName = (a, b) => {
         const namePartsA = a.hoVaTen?.trim().split(" ").reverse() || [];
         const namePartsB = b.hoVaTen?.trim().split(" ").reverse() || [];
         const len = Math.max(namePartsA.length, namePartsB.length);
-
         for (let i = 0; i < len; i++) {
           const partA = (namePartsA[i] || "").toLowerCase();
           const partB = (namePartsB[i] || "").toLowerCase();
@@ -201,14 +124,9 @@ export default function TongHopKQ() {
         }
         return 0;
       };
-
       data.sort(compareVietnameseName);
 
-      const numberedData = data.map((item, idx) => ({
-        stt: idx + 1,
-        ...item,
-      }));
-
+      const numberedData = data.map((item, idx) => ({ stt: idx + 1, ...item }));
       setResults(numberedData);
     } catch (err) {
       console.error("❌ Lỗi khi load kết quả:", err);
@@ -217,13 +135,10 @@ export default function TongHopKQ() {
       setSnackbarMessage("❌ Lỗi khi load kết quả!");
       setSnackbarOpen(true);
     }
-
     setLoading(false);
   };
 
-  useEffect(() => {
-    loadResults();
-  }, [selectedLop, hocKi, loai]);
+  useEffect(() => { loadResults(); }, [selectedLop, selectedMon, hocKi]);
 
   // Xóa lớp
   const handleDeleteClass = () => {
@@ -404,23 +319,6 @@ export default function TongHopKQ() {
                   <DeleteForever />
                 </IconButton>
               </Tooltip>
-
-              {/*<Tooltip title="Đồng bộ dữ liệu">
-                <IconButton
-                  onClick={handleSyncData}
-                  disabled={syncing}
-                  sx={{
-                    ...circleIconStyle,
-                    color: "secondary.main",
-                    "&:hover": {
-                      bgcolor: "secondary.main",
-                      color: "#fff",
-                    },
-                  }}
-                >
-                  <SyncIcon />
-                </IconButton>
-              </Tooltip>*/}
             </Stack>
           </Box>
 
@@ -482,101 +380,119 @@ export default function TongHopKQ() {
             <MenuItem value="Giữa kỳ II">Giữa kỳ II</MenuItem>
             <MenuItem value="Cuối năm">Cuối năm</MenuItem>
           </TextField>
-
-          <TextField
-            select
-            label="Loại"
-            value={loai}
-            onChange={(e) => setLoai(e.target.value)}
-            size="small"
-            sx={{ width: 130 }}
-          >
-            <MenuItem value="ktdk">KTĐK</MenuItem>
-            <MenuItem value="ontap">Ôn tập</MenuItem>
-          </TextField>
-          
         </Box>
 
         {loading ? (
           <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}><CircularProgress /></Box>
         ) : (
           <Box sx={{ width: "100%", overflowX: "auto" }}>
-            <TableContainer component={Paper} sx={{ boxShadow: "none", minWidth: 700 }}>
-              <Table size="small">
+            <TableContainer
+              component={Paper}
+              sx={{
+                boxShadow: "none",
+                minWidth: 700,        // ⬅️ tổng chiều rộng bảng
+                overflowX: "auto",
+              }}
+            >
+              <Table
+                size="small"
+                sx={{
+                  tableLayout: "fixed", // ⬅️ QUAN TRỌNG: ép width theo TableCell
+                }}
+              >
                 <TableHead>
                   <TableRow>
-                    <TableCell sx={{ bgcolor: "#1976d2", color: "#fff", textAlign: "center", width: 50 }}>STT</TableCell>
-                    <TableCell sx={{ bgcolor: "#1976d2", color: "#fff", textAlign: "center", width: 200 }}>Họ và tên</TableCell>
+                    <TableCell
+                      sx={{ bgcolor: "#1976d2", color: "#fff", textAlign: "center", width: 50 }}
+                    >
+                      STT
+                    </TableCell>
 
-                    <TableCell sx={{ bgcolor: "#1976d2", color: "#fff", textAlign: "center", width: 70 }}>Điểm</TableCell>
-                    {loai === "ontap" && ( // ⭐ thêm điều kiện
-                      <TableCell sx={{ bgcolor: "#1976d2", color: "#fff", textAlign: "center", width: 80 }}>
-                        Số lần
-                      </TableCell>
-                    )}
-                    <TableCell sx={{ bgcolor: "#1976d2", color: "#fff", textAlign: "center", width: 70 }}>Thời gian</TableCell>
-                    <TableCell sx={{ bgcolor: "#1976d2", color: "#fff", textAlign: "center", width: 100 }}>Ngày</TableCell>
+                    <TableCell
+                      sx={{ bgcolor: "#1976d2", color: "#fff", textAlign: "center", width: 200 }}
+                    >
+                      Họ và tên
+                    </TableCell>
+
+                    <TableCell
+                      sx={{ bgcolor: "#1976d2", color: "#fff", textAlign: "center", width: 70 }}
+                    >
+                      Điểm
+                    </TableCell>
+
+                    <TableCell
+                      sx={{ bgcolor: "#1976d2", color: "#fff", textAlign: "center", width: 70 }}
+                    >
+                      Thời gian
+                    </TableCell>
+
+                    <TableCell
+                      sx={{ bgcolor: "#1976d2", color: "#fff", textAlign: "center", width: 100 }}
+                    >
+                      Ngày
+                    </TableCell>
                   </TableRow>
                 </TableHead>
+
                 <TableBody>
-                  {(() => {
-                    const filtered = results.filter(
-                      r => r.diem !== "" && r.diem !== null && r.diem !== undefined
-                    );
+                  {(results.length > 0
+                    ? results
+                    : Array.from({ length: 5 }, (_, i) => ({
+                        stt: i + 1,
+                        hoVaTen: "",
+                        diem: "",
+                        thoiGianLamBai: "",
+                        ngayHienThi: "",
+                      }))
+                  ).map((r) => (
+                    <TableRow key={r.stt}>
+                      <TableCell
+                        sx={{ px: 1, textAlign: "center", border: "1px solid rgba(0,0,0,0.12)" }}
+                      >
+                        {r.stt}
+                      </TableCell>
 
-                    const displayData =
-                      filtered.length > 0
-                        ? filtered.map((item, idx) => ({
-                            ...item,
-                            stt: idx + 1, // ✅ đánh lại STT sau khi lọc
-                          }))
-                        : Array.from({ length: 5 }, (_, i) => ({
-                            stt: i + 1,
-                            hoVaTen: "",
-                            diem: "",
-                            thoiGianLamBai: "",
-                            ngayHienThi: "",
-                          }));
+                      <TableCell
+                        sx={{
+                          px: 1,
+                          textAlign: "left",
+                          border: "1px solid rgba(0,0,0,0.12)",
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis", // ⬅️ tên dài không phá layout
+                        }}
+                      >
+                        {r.hoVaTen}
+                      </TableCell>
 
-                    return displayData.map(r => (
-                      <TableRow key={r.stt}>
-                        <TableCell sx={{ px: 1, textAlign: "center", border: "1px solid rgba(0,0,0,0.12)" }}>
-                          {r.stt}
-                        </TableCell>
+                      <TableCell
+                        sx={{
+                          px: 1,
+                          textAlign: "center",
+                          border: "1px solid rgba(0,0,0,0.12)",
+                          fontWeight: "bold",
+                        }}
+                      >
+                        {r.diem}
+                      </TableCell>
 
-                        <TableCell sx={{ px: 1, textAlign: "left", border: "1px solid rgba(0,0,0,0.12)" }}>
-                          {r.hoVaTen}
-                        </TableCell>
+                      <TableCell
+                        sx={{ px: 1, textAlign: "center", border: "1px solid rgba(0,0,0,0.12)" }}
+                      >
+                        {r.thoiGianLamBai}
+                      </TableCell>
 
-                        <TableCell sx={{ px: 1, textAlign: "center", border: "1px solid rgba(0,0,0,0.12)", fontWeight: "bold" }}>
-                          {r.diem}
-                        </TableCell>
-
-                        {loai === "ontap" && (
-                          <TableCell
-                            sx={{
-                              px: 1,
-                              textAlign: "center",
-                              border: "1px solid rgba(0,0,0,0.12)",
-                            }}
-                          >
-                            {r.soLanLam}
-                          </TableCell>
-                        )}
-
-                        <TableCell sx={{ px: 1, textAlign: "center", border: "1px solid rgba(0,0,0,0.12)" }}>
-                          {r.thoiGianLamBai}
-                        </TableCell>
-
-                        <TableCell sx={{ px: 1, textAlign: "center", border: "1px solid rgba(0,0,0,0.12)" }}>
-                          {r.ngayHienThi}
-                        </TableCell>
-                      </TableRow>
-                    ));
-                  })()}
+                      <TableCell
+                        sx={{ px: 1, textAlign: "center", border: "1px solid rgba(0,0,0,0.12)" }}
+                      >
+                        {r.ngayHienThi}
+                      </TableCell>
+                    </TableRow>
+                  ))}
                 </TableBody>
               </Table>
             </TableContainer>
+
           </Box>
         )}
 
