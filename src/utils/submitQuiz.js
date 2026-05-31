@@ -213,7 +213,7 @@ export const handleSubmitQuiz = async ({
 
     const hocKiFinal = configData?.hocKy || "Giữa kỳ I";
 
-    const collectionRoot = "LAMVANBEN";
+    const collectionRoot = "DATA";
 
     const lop = studentClass;
 

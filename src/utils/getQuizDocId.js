@@ -1,4 +1,4 @@
-import { collection, getDocs, query, where } from "firebase/firestore";
+import { collection, getDocs } from "firebase/firestore";
 
 export const getQuizDocId = async ({
   db,
@@ -17,15 +17,33 @@ export const getQuizDocId = async ({
 
   const hocKiCode = hocKiMap[hocKiFromConfig];
   const mon = studentInfo.mon;
-  const namHoc = configData.namHoc || "25-26";
+
+  // 2026-2027 -> 26-27
+  const namHoc = configData.namHoc
+    ? configData.namHoc
+        .split("-")
+        .map(x => x.slice(-2))
+        .join("-")
+    : "25-26";
+
+  const classNumber = classLabel.match(/\d+/)?.[0];
 
   // ================= ÔN TẬP =================
   if (configData.onTap) {
-    const expectedId = `quiz_${classLabel}_${mon}_${hocKiCode}_${namHoc}`;
+    const snap = await getDocs(
+      collection(db, "DE_ONTAP")
+    );
 
-    const snap = await getDocs(collection(db, "DE_ONTAP"));
+    const found = snap.docs.find((d) => {
+      const id = d.id;
 
-    const found = snap.docs.find((d) => d.id === expectedId);
+      return (
+        id.includes(`Lớp ${classNumber}`) &&
+        id.includes(mon) &&
+        id.includes(hocKiCode) &&
+        id.includes(namHoc)
+      );
+    });
 
     if (!found) {
       setNotFoundMessage("❌ Không tìm thấy đề ôn tập");
@@ -40,24 +58,28 @@ export const getQuizDocId = async ({
 
   // ================= KTĐK =================
   if (configData.kiemTraDinhKi) {
-    const q = query(
-      collection(db, "DETHI"),
-      where("class", "==", classLabel),
-      where("semester", "==", hocKiCode),
-      where("subject", "==", mon)
+    const snap = await getDocs(
+      collection(db, "DETHI")
     );
 
-    const snap = await getDocs(q);
+    const found = snap.docs.find((d) => {
+      const id = d.id;
 
-    if (snap.empty) {
+      return (
+        id.includes(`Lớp ${classNumber}`) &&
+        id.includes(mon) &&
+        id.includes(hocKiCode) &&
+        id.includes(namHoc)
+      );
+    });
+
+    if (!found) {
       setNotFoundMessage("❌ Không tìm thấy đề KTĐK");
       return null;
     }
 
-    const docSnap = snap.docs[0];
-
     return {
-      docId: docSnap.id,
+      docId: found.id,
       collectionName: "DETHI",
     };
   }

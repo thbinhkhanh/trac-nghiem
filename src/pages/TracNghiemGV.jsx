@@ -105,10 +105,15 @@ export default function TracNghiemGV() {
   const [schoolYear, setSchoolYear] = useState(savedConfig.schoolYear || "2025-2026");
   const [examLetter, setExamLetter] = useState(savedConfig.examLetter || "");
   const [semester, setSemester] = useState("Giữa kỳ I");
+  const [examType, setExamType] = useState(
+    savedConfig.examType || "ktdk"
+  );
+  const systemYear = config?.namHoc || config?.schoolYear;
 
   const [filterClass, setFilterClass] = useState("Tất cả");
-  const [filterYear, setFilterYear] = useState("Tất cả");
+  //const [filterYear, setFilterYear] = useState("Tất cả");
   const [dialogExamType, setDialogExamType] = useState("ktdk");
+  const [filterYear, setFilterYear] = useState(schoolYear);
 
   // =========================
   // ⚙️ DIALOG STATES
@@ -135,6 +140,7 @@ export default function TracNghiemGV() {
   const [questions, setQuestions] = useState([]);
   const [importData, setImportData] = useState([]);
   const [deleteIndex, setDeleteIndex] = useState(null);
+  const [loadingQuiz, setLoadingQuiz] = useState(true);
 
   // =========================
   // ⚙️ INPUT / FILE
@@ -201,75 +207,59 @@ export default function TracNghiemGV() {
 
 
   useEffect(() => {
-    const savedId = localStorage.getItem("deTracNghiemId");
-    if (savedId) {
-      updateQuizConfig({ deTracNghiem: savedId });
-    }
-  }, []);
-
-  useEffect(() => {
     const fetchInitialQuiz = async () => {
       try {
-        // Luôn đọc config từ CONFIG/config
         const cfgRef = doc(db, "CONFIG", "config");
         const cfgSnap = await getDoc(cfgRef);
 
-        if (!cfgSnap.exists()) {
-          console.warn("Không tìm thấy CONFIG/config");
-          setQuestions([]);
-          return;
-        }
+        if (!cfgSnap.exists()) return;
 
         const cfgData = cfgSnap.data() || {};
 
-        // 🔹 Lấy id đề
-        const docId = cfgData.deTracNghiem || null;
+        const docId = cfgData.deTracNghiem;
+        const type = cfgData.deTracType || "ktdk";
 
-        if (!docId) {
-          console.warn("Không có deTracNghiem trong config");
-          setQuestions([]);
-          return;
-        }
+        if (!docId) return;
 
-        // 🔹 CHỈ DÙNG 1 COLLECTION
-        const quizRef = doc(db, "NGANHANG_DE", docId);
+        // 🔥 FIX QUAN TRỌNG: chọn collection đúng
+        const collectionName =
+          type === "on_tap" ? "DE_ONTAP" : "NGANHANG_DE";
+
+        const quizRef = doc(db, collectionName, docId);
         const quizSnap = await getDoc(quizRef);
 
-        if (!quizSnap.exists()) {
-          console.warn("Không tìm thấy đề:", docId);
-          setQuestions([]);
-          return;
-        }
+        if (!quizSnap.exists()) return;
 
         const data = quizSnap.data();
         const list = Array.isArray(data.questions) ? data.questions : [];
 
-        // 🔹 Đồng bộ state
-        setQuestions(list);
+        const fixed = list.map((q) => {
+          if (q.type === "image") {
+            return {
+              ...q,
+              options: Array.from({ length: 4 }, (_, i) => q.options?.[i] || ""),
+              correct: Array.isArray(q.correct) ? q.correct : [],
+            };
+          }
+          return q;
+        });
+
+        setQuestions(fixed);
         setSelectedClass(data.class || "");
         setSemester(data.semester || "");
-        setSchoolYear(data.schoolYear || "");
+        setSchoolYear(data.namHoc || data.schoolYear || systemYear || "");
         setExamLetter(data.examLetter || "");
+        setExamType(type);
 
-        // 🔹 Lưu localStorage
-        localStorage.setItem("teacherQuiz", JSON.stringify(list));
-        localStorage.setItem(
-          "teacherConfig",
-          JSON.stringify({
-            selectedClass: data.class || "",
-            semester: data.semester || "",
-            schoolYear: data.schoolYear || "",
-            examLetter: data.examLetter || "",
-          })
-        );
+        localStorage.setItem("teacherQuiz", JSON.stringify(fixed));
+
       } catch (err) {
         console.error("❌ Lỗi load đề:", err);
-        setQuestions([]);
       }
     };
 
     fetchInitialQuiz();
-  }, [location?.state?.school]);
+  }, []);
 
 // -----------------------
 // Load dữ liệu khi mount
@@ -282,6 +272,8 @@ useEffect(() => {
     if (cfg?.selectedClass) setSelectedClass(cfg.selectedClass);
     if (cfg?.schoolYear) setSchoolYear(cfg.schoolYear);
     if (cfg?.examLetter) setExamLetter(cfg.examLetter);
+    if (cfg?.examType) setExamType(cfg.examType);
+    if (cfg?.semester) setSemester(cfg.semester); // ✅ THÊM DÒNG NÀY
 
     // Load quiz
     const saved = JSON.parse(localStorage.getItem("teacherQuiz") || "[]");
@@ -330,13 +322,14 @@ useEffect(() => {
     const cfg = {
       selectedClass,
       semester,
+      semester,
       schoolYear,
       examLetter,
+      examType,
+      namHoc: schoolYear, 
     };
     localStorage.setItem("teacherConfig", JSON.stringify(cfg));
-  }, [selectedClass, semester, schoolYear, examLetter]);
-
-
+  }, [selectedClass, semester, schoolYear, examLetter, examType]);
 
   // -----------------------
   // Xử lý câu hỏi
@@ -380,6 +373,7 @@ useEffect(() => {
     setSemester("");
     setSchoolYear("");
     setExamLetter("");
+    setSchoolYear(systemYear || "");
   };
 
 
@@ -469,7 +463,7 @@ useEffect(() => {
     setSelectedDoc(null);
 
     setFilterClass("Tất cả");
-    setFilterYear("Tất cả");
+    //setFilterYear("Tất cả");
 
     // 🔥 mặc định KTĐK
     setDialogExamType("ktdk");
@@ -584,8 +578,13 @@ useEffect(() => {
       setQuestions(fixedQuestions);
       setSelectedClass(data.class || "");
       setSemester(data.semester || "");
-      setSchoolYear(data.schoolYear || "");
+      setSchoolYear(data.namHoc || data.schoolYear || systemYear || "");
       setExamLetter(data.examLetter || "");
+      setExamType(
+        ["ktdk", "on_tap"].includes(data.examType)
+          ? data.examType
+          : (selected?.type || "ktdk")
+      );
 
       // 🔹 Lưu context
       updateQuizConfig({ deTracNghiem: selectedDoc });
@@ -597,8 +596,9 @@ useEffect(() => {
         JSON.stringify({
           selectedClass: data.class,
           semester: data.semester,
-          schoolYear: data.schoolYear,
+          schoolYear: data.namHoc,
           examLetter: data.examLetter,
+          examType: data.examType,
         })
       );
 
@@ -693,22 +693,61 @@ useEffect(() => {
   };
 
 
-  useEffect(() => {
-    // Ưu tiên lấy từ context nếu có
-    const contextDocId = quizConfig?.deTracNghiem;
+  /*useEffect(() => {
+    const docId = localStorage.getItem("deTracNghiemId");
 
-    // Nếu không có trong context, thử lấy từ localStorage
-    const storedDocId = localStorage.getItem("deTracNghiemId");
-
-    const docId = contextDocId || storedDocId || null;
-
-    if (docId) {
-      setSelectedDoc(docId);
-      setIsEditingNewDoc(false); // có đề → không phải đề mới
-    } else {
-      setIsEditingNewDoc(true); // không có đề → là đề mới
+    if (!docId) {
+      setIsEditingNewDoc(true);
+      return;
     }
-  }, []);
+
+    const loadDoc = async () => {
+      try {
+        const cfgRef = doc(db, "CONFIG", "config");
+        const cfgSnap = await getDoc(cfgRef);
+        const cfgData = cfgSnap.data() || {};
+
+        const collectionName =
+          cfgData.deTracType === "on_tap"
+            ? "DE_ONTAP"
+            : "NGANHANG_DE";
+
+        const docRef = doc(db, collectionName, docId);
+        const snap = await getDoc(docRef);
+
+        if (!snap.exists()) return;
+
+        const data = snap.data();
+
+        const fixedQuestions = (data.questions || []).map((q) => {
+          if (q.type === "image") {
+            return {
+              ...q,
+              options: Array.from({ length: 4 }, (_, i) => q.options?.[i] || ""),
+              correct: Array.isArray(q.correct) ? q.correct : [],
+            };
+          }
+          return q;
+        });
+
+        setQuestions(fixedQuestions);
+        setSelectedDoc(docId);
+
+        setSelectedClass(data.class || "");
+        setSemester(data.semester || "");
+        setSchoolYear(data.schoolYear || data.namHoc || systemYear || "");
+        setExamLetter(data.examLetter || "");
+        setExamType(data.examType || "ktdk");
+
+        setIsEditingNewDoc(false);
+
+      } catch (err) {
+        console.error("Load đề lỗi:", err);
+      }
+    };
+
+    loadDoc();
+  }, []);*/
 
 
   const handleImageChange = async (qi, oi, file) => {
@@ -753,6 +792,7 @@ useEffect(() => {
       semester,
       schoolYear,
       examLetter,
+      examType,
       quizConfig,
       updateQuizConfig,
       setSnackbar,
@@ -1303,6 +1343,7 @@ const moveQuestionBottom = (index) => {
   });
 };
 
+
   return (
   <Box
     sx={{
@@ -1461,6 +1502,23 @@ const moveQuestionBottom = (index) => {
             overflowX: "auto",
           }}
         >
+          <FormControl size="small" sx={{ flex: 1, minWidth: 140 }}>
+            <InputLabel>Loại đề</InputLabel>
+
+            <Select
+              value={examType}
+              label="Loại đề"
+              onChange={(e) => setExamType(e.target.value)}
+            >
+              <MenuItem value="ktdk">
+                KTĐK
+              </MenuItem>
+
+              <MenuItem value="on_tap">
+                Ôn tập
+              </MenuItem>
+            </Select>
+          </FormControl>
 
           {/* LỚP */}
           <FormControl size="small" sx={{ flex: 1, minWidth: 120 }}>
@@ -1504,19 +1562,23 @@ const moveQuestionBottom = (index) => {
             </Select>
           </FormControl>
 
-          {/* ĐỀ */}
-          <FormControl size="small" sx={{ flex: 1, minWidth: 100 }}>
-            <InputLabel>Đề</InputLabel>
-            <Select
-              value={examLetter || ""}
-              onChange={(e) => setExamLetter(e.target.value)}
-              label="Đề"
-            >
-              {["A", "B", "C", "D", "E", "F", "G", "H"].map((d) => (
-                <MenuItem key={d} value={d}>{d}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+          {/* ĐỀ - chỉ hiện với KTĐK */}
+          {examType === "ktdk" && (
+            <FormControl size="small" sx={{ flex: 1, minWidth: 100 }}>
+              <InputLabel>Đề</InputLabel>
+              <Select
+                value={examLetter || ""}
+                onChange={(e) => setExamLetter(e.target.value)}
+                label="Đề"
+              >
+                {["A", "B", "C", "D", "E", "F", "G", "H"].map((d) => (
+                  <MenuItem key={d} value={d}>
+                    {d}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          )}
 
         </Stack>
       </Card>
@@ -1542,6 +1604,7 @@ const moveQuestionBottom = (index) => {
                     semester,
                     schoolYear,
                     examLetter,
+                    examType,
                     quizConfig,
                     updateQuizConfig,
                     setSnackbar,
@@ -1577,7 +1640,9 @@ const moveQuestionBottom = (index) => {
           setFilterClass={setFilterClass}
           filterYear={filterYear}          // thêm
           setFilterYear={setFilterYear}    // thêm
-          
+          schoolYear={schoolYear}
+          namHoc={systemYear}
+
           classes={classes}
           loadingList={loadingList}
           docList={docList}

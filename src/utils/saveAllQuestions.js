@@ -7,6 +7,7 @@ export const saveAllQuestions = async ({
   semester,
   schoolYear,
   examLetter,
+  examType,
   quizConfig,
   updateQuizConfig,
   setQuizCache,
@@ -319,7 +320,7 @@ for (let q of questions) {
       "Giữa kỳ I": "GKI",
       "Cuối kỳ I": "CKI",
       "Giữa kỳ II": "GKII",
-      "Cuối năm": "CN",
+      "Cả năm": "CN",
     };
 
     const shortSchoolYear = (year) => {
@@ -336,7 +337,11 @@ for (let q of questions) {
     /* =========================
        FIRESTORE
     ========================== */
-    const quizRef = doc(db, "NGANHANG_DE", docId);
+    const collectionName =
+      examType === "on_tap"
+        ? "DE_ONTAP"
+        : "NGANHANG_DE";
+    const quizRef = doc(db, collectionName, docId);
 
     await setDoc(quizRef, {
       class: selectedClass,
@@ -344,6 +349,7 @@ for (let q of questions) {
       semester,
       schoolYear,
       examLetter,
+      examType,
       questions: questionsToSave,
       updatedAt: Date.now(),
     });
@@ -367,6 +373,9 @@ for (let q of questions) {
       semester,
       schoolYear,
       examLetter,
+      examType,
+      type: examType,
+      collection: collectionName,
     };
 
     const existed = quizConfig.quizList?.some((d) => d.id === docId);
