@@ -74,7 +74,6 @@ export const handleSubmitQuiz = async ({
           q => questions.findIndex(item => item.id === q.id) + 1
         )
       );
-      console.log(typeof setOpenAlertDialog);
       setOpenAlertDialog(true);
       return; // ⛔ DỪNG LUÔN, KHÔNG TÍNH ĐIỂM
     }

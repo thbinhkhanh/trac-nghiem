@@ -18,8 +18,6 @@ const generateClassList = () => {
 
 export const syncMasterHocSinh = async ({ db, namHoc, hocKy }) => {
   try {
-    console.log("🚀 SYNC MASTER HOC SINH START");
-
     // =========================
     // SAFE INPUT
     // =========================
@@ -75,7 +73,6 @@ export const syncMasterHocSinh = async ({ db, namHoc, hocKy }) => {
       })
     );
 
-    console.log("🎉 SYNC MASTER DONE");
   } catch (err) {
     console.error("❌ SYNC MASTER ERROR:", err);
   }

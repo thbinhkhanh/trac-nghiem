@@ -20,8 +20,6 @@ export const syncLamVanBenToKTDK = async ({
   targetHocKy = "Cuối năm",
 }) => {
   try {
-    console.log("🚀 FAST SYNC START");
-
     const targetRoot = `DATA_KTDK_${namHoc.replace(/-/g, "_")}`;
     const classList = generateClassList();
 
@@ -55,8 +53,6 @@ export const syncLamVanBenToKTDK = async ({
         }
       })
     );
-
-    console.log("🎉 FAST SYNC DONE");
   } catch (err) {
     console.error("❌ SYNC ERROR:", err);
   }

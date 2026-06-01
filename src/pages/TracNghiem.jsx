@@ -312,15 +312,6 @@ export default function TracNghiem() {
 
           const classNumber = classLabel.match(/\d+/)?.[0];
           const normalizedClass = `Lớp ${classNumber}`;
-
-          console.log("hocKiFromConfig =", hocKiFromConfig);
-          console.log("hocKiCode =", hocKiCode);
-          console.log("namHoc =", namHoc);
-
-          deThiSnap.docs.forEach(d => {
-            console.log("DOC:", d.id);
-          });
-
           const matchedDoc = deThiSnap.docs.find((d) => {
             const id = d.id;
 

@@ -1254,8 +1254,6 @@ const handleImportWord = async (e) => {
       }
     });
 
-    console.log("✅ FINAL:", finalQuestions);
-
     const isEmpty =
       !questions ||
       questions.length === 0 ||
@@ -1724,8 +1722,6 @@ const moveQuestionBottom = (index) => {
 
           onSelectWord={() => {
             setOpenImportSourceDialog(false);
-
-            // 👉 THAY console.log bằng trigger thật
             setTimeout(() => {
               fileInputRefWord.current?.click?.(); 
             }, 0);

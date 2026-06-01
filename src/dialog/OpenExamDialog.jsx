@@ -73,7 +73,6 @@ const OpenExamDialog = ({
       };
     });
 
-    console.log("📦 DOC RAW (mẫu 3 dòng):", result.slice(0, 3));
     return result;
   }, [docList]);
 
@@ -106,13 +105,6 @@ const OpenExamDialog = ({
         return match;
       });
 
-    console.log("🧪 FILTER CHECK:");
-    console.log(" - systemYear:", systemYear);
-    console.log(" - filterYear:", filterYear);
-    console.log(" - sample doc years:", normalizedDocs.map(d => d.namHoc));
-
-    console.log(" - result count:", result.length);
-
     return result;
   }, [normalizedDocs, dialogExamType, filterClass, filterYear, namHoc]);
 
@@ -120,11 +112,7 @@ const OpenExamDialog = ({
   useEffect(() => {
     if (!open) return;
 
-    console.log("🟡 [OPEN DIALOG] namHoc hệ thống =", namHoc);
-
     const systemYear = namHoc || "2026-2027";
-
-    console.log("🟢 systemYear dùng để filter =", systemYear);
 
     setDialogExamType("ktdk");
     setFilterClass("Tất cả");
