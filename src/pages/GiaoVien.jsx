@@ -29,7 +29,7 @@ const SCHOOL_LIST = ["TH Lâm Văn Bền"];
 export default function GiaoVien() {
   const [school, setSchool] = useState("TH Lâm Văn Bền"); // mặc định
   //const [fullname, setFullname] = useState("");
- const [lop, setLop] = useState("4A");
+  const [lop, setLop] = useState("");
   const [classes, setClasses] = useState([]);
   const [filteredClasses, setFilteredClasses] = useState([]);
   const [khoi, setKhoi] = useState("Khối 4");
@@ -55,13 +55,7 @@ export default function GiaoVien() {
     const soKhoi = khoi.replace("Khối ", "");
     const filtered = classes.filter(cl => cl.startsWith(soKhoi));
     setFilteredClasses(filtered);
-
-    // ✅ chỉ set mặc định nếu 4A tồn tại trong danh sách
-    if (filtered.includes("4A")) {
-      setLop("4A");
-    } else {
-      setLop(filtered[0] || "");
-    }
+    setLop("");
   }, [khoi, classes]);
 
   useEffect(() => {
@@ -175,11 +169,8 @@ export default function GiaoVien() {
 
     setFilteredClasses(filtered);
 
-    if (filtered.includes("4A")) {
-      setLop("4A");
-    } else {
-      setLop(filtered[0] || "");
-    }
+    // chỉ reset lớp, KHÔNG auto chọn lớp đầu
+    setLop("");
     setStudents([]);
   }, [khoi, classes]);
 
@@ -447,114 +438,115 @@ export default function GiaoVien() {
             }}
           >
             {recentStudents.map((student, index) => (
-  <Paper
-    key={student.id || index}
-    onClick={() => handleStudentClick(student)}
-    elevation={0}
-    sx={{
-      flex: "0 0 auto", // 🔥 QUAN TRỌNG NHẤT (fix mất item trên mobile)
+              <Paper
+                key={student.id}
+                onClick={() => handleStudentClick(student)}
+                elevation={0}
+                sx={{
+                  flexShrink: 0, // 🔥 QUAN TRỌNG: không co card => không mất item
 
-      width: isMobile ? "85%" : 260,  // mobile đẹp hơn full 100%
-      minWidth: isMobile ? "85%" : 260,
+                  width: isMobile ? "100%" : 260,
+                  minWidth: isMobile ? "100%" : 260,
 
-      borderRadius: "30px",
-      cursor: "pointer",
-      overflow: "hidden",
-      position: "relative",
+                  borderRadius: "30px",
+                  cursor: "pointer",
+                  overflow: "hidden",
+                  position: "relative",
 
-      border: "1px solid rgba(226,232,240,.9)",
-      background: "linear-gradient(180deg,#fff,#f8fbff)",
-      boxShadow: "0 8px 28px rgba(15,23,42,.06)",
-      transition: ".25s ease",
+                  border: "1px solid rgba(226,232,240,.9)",
+                  background: "linear-gradient(180deg,#fff,#f8fbff)",
+                  boxShadow: "0 8px 28px rgba(15,23,42,.06)",
+                  transition: ".25s ease",
 
-      "&:hover": {
-        transform: "translateY(-4px)",
-        boxShadow: "0 18px 40px rgba(37,99,235,.14)",
-        borderColor: "#93c5fd",
-      },
+                  "&:hover": {
+                    transform: "translateY(-4px)",
+                    boxShadow: "0 18px 40px rgba(37,99,235,.14)",
+                    borderColor: "#93c5fd",
+                  },
 
-      "&::before": {
-        content: '""',
-        position: "absolute",
-        top: 0,
-        left: 0,
-        right: 0,
-        height: 6,
-        background:
-          index % 2 === 0
-            ? "linear-gradient(90deg,#2563eb,#60a5fa)"
-            : "linear-gradient(90deg,#7c3aed,#a78bfa)",
-      },
-    }}
-  >
-    <Box sx={{ p: 2.5, textAlign: "center" }}>
-      
-      {/* ICON */}
-      <Box
-        sx={{
-          width: 72,
-          height: 72,
-          borderRadius: "24px",
-          mx: "auto",
-          mb: 2,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          background:
-            index % 2 === 0
-              ? "linear-gradient(135deg,#2563eb,#60a5fa)"
-              : "linear-gradient(135deg,#7c3aed,#a78bfa)",
-          boxShadow: "0 14px 30px rgba(37,99,235,.2)",
-        }}
-      >
-        <SchoolIcon sx={{ color: "#fff", fontSize: 34 }} />
-      </Box>
+                  // 🔥 TOP BAR (giống mẫu)
+                  "&::before": {
+                    content: '""',
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    height: 6,
+                    background:
+                      index % 2 === 0
+                        ? "linear-gradient(90deg,#2563eb,#60a5fa)"
+                        : "linear-gradient(90deg,#7c3aed,#a78bfa)",
+                  },
+                }}
+              >
+                <Box sx={{ p: 2.5, textAlign: "center" }}>
+                  
+                  {/* ICON */}
+                  <Box
+                    sx={{
+                      width: 72,
+                      height: 72,
+                      borderRadius: "24px",
+                      mx: "auto",
+                      mb: 2,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      background:
+                        index % 2 === 0
+                          ? "linear-gradient(135deg,#2563eb,#60a5fa)"
+                          : "linear-gradient(135deg,#7c3aed,#a78bfa)",
+                      boxShadow: "0 14px 30px rgba(37,99,235,.2)",
+                    }}
+                  >
+                    <SchoolIcon sx={{ color: "#fff", fontSize: 34 }} />
+                  </Box>
 
-      {/* NAME */}
-      <Typography
-        sx={{
-          fontSize: 18,
-          fontWeight: 700,
-          color: "#0f172a",
-          minHeight: 48,
-          display: "-webkit-box",
-          WebkitLineClamp: 2,
-          WebkitBoxOrient: "vertical",
-          overflow: "hidden",
-        }}
-      >
-        {student.hoTen}
-      </Typography>
+                  {/* NAME */}
+                  <Typography
+                    sx={{
+                      fontSize: 18,
+                      fontWeight: 700,
+                      color: "#0f172a",
+                      minHeight: 48,
+                      display: "-webkit-box",
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: "vertical",
+                      overflow: "hidden",
+                    }}
+                  >
+                    {student.hoTen}
+                  </Typography>
 
-      {/* CLASS */}
-      <Typography
-        sx={{
-          mt: 1,
-          fontSize: 13,
-          color: "#64748b",
-          fontWeight: 600,
-        }}
-      >
-        Học sinh lớp {lop || "4A"}
-      </Typography>
+                  {/* CLASS */}
+                  <Typography
+                    sx={{
+                      mt: 1,
+                      fontSize: 13,
+                      color: "#64748b",
+                      fontWeight: 600,
+                    }}
+                  >
+                    Học sinh lớp {lop}
+                  </Typography>
 
-      {/* CTA */}
-      <Box
-        sx={{
-          mt: 2.5,
-          py: 1.2,
-          borderRadius: "16px",
-          fontWeight: 700,
-          fontSize: 14,
-          color: "#2563eb",
-          background: "#eff6ff",
-        }}
-      >
-        Xem kết quả
-      </Box>
-    </Box>
-  </Paper>
-))}
+                  {/* CTA */}
+                  <Box
+                    sx={{
+                      mt: 2.5,
+                      py: 1.2,
+                      borderRadius: "16px",
+                      fontWeight: 700,
+                      fontSize: 14,
+                      color: "#2563eb",
+                      background: "#eff6ff",
+                    }}
+                  >
+                    Xem kết quả
+                  </Box>
+                </Box>
+              </Paper>
+            ))}
           </Box>
 
           {/* BUTTON */}
