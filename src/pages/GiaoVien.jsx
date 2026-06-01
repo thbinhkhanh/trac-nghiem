@@ -1,0 +1,757 @@
+import React, { useState, useEffect, useContext } from "react";
+import {
+  Box,
+  Typography,
+  TextField,
+  Button,
+  Stack,
+  Card,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Autocomplete,
+  Paper
+} from "@mui/material";
+import SchoolIcon from "@mui/icons-material/School";
+import { useNavigate } from "react-router-dom";
+import { ConfigContext } from "../context/ConfigContext";
+import { db } from "../firebase";
+import { collection, getDocs, doc, getDoc } from "firebase/firestore";
+import HistoryIcon from "@mui/icons-material/History";
+import GroupsIcon from "@mui/icons-material/Groups";
+import ResultDialog_GV from "../dialog/ResultDialog_GV";
+import { useMediaQuery } from "@mui/material";
+
+// ✅ Chỉ còn 1 trường
+const SCHOOL_LIST = ["TH Lâm Văn Bền"];
+
+export default function GiaoVien() {
+  const [school, setSchool] = useState("TH Lâm Văn Bền"); // mặc định
+  //const [fullname, setFullname] = useState("");
+  const [lop, setLop] = useState("");
+  const [classes, setClasses] = useState([]);
+  const [filteredClasses, setFilteredClasses] = useState([]);
+  const [khoi, setKhoi] = useState("Khối 4");
+  //const [errorMsg, setErrorMsg] = useState("");
+  const [students, setStudents] = useState([]);
+  const [recentStudents, setRecentStudents] = useState([]);
+  const [showAll, setShowAll] = useState(false);
+
+  const navigate = useNavigate();
+  const { config, setConfig } = useContext(ConfigContext);
+  const [hocKi, setHocKi] = useState("");
+  const [openResultDialog, setOpenResultDialog] = useState(false);
+  const [resultData, setResultData] = useState(null);
+  const [hasResult, setHasResult] = useState(false);
+
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState("");
+  const [snackbarSeverity, setSnackbarSeverity] = useState("success");
+  const isMobile = useMediaQuery("(max-width:600px)");
+ 
+  // 🔹 Lọc lớp theo khối
+  useEffect(() => {
+    const soKhoi = khoi.replace("Khối ", "");
+    const filtered = classes.filter(cl => cl.startsWith(soKhoi));
+    setFilteredClasses(filtered);
+    setLop("");
+  }, [khoi, classes]);
+
+  useEffect(() => {
+    if (!lop) return;
+
+    const key = `recent_${lop}`;
+    const stored = JSON.parse(
+      localStorage.getItem(key) || "[]"
+    );
+
+    setRecentStudents(stored);
+  }, [lop]);
+
+  const convertToId = (name = "") =>
+    "_" +
+    name
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/đ/g, "d")
+      .replace(/Đ/g, "D")
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, "_");
+      
+  const handleStudentClick = async (student) => {
+  try {
+    const namHocRaw = config?.namHoc || "2025_2026";
+    const namHoc = namHocRaw.replaceAll("-", "_");
+    const hocKy = config?.hocKy || "Cuối năm";
+    const lop = student.lop || "4A";
+
+    const studentKey = (student.id || "")
+      .trim()
+      .replace(/_$/, "");
+
+    const examRef = doc(
+      db,
+      `DATA_KTDK_${namHoc}`,
+      hocKy,
+      lop,
+      studentKey
+    );
+
+    const examSnap = await getDoc(examRef);
+
+    // ======================
+    // CÓ KẾT QUẢ
+    // ======================
+    if (examSnap.exists()) {
+      const data = examSnap.data();
+
+      setResultData({
+        ...data,
+        lop,
+        hoVaTen: student.hoTen,
+      });
+
+      setHasResult(true);
+      setOpenResultDialog(true);
+      return; // 👈 QUAN TRỌNG
+    }
+
+    // ======================
+    // KHÔNG CÓ KẾT QUẢ
+    // ======================
+    setResultData({
+      lop,
+      hoVaTen: student.hoTen,
+    });
+
+    setHasResult(false);
+    setOpenResultDialog(true);
+
+    setSnackbarMessage("Học sinh chưa có kết quả!");
+    setSnackbarSeverity("warning");
+    setSnackbarOpen(true);
+
+  } catch (err) {
+    console.error("🔥 ERROR FULL:", err);
+    setSnackbarMessage("Không kiểm tra được dữ liệu!");
+    setSnackbarSeverity("error");
+    setSnackbarOpen(true);
+  }
+};
+
+  // 🔹 Fetch danh sách lớp (LAMVANBEN)
+  useEffect(() => {
+    const fetchClasses = async () => {
+      try {
+        const lopRef = doc(db, "LAMVANBEN", "lop");
+        const lopSnap = await getDoc(lopRef);
+
+        const classList = lopSnap.exists()
+          ? lopSnap.data().list ?? []
+          : [];
+
+        classList.sort((a, b) => a.localeCompare(b));
+        setClasses(classList);
+        setLop(classList[0] || "");
+      } catch (err) {
+        console.error("❌ Lỗi fetch lớp:", err);
+      }
+    };
+
+    fetchClasses();
+  }, []);
+
+  useEffect(() => {
+    const soKhoi = khoi.replace("Khối ", "");
+    const filtered = classes.filter(cl => cl.startsWith(soKhoi));
+
+    setFilteredClasses(filtered);
+
+    // chỉ reset lớp, KHÔNG auto chọn lớp đầu
+    setLop("");
+    setStudents([]);
+  }, [khoi, classes]);
+
+  useEffect(() => {
+    if (!lop) return;
+    fetchStudentsByClass(lop);
+  }, [lop]);
+
+  const fetchStudentsByClass = async (classKey) => {
+    try {
+      if (!classKey) return;
+
+      const snap = await getDocs(
+        collection(db, "DS_HOCSINH_MASTER", classKey, "STUDENTS")
+      );
+
+      const list = snap.docs.map((d) => ({
+        id: d.id,
+        ...d.data(),
+      }));
+
+      const getTenSortKey = (hoTen = "") =>
+        hoTen.trim().split(/\s+/).reverse().join(" ");
+
+      const compareVietnameseName = (a, b) => {
+        const pa = (a.hoTen || "").trim().split(/\s+/).reverse();
+        const pb = (b.hoTen || "").trim().split(/\s+/).reverse();
+
+        const len = Math.max(pa.length, pb.length);
+
+        for (let i = 0; i < len; i++) {
+          const wa = pa[i] || "";
+          const wb = pb[i] || "";
+
+          const cmp = wa.localeCompare(wb, "vi", {
+            sensitivity: "base",
+            numeric: true,
+          });
+
+          if (cmp !== 0) return cmp;
+        }
+
+        return 0;
+      };
+
+      list.sort(compareVietnameseName);
+
+      setStudents(list);
+    } catch (err) {
+      console.error("❌ Lỗi load học sinh:", err);
+      setStudents([]);
+    }
+  };
+
+  const handleStart = () => {
+    if (!fullname.trim()) {
+      setErrorMsg("❌ Vui lòng nhập Họ và tên!");
+    } else if (!lop) {
+      setErrorMsg("❌ Vui lòng chọn lớp!");
+    } else {
+      setErrorMsg("");
+      setConfig(prev => ({ ...prev, lop, mon: prev.mon || "Tin học" }));
+      navigate("/tracnghiem", { state: { school, fullname, lop } });
+    }
+  };
+
+  const columnCount = 5;
+  const rowsPerColumn = Math.ceil(
+    students.length / columnCount
+  );
+
+  const columns = Array.from(
+    { length: columnCount },
+    (_, colIndex) =>
+      students
+        .slice(
+          colIndex * rowsPerColumn,
+          (colIndex + 1) * rowsPerColumn
+        )
+        .map((student, index) => ({
+          ...student,
+          displayIndex:
+            colIndex * rowsPerColumn +
+            index +
+            1,
+        }))
+  );
+
+  return (
+  <Box
+    sx={{
+      minHeight: "100vh",
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      background:
+        "linear-gradient(to bottom, #e3f2fd, #bbdefb)",
+      pt: 3,
+      px: 3,
+      fontFamily:
+        '"Segoe UI","Arial","Helvetica","Noto Sans","sans-serif"',
+    }}
+  >
+    <Paper
+      elevation={6}
+      sx={{
+        p: 4,
+        borderRadius: 3,
+        width: "100%",
+        maxWidth: 1420,
+        bgcolor: "#fff",
+        minHeight: 650,
+      }}
+    >
+      {/* TIÊU ĐỀ */}
+      <Box
+        sx={{
+          textAlign: "center",
+          mb: 2,
+        }}
+      >
+        <Typography
+          sx={{
+            color: "#1976d2",
+            fontSize: 28,
+            fontWeight: 700,
+            textAlign: "center",
+          }}
+        >
+          {config?.examType === "on_tap"
+            ? `KẾT QUẢ ÔN TẬP - ${(config?.hocKy || "").toUpperCase()}`
+            : `KẾT QUẢ KTĐK - ${(config?.hocKy || "").toUpperCase()}`}
+        </Typography>
+      </Box>
+
+      {/* KHỐI + LỚP */}
+      <Box
+        sx={{
+          display: "flex",
+          flexWrap: "wrap",
+          justifyContent: "center",
+          alignItems: "center",
+          gap: 2,
+          mt: 1,
+          mb: 4,
+        }}
+      >
+        <FormControl
+          size="small"
+          sx={{ minWidth: 120 }}
+        >
+          <InputLabel>Khối</InputLabel>
+
+          <Select
+            value={khoi}
+            label="Khối"
+            onChange={(e) =>
+              setKhoi(e.target.value)
+            }
+          >
+            {[
+              "Khối 1",
+              "Khối 2",
+              "Khối 3",
+              "Khối 4",
+              "Khối 5",
+            ].map((k) => (
+              <MenuItem
+                key={k}
+                value={k}
+              >
+                {k}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+
+        <FormControl
+          size="small"
+          sx={{ minWidth: 120 }}
+        >
+          <InputLabel>Lớp</InputLabel>
+
+          <Select
+            value={lop}
+            label="Lớp"
+            onChange={(e) => {
+              const newClass =
+                e.target.value;
+
+              setLop(newClass);
+
+              fetchStudentsByClass(
+                newClass
+              );
+            }}
+          >
+            {filteredClasses.map(
+              (cl) => (
+                <MenuItem
+                  key={cl}
+                  value={cl}
+                >
+                  {cl}
+                </MenuItem>
+              )
+            )}
+          </Select>
+        </FormControl>
+      </Box>
+
+      {/* GẦN ĐÂY */}
+      {!showAll && (
+        <Box
+          sx={{
+            width: "100%",
+            maxWidth: 1200,
+            mx: "auto",
+            mb: 4,
+          }}
+        >
+          <Typography
+            sx={{
+              fontSize: 24,
+              fontWeight: 600,
+              color: "#0f172a",
+            }}
+          >
+            Học sinh gần đây
+          </Typography>
+
+          <Typography
+            sx={{
+              fontSize: 14,
+              color: "#64748b",
+              mt: 0.5,
+              mb: 3,
+            }}
+          >
+            Truy cập nhanh học sinh vừa thao tác
+          </Typography>
+
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: isMobile ? "column" : "row",
+              gap: 2.5,
+              overflowX: isMobile ? "hidden" : "auto",
+              overflowY: isMobile ? "auto" : "hidden",
+              pb: 1,
+            }}
+          >
+            {recentStudents.map(
+              (student, index) => (
+                <Paper
+                  key={student.id}
+                  elevation={0}
+                  onClick={() =>
+                    handleStudentClick(
+                      student
+                    )
+                  }
+                  sx={{
+                    width: isMobile ? "85%" : 260,
+                    minWidth: isMobile ? "85%" : 260,
+                    margin: isMobile ? "0 auto" : "unset",
+                    borderRadius:
+                      "30px",
+                    cursor: "pointer",
+                    overflow:
+                      "hidden",
+                    border:
+                      "1px solid rgba(226,232,240,.9)",
+                    background:
+                      "linear-gradient(180deg,#fff,#f8fbff)",
+                    boxShadow:
+                      "0 8px 28px rgba(15,23,42,.06)",
+                    transition:
+                      ".28s ease",
+
+                    "&:hover": {
+                      transform:
+                        "translateY(-4px)",
+                      boxShadow:
+                        "0 18px 40px rgba(37,99,235,.14)",
+                    },
+                  }}
+                >
+                  <Box
+                    sx={{
+                      p: 2.5,
+                      textAlign:
+                        "center",
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        width: 72,
+                        height: 72,
+                        borderRadius:
+                          "24px",
+                        display:
+                          "flex",
+                        alignItems:
+                          "center",
+                        justifyContent:
+                          "center",
+                        mx: "auto",
+                        mb: 2,
+                        background:
+                          index % 2 === 0
+                            ? "linear-gradient(135deg,#2563eb,#60a5fa)"
+                            : "linear-gradient(135deg,#7c3aed,#a78bfa)",
+                      }}
+                    >
+                      <SchoolIcon
+                        sx={{
+                          color:
+                            "#fff",
+                          fontSize:
+                            34,
+                        }}
+                      />
+                    </Box>
+
+                    <Typography
+                      sx={{
+                        fontSize:
+                          18,
+                        fontWeight:
+                          700,
+                        color:
+                          "#0f172a",
+                      }}
+                    >
+                      {student.hoTen}
+                    </Typography>
+
+                    <Typography
+                      sx={{
+                        mt: 1,
+                        fontSize:
+                          13,
+                        color:
+                          "#64748b",
+                        fontWeight:
+                          600,
+                      }}
+                    >
+                      Học sinh lớp {lop}
+                    </Typography>
+
+                    <Box
+                      sx={{
+                        mt: 2.5,
+                        py: 1.2,
+                        borderRadius:
+                          "16px",
+                        fontWeight:
+                          700,
+                        fontSize:
+                          14,
+                        color:
+                          "#2563eb",
+                        background:
+                          "#eff6ff",
+                      }}
+                    >
+                      Xem kết quả
+                    </Box>
+                  </Box>
+                </Paper>
+              )
+            )}
+          </Box>
+
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent:
+                "flex-start",
+              mt: 3,
+            }}
+          >
+            <Box
+              onClick={() => {
+                if (!lop) return; // ⛔ chưa chọn lớp thì không làm gì
+                setShowAll(true);
+              }}
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 1.5,
+                px: 3,
+                py: 1.6,
+                borderRadius: "18px",
+                cursor: lop ? "pointer" : "not-allowed",
+                background: lop
+                  ? "linear-gradient(135deg,#eff6ff,#f8fbff)"
+                  : "#e5e7eb",
+                border: "1px solid #dbeafe",
+                boxShadow: "0 8px 22px rgba(37,99,235,.12)",
+                opacity: lop ? 1 : 0.5,
+                pointerEvents: lop ? "auto" : "none",
+              }}
+            >
+              <GroupsIcon
+                sx={{
+                  color:
+                    "#2563eb",
+                  fontSize:
+                    28,
+                }}
+              />
+
+              <Typography
+                sx={{
+                  fontSize:
+                    16,
+                  fontWeight:
+                    700,
+                  color:
+                    "#2563eb",
+                }}
+              >
+                Xem toàn bộ lớp
+              </Typography>
+            </Box>
+          </Box>
+        </Box>
+      )}
+
+      {/* TOÀN BỘ LỚP */}
+      {showAll && (
+        <>
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: isMobile
+                ? "1fr"
+                : "repeat(5, 1fr)",
+              gap: 2,
+              alignItems: "start",
+            }}
+          >
+            {isMobile ? (
+              // 📱 MOBILE: 1 CỘT DUY NHẤT
+              <Box
+                sx={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 2,
+                }}
+              >
+                {students.map((student, index) => (
+                  <Paper
+                    key={student.id}
+                    elevation={3}
+                    onClick={() => handleStudentClick(student)}
+                    sx={{
+                      p: 2,
+                      borderRadius: "8px",
+                      cursor: "pointer",
+                      transition: ".2s",
+                      "&:hover": {
+                        transform: "scale(1.02)",
+                      },
+                    }}
+                  >
+                    <Typography sx={{ fontWeight: 500, fontSize: 16 }}>
+                      {index + 1}. {student.hoTen.toUpperCase()}
+                    </Typography>
+                  </Paper>
+                ))}
+              </Box>
+            ) : (
+              // 🖥 DESKTOP: GIỮ NGUYÊN 5 CỘT
+              columns.map((column, colIndex) => (
+                <Box
+                  key={colIndex}
+                  sx={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 2,
+                  }}
+                >
+                  {column.map((student) => (
+                    <Paper
+                      key={student.id}
+                      elevation={3}
+                      onClick={() => handleStudentClick(student)}
+                      sx={{
+                        p: 2,
+                        borderRadius: "18px",
+                        cursor: "pointer",
+                        transition: ".2s",
+                        "&:hover": {
+                          transform: "scale(1.03)",
+                        },
+                      }}
+                    >
+                      <Typography sx={{ fontWeight: 500, fontSize: 16 }}>
+                        {student.displayIndex}. {student.hoTen}
+                      </Typography>
+                    </Paper>
+                  ))}
+                </Box>
+              ))
+            )}
+          </Box>
+
+          {/* NÚT Ở CUỐI DANH SÁCH */}
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "flex-start",
+              mt: 4,
+            }}
+          >
+            <Box
+              onClick={() => setShowAll(false)}
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 1.5,
+                px: 3,
+                py: 1.6,
+                borderRadius: "18px",
+                cursor: "pointer",
+                background:
+                  "linear-gradient(135deg,#eff6ff,#f8fbff)",
+                border: "1px solid #dbeafe",
+                boxShadow:
+                  "0 8px 22px rgba(37,99,235,.12)",
+                transition: ".25s",
+
+                "&:hover": {
+                  transform: "translateY(-2px)",
+                  boxShadow:
+                    "0 14px 32px rgba(37,99,235,.2)",
+                  borderColor: "#93c5fd",
+                },
+              }}
+            >
+              <HistoryIcon
+                sx={{
+                  color: "#2563eb",
+                  fontSize: 28,
+                }}
+              />
+
+              <Typography
+                sx={{
+                  fontSize: 16,
+                  fontWeight: 700,
+                  color: "#2563eb",
+                }}
+              >
+                Chế độ xem: Gần đây
+              </Typography>
+            </Box>
+          </Box>
+        </>
+      )}
+
+      <ResultDialog_GV
+        open={openResultDialog}
+        onClose={() => setOpenResultDialog(false)}
+        dialogMode="success"
+        dialogMessage=""
+        studentResult={
+          config?.choXemDiem
+            ? resultData
+            : { ...resultData, diem: undefined }
+        }
+        hasResult={hasResult}   // 👈 THÊM
+        choXemDiem={config?.choXemDiem ?? false}
+        configData={config}
+        convertPercentToScore={(v) => v}
+      />
+    </Paper>
+  </Box>
+);
+}

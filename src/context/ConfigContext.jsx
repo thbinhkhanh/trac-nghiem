@@ -30,6 +30,8 @@ export const ConfigProvider = ({ children }) => {
     xuatFileBaiLam: false,
     hienThiTenGanDay: false,
     khoaHeThong: false,
+
+    giaoDien: "dang_nhap",
   };
 
   const storedConfig = JSON.parse(localStorage.getItem("appConfig") || "{}");

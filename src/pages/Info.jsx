@@ -9,13 +9,15 @@ import {
   FormControl,
   InputLabel,
   Select,
-  MenuItem
+  MenuItem,
+  Autocomplete,
 } from "@mui/material";
 import SchoolIcon from "@mui/icons-material/School";
 import { useNavigate } from "react-router-dom";
 import { ConfigContext } from "../context/ConfigContext";
-import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebase";
+import { collection, getDocs, doc, getDoc } from "firebase/firestore";
+import ResultDialog from "../dialog/ResultDialog";
 
 // ✅ Chỉ còn 1 trường
 const SCHOOL_LIST = ["TH Lâm Văn Bền"];
@@ -26,11 +28,15 @@ export default function Info() {
   const [lop, setLop] = useState("");
   const [classes, setClasses] = useState([]);
   const [filteredClasses, setFilteredClasses] = useState([]);
-  const [khoi, setKhoi] = useState("Khối 3");
+  const [khoi, setKhoi] = useState("Khối 4");
   const [errorMsg, setErrorMsg] = useState("");
+  const [students, setStudents] = useState([]);
 
   const navigate = useNavigate();
-  const { setConfig } = useContext(ConfigContext);
+  const { config, setConfig } = useContext(ConfigContext);
+
+  const [openResultDialog, setOpenResultDialog] = useState(false);
+  const [resultData, setResultData] = useState(null);
 
   // 🔹 Lọc lớp theo khối
   useEffect(() => {
@@ -62,19 +68,145 @@ export default function Info() {
     fetchClasses();
   }, []);
 
-  const handleStart = () => {
-    if (!fullname.trim()) {
-      setErrorMsg("❌ Vui lòng nhập Họ và tên!");
-    } else if (!lop) {
-      setErrorMsg("❌ Vui lòng chọn lớp!");
-    } else {
-      setErrorMsg("");
-      setConfig(prev => ({ ...prev, lop, mon: prev.mon || "Tin học" }));
-      navigate("/tracnghiem", { state: { school, fullname, lop } });
+  useEffect(() => {
+    const soKhoi = khoi.replace("Khối ", "");
+    const filtered = classes.filter(cl => cl.startsWith(soKhoi));
+
+    setFilteredClasses(filtered);
+
+    // chỉ reset lớp, KHÔNG auto chọn lớp đầu
+    setLop("");
+    setStudents([]);
+  }, [khoi, classes]);
+
+  useEffect(() => {
+    if (!lop) return;
+    fetchStudentsByClass(lop);
+  }, [lop]);
+
+  const fetchStudentsByClass = async (classKey) => {
+    try {
+      if (!classKey) return;
+
+      const snap = await getDocs(
+        collection(db, "DS_HOCSINH_MASTER", classKey, "STUDENTS")
+      );
+
+      const list = snap.docs.map((d) => ({
+        id: d.id,
+        ...d.data(),
+      }));
+
+      const getTenSortKey = (hoTen = "") =>
+        hoTen.trim().split(/\s+/).reverse().join(" ");
+
+      const compareVietnameseName = (a, b) => {
+        const pa = (a.hoTen || "").trim().split(/\s+/).reverse();
+        const pb = (b.hoTen || "").trim().split(/\s+/).reverse();
+
+        const len = Math.max(pa.length, pb.length);
+
+        for (let i = 0; i < len; i++) {
+          const wa = pa[i] || "";
+          const wb = pb[i] || "";
+
+          const cmp = wa.localeCompare(wb, "vi", {
+            sensitivity: "base",
+            numeric: true,
+          });
+
+          if (cmp !== 0) return cmp;
+        }
+
+        return 0;
+      };
+
+      list.sort(compareVietnameseName);
+
+      setStudents(list);
+    } catch (err) {
+      console.error("❌ Lỗi load học sinh:", err);
+      setStudents([]);
+    }
+  };
+
+  const convertToId = (name = "") =>
+    name
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/đ/g, "d")
+      .replace(/Đ/g, "D")
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, "_");   // ❌ BỎ "_" đầu
+
+  const handleStart = async () => {
+    try {
+      if (!lop) {
+        setErrorMsg("❌ Vui lòng chọn lớp!");
+        return;
+      }
+
+      if (!fullname.trim()) {
+        setErrorMsg("❌ Vui lòng nhập Họ và tên!");
+        return;
+      }
+
+      const namHocRaw = config?.namHoc || "2025_2026";
+      const namHoc = namHocRaw.replaceAll("-", "_");
+      const hocKy = config?.hocKy || "Cuối năm";
+
+      // 🔥 KEY CHUẨN GIỐNG HỆ THỐNG LƯU
+      const studentKey = convertToId(fullname);
+
+      const examRef = doc(
+        db,
+        `DATA_KTDK_${namHoc}`,
+        hocKy,
+        lop,
+        studentKey
+      );
+
+      const examSnap = await getDoc(examRef);
+
+      // ======================
+      // ĐÃ LÀM BÀI
+      // ======================
+      if (examSnap.exists()) {
+        const data = examSnap.data();
+
+        setResultData({
+          ...data,
+          lop,
+          hoVaTen: fullname,
+        });
+
+        setOpenResultDialog(true);
+        return;
+      }
+
+      // ======================
+      // CHƯA LÀM BÀI
+      // ======================
+      setConfig(prev => ({
+        ...prev,
+        lop,
+        mon: prev.mon || "Tin học",
+      }));
+
+      navigate("/tracnghiem", {
+        state: { school, fullname, lop },
+      });
+
+    } catch (err) {
+      console.error("🔥 ERROR:", err);
+      alert("Không kiểm tra được trạng thái bài làm.");
     }
   };
 
   return (
+  
+
   <Box
     sx={{
       minHeight: "100vh",
@@ -94,284 +226,293 @@ export default function Info() {
         maxWidth: 420,
       }}
     >
-      <Card
-        elevation={0}
-        sx={{
-          borderRadius: "14px",
-          overflow: "hidden",
-          background: "#f8fafc",
-          border: "1px solid #e2e8f0",
-          boxShadow:
-            "0 10px 35px rgba(0,0,0,0.12)",
-          position: "relative",
-        }}
-      >
-        {/* ===== HEADER ===== */}
-        <Box
+      {!openResultDialog && (
+        <Card
+          elevation={0}
           sx={{
-            px: 3,
-            py: 1.5,
-            background: "#1976d2",
-            color: "#fff",
+            borderRadius: "14px",
+            overflow: "hidden",
+            background: "#f8fafc",
+            border: "1px solid #e2e8f0",
+            boxShadow:
+              "0 10px 35px rgba(0,0,0,0.12)",
+            position: "relative",
           }}
         >
-          <Typography
+          {/* ===== HEADER ===== */}
+          <Box
             sx={{
-              fontSize: 17,
-              fontWeight: 700,
+              px: 3,
+              py: 1.5,
+              background: "#1976d2",
+              color: "#fff",
             }}
           >
-            Thông tin học sinh
-          </Typography>
-
-          {/*<Typography
-            sx={{
-              fontSize: 13,
-              opacity: 0.9,
-              mt: 0.3,
-            }}
-          >
-            Nhập thông tin để bắt đầu làm bài
-          </Typography>*/}
-        </Box>
-
-        {/* ===== CONTENT ===== */}
-        <Box
-          sx={{
-            px: 3,
-            py: 3,
-          }}
-        >
-          <Stack
-            spacing={2.5}
-            alignItems="center"
-          >
-            {/* ICON */}
-            <Box
+            <Typography
               sx={{
-                width: 82,
-                height: 82,
-                borderRadius: "50%",
-                bgcolor: "#e3f2fd",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                border:
-                  "4px solid #fff",
-                boxShadow:
-                  "0 4px 15px rgba(25,118,210,0.15)",
+                fontSize: 17,
+                fontWeight: 700,
               }}
             >
-              <SchoolIcon
-                sx={{
-                  fontSize: 42,
-                  color: "#1976d2",
-                }}
-              />
-            </Box>
+              Thông tin học sinh
+            </Typography>
 
-            {/* TITLE */}
-            <Box textAlign="center">
-              <Typography
-                sx={{
-                  fontSize: 24,
-                  fontWeight: 700,
-                  color: "#1e293b",
-                }}
-              >
-                Chào em 👋
-              </Typography>
-
-              <Typography
-                sx={{
-                  fontSize: 14,
-                  color: "#64748b",
-                  mt: 0.5,
-                }}
-              >
-                Vui lòng nhập thông tin
-                để tiếp tục
-              </Typography>
-            </Box>
-
-            {/* KHỐI */}
-            <FormControl
-              fullWidth
-              size="small"
-            >
-              <InputLabel>
-                Khối
-              </InputLabel>
-
-              <Select
-                value={khoi}
-                label="Khối"
-                onChange={(e) =>
-                  setKhoi(
-                    e.target.value
-                  )
-                }
-                sx={{
-                  bgcolor: "#fff",
-                  borderRadius: "5px",
-
-                  "& .MuiOutlinedInput-notchedOutline":
-                    {
-                      borderColor:
-                        "#dbe2ea",
-                    },
-
-                  "&.Mui-focused .MuiOutlinedInput-notchedOutline":
-                    {
-                      borderColor:
-                        "#1976d2",
-                      borderWidth: 2,
-                    },
-                }}
-              >
-                {[
-                  "Khối 1",
-                  "Khối 2",
-                  "Khối 3",
-                  "Khối 4",
-                  "Khối 5",
-                ].map((k) => (
-                  <MenuItem
-                    key={k}
-                    value={k}
-                  >
-                    {k}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-
-            {/* LỚP */}
-            <FormControl
-              fullWidth
-              size="small"
-            >
-              <InputLabel>
-                Lớp
-              </InputLabel>
-
-              <Select
-                value={lop}
-                label="Lớp"
-                onChange={(e) =>
-                  setLop(
-                    e.target.value
-                  )
-                }
-                sx={{
-                  bgcolor: "#fff",
-                  borderRadius: "5px",
-
-                  "& .MuiOutlinedInput-notchedOutline":
-                    {
-                      borderColor:
-                        "#dbe2ea",
-                    },
-
-                  "&.Mui-focused .MuiOutlinedInput-notchedOutline":
-                    {
-                      borderColor:
-                        "#1976d2",
-                      borderWidth: 2,
-                    },
-                }}
-              >
-                {filteredClasses.map(
-                  (cl) => (
-                    <MenuItem
-                      key={cl}
-                      value={cl}
-                    >
-                      {cl}
-                    </MenuItem>
-                  )
-                )}
-              </Select>
-            </FormControl>
-
-            {/* HỌ TÊN */}
-            <TextField
-              label="Họ và tên"
-              value={fullname}
-              onChange={(e) =>
-                setFullname(
-                  e.target.value
-                )
-              }
-              fullWidth
-              size="small"
-              onKeyDown={(e) =>
-                e.key === "Enter" &&
-                handleStart()
-              }
+            {/*<Typography
               sx={{
-                "& .MuiOutlinedInput-root":
-                  {
+                fontSize: 13,
+                opacity: 0.9,
+                mt: 0.3,
+              }}
+            >
+              Nhập thông tin để bắt đầu làm bài
+            </Typography>*/}
+          </Box>
+
+          {/* ===== CONTENT ===== */}
+          <Box
+            sx={{
+              px: 3,
+              py: 3,
+            }}
+          >
+            <Stack
+              spacing={2.5}
+              alignItems="center"
+            >
+              {/* ICON */}
+              <Box
+                sx={{
+                  width: 82,
+                  height: 82,
+                  borderRadius: "50%",
+                  bgcolor: "#e3f2fd",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  border:
+                    "4px solid #fff",
+                  boxShadow:
+                    "0 4px 15px rgba(25,118,210,0.15)",
+                }}
+              >
+                <SchoolIcon
+                  sx={{
+                    fontSize: 42,
+                    color: "#1976d2",
+                  }}
+                />
+              </Box>
+
+              {/* TITLE */}
+              <Box textAlign="center">
+                <Typography
+                  sx={{
+                    fontSize: 24,
+                    fontWeight: 700,
+                    color: "#1e293b",
+                  }}
+                >
+                  Chào em 👋
+                </Typography>
+
+                <Typography
+                  sx={{
+                    fontSize: 14,
+                    color: "#64748b",
+                    mt: 0.5,
+                  }}
+                >
+                  Vui lòng nhập thông tin
+                  để tiếp tục
+                </Typography>
+              </Box>
+
+              {/* KHỐI */}
+              <FormControl
+                fullWidth
+                size="small"
+              >
+                <InputLabel>
+                  Khối
+                </InputLabel>
+
+                <Select
+                  value={khoi}
+                  label="Khối"
+                  onChange={(e) =>
+                    setKhoi(
+                      e.target.value
+                    )
+                  }
+                  sx={{
                     bgcolor: "#fff",
-                    borderRadius:
-                      "5px",
+                    borderRadius: "5px",
 
-                    "& fieldset": {
-                      borderColor:
-                        "#dbe2ea",
-                    },
+                    "& .MuiOutlinedInput-notchedOutline":
+                      {
+                        borderColor:
+                          "#dbe2ea",
+                      },
 
-                    "&.Mui-focused fieldset":
+                    "&.Mui-focused .MuiOutlinedInput-notchedOutline":
                       {
                         borderColor:
                           "#1976d2",
                         borderWidth: 2,
                       },
-                  },
-              }}
-            />
+                  }}
+                >
+                  {[
+                    "Khối 1",
+                    "Khối 2",
+                    "Khối 3",
+                    "Khối 4",
+                    "Khối 5",
+                  ].map((k) => (
+                    <MenuItem
+                      key={k}
+                      value={k}
+                    >
+                      {k}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
 
-            {/* BUTTON */}
-            <Button
-              variant="contained"
-              fullWidth
-              onClick={handleStart}
-              sx={{
-                textTransform:
-                  "none",
-                borderRadius:
-                  "12px",
-                py: 1.2,
-                fontWeight: 700,
-                fontSize: 15,
-                boxShadow: "none",
+              {/* LỚP */}
+              <FormControl
+                fullWidth
+                size="small"
+              >
+                <InputLabel>
+                  Lớp
+                </InputLabel>
 
-                "&:hover": {
-                  boxShadow: "none",
-                },
-              }}
-            >
-              Bắt đầu làm bài
-            </Button>
+                <Select
+                  value={lop}
+                  label="Lớp"
+                  onChange={(e) => {
+                    const newClass = e.target.value;
+                    setLop(newClass);
+                    setErrorMsg("");
+                    fetchStudentsByClass(newClass); // 👈 quan trọng
+                  }}
+                  sx={{
+                    bgcolor: "#fff",
+                    borderRadius: "5px",
 
-            {/* ERROR */}
-            {errorMsg && (
-              <Typography
+                    "& .MuiOutlinedInput-notchedOutline": {
+                      borderColor: "#dbe2ea",
+                    },
+
+                    "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                      borderColor: "#1976d2",
+                      borderWidth: 2,
+                    },
+                  }}
+                >
+                  {filteredClasses.map(
+                    (cl) => (
+                      <MenuItem
+                        key={cl}
+                        value={cl}
+                      >
+                        {cl}
+                      </MenuItem>
+                    )
+                  )}
+                </Select>
+              </FormControl>
+
+              {/* HỌ TÊN */}
+              <Autocomplete
+                freeSolo
+                fullWidth
+                size="small"
+                options={lop ? students.map((st) => st.hoTen) : []}
+                value={fullname}
+                onChange={(event, newValue) => {
+                  setFullname(newValue || "");
+                }}
+                onInputChange={(event, newInputValue) => {
+                  setFullname(newInputValue);
+                  setErrorMsg("");
+                }}
                 sx={{
-                  fontSize: 13,
-                  color: "#ef4444",
-                  fontWeight: 600,
-                  textAlign:
-                    "center",
+                  bgcolor: "#fff",
+                  borderRadius: "5px",
+                  "& .MuiOutlinedInput-notchedOutline": {
+                    borderColor: "#dbe2ea",
+                  },
+                  "& .Mui-focused .MuiOutlinedInput-notchedOutline": {
+                    borderColor: "#1976d2",
+                    borderWidth: 2,
+                  },
+                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Họ và tên"
+                  />
+                )}
+              />
+
+              {/* BUTTON */}
+              <Button
+                variant="contained"
+                fullWidth
+                onClick={handleStart}
+                sx={{
+                  textTransform:
+                    "none",
+                  borderRadius:
+                    "12px",
+                  py: 1.2,
+                  fontWeight: 700,
+                  fontSize: 15,
+                  boxShadow: "none",
+
+                  "&:hover": {
+                    boxShadow: "none",
+                  },
                 }}
               >
-                {errorMsg}
-              </Typography>
-            )}
-          </Stack>
-        </Box>
-      </Card>
+                Bắt đầu làm bài
+              </Button>
+
+              {/* ERROR */}
+              {errorMsg && (
+                <Typography
+                  sx={{
+                    fontSize: 13,
+                    color: "#ef4444",
+                    fontWeight: 600,
+                    textAlign:
+                      "center",
+                  }}
+                >
+                  {errorMsg}
+                </Typography>
+              )}
+            </Stack>
+          </Box>
+        </Card>
+      )}
     </Box>
+    <ResultDialog
+      open={openResultDialog}
+      onClose={() => setOpenResultDialog(false)}
+      dialogMode="success"
+      dialogMessage=""
+      studentResult={
+        config?.choXemDiem
+          ? resultData
+          : { ...resultData, diem: undefined }
+      }
+      choXemDiem={config?.choXemDiem ?? false}
+      configData={config}
+      convertPercentToScore={(v) => v}
+    />
   </Box>
 );
 }

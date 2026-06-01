@@ -141,7 +141,6 @@ export default function QuanTri() {
           xuatFileBaiLam: data.xuatFileBaiLam ?? true,
           khoaHeThong: data.khoaHeThong ?? false,
           examType: data.examType ?? "ktdk",
-          giaoDien: data.giaoDien ?? "dang_nhap",
         });
 
         setSelectedSemester(data.hocKy ?? "Cuối kỳ I");
@@ -164,26 +163,12 @@ export default function QuanTri() {
 
   // ===== Cập nhật config =====
   const updateConfigField = async (field, value) => {
-    // 1. update context local
-    setConfig((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-
-    // 2. update UI state phụ
+    await setConfig({ [field]: value }); // ✅ dùng setConfig context
     if (field === "lop") setSelectedClass(value);
     if (field === "hocKy") setSelectedSemester(value);
     if (field === "timeLimit") setTimeInput(value);
+    if (field === "namHoc") ;
     if (field === "examType") setExamType(value);
-
-    // 3. update Firestore
-    await setDoc(
-      doc(db, "CONFIG", "config"),
-      {
-        [field]: value,
-      },
-      { merge: true }
-    );
   };
 
   // ===== Thêm / xóa lớp =====
@@ -776,47 +761,6 @@ export default function QuanTri() {
                   phút
                 </Typography>
               </Stack>
-            </Box>
-
-            {/* ===== GIAO DIỆN ===== */}
-            <Box
-              sx={{
-                p: 1.6,
-                borderRadius: "5px",
-                bgcolor: "#fff",
-                border: "1px solid #e2e8f0",
-              }}
-            >
-              <Typography
-                sx={{
-                  fontSize: 14,
-                  fontWeight: 700,
-                  mb: 1.5,
-                  color: "#1e293b",
-                }}
-              >
-                Giao diện
-              </Typography>
-
-              <RadioGroup
-                row
-                value={config.giaoDien || "dang_nhap"}
-                onChange={(e) =>
-                  updateConfigField("giaoDien", e.target.value)
-                }
-              >
-                <FormControlLabel
-                  value="dang_nhap"
-                  control={<Radio size="small" />}
-                  label="Đăng nhập"
-                />
-
-                <FormControlLabel
-                  value="the_ten"
-                  control={<Radio size="small" />}
-                  label="Dùng thẻ tên"
-                />
-              </RadioGroup>
             </Box>
 
             {/* TÙY CHỌN */}

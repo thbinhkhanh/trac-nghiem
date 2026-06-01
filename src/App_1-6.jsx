@@ -11,8 +11,6 @@ import { AppBar, Toolbar, Button, Typography, Box } from "@mui/material";
 
 // 🔹 Pages
 import Info from "./pages/Info";
-import HocSinh from "./pages/HocSinh";
-import GiaoVien from "./pages/GiaoVien";
 import Login from "./pages/Login";
 import TongHopKQ from "./pages/TongHopKQ";
 import TracNghiemGV from "./pages/TracNghiemGV";
@@ -87,10 +85,10 @@ function AppContent() {
       label: "Học sinh",
       onClick: handleHocSinhClick,
     },
+
     ...(isLoggedIn
       ? [
-        { path: "/giaovien", label: "Giáo viên" }, // 👈 thêm ở đây  
-        { path: "/ketqua", label: "Kết quả" },
+          { path: "/ketqua", label: "Kết quả" },
           { path: "/tracnghiem-gv", label: "Soạn đề" },
           { path: "/tracnghiem-test", label: "Test đề" },
           { path: "/de-thi", label: "Đề thi" },
@@ -249,27 +247,7 @@ function AppContent() {
             element={<Login setIsLoggedIn={setIsLoggedIn} />}
           />
 
-          <Route
-            path="/hocsinh"
-            element={
-              config?.giaoDien === "the_ten" ? (
-                <HocSinh />
-              ) : (
-                <Info />
-              )
-            }
-          />
-
-          <Route
-            path="/giaovien"
-            element={
-              isLoggedIn ? (
-                <GiaoVien />
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
-          />
+          <Route path="/hocsinh" element={<Info />} />
 
           <Route
             path="/ketqua"

@@ -12,6 +12,7 @@ import { exportKetQuaExcel } from "../utils/exportKetQuaExcel";
 import CloseIcon from "@mui/icons-material/Close";
 import ConfirmDialog from "../dialog/ConfirmDialog";
 import { syncLamVanBenToKTDK } from "../utils/syncLamVanBenToKTDK";
+import { syncMasterHocSinh } from "../utils/syncMasterHocSinh";
 import SyncIcon from "@mui/icons-material/Sync";
 
 export default function TongHopKQ() {
@@ -25,7 +26,7 @@ export default function TongHopKQ() {
   const [config, setConfig] = useState(null);
 
   const [syncing, setSyncing] = useState(false);
-
+  
   // =========================
   // STATE - DATA
   // =========================
@@ -83,6 +84,32 @@ export default function TongHopKQ() {
 
     fetchConfig();
   }, []);
+
+  const handleSyncHocSinh = async () => {
+    try {
+      setSyncing(true);
+
+      await syncMasterHocSinh({
+        db,
+        namHoc: "2025-2026",
+        hocKy: hocKi || "Cuối năm", // ✅ lấy state hocKi, fallback Cuối năm
+      });
+
+      setSnackbarSeverity("success");
+      setSnackbarMessage("✅ Đồng bộ danh sách học sinh thành công!");
+      setSnackbarOpen(true);
+
+      loadResults?.(); // optional safety
+    } catch (err) {
+      console.error("SYNC HOC SINH ERROR:", err);
+
+      setSnackbarSeverity("error");
+      setSnackbarMessage("❌ Đồng bộ thất bại!");
+      setSnackbarOpen(true);
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   /*const handleSyncData = () => {
     openConfirmDialog(
@@ -422,6 +449,23 @@ export default function TongHopKQ() {
                 </IconButton>
               </Tooltip>*/}
             </Stack>
+
+            <Tooltip title="Đồng bộ danh sách học sinh">
+              <IconButton
+                onClick={handleSyncHocSinh}
+                disabled={syncing}
+                sx={{
+                  ...circleIconStyle,
+                  color: "secondary.main",
+                  "&:hover": {
+                    bgcolor: "secondary.main",
+                    color: "#fff",
+                  },
+                }}
+              >
+                <SyncIcon />
+              </IconButton>
+            </Tooltip>
           </Box>
 
           {/* TIÊU ĐỀ – căn giữa như mẫu */}
@@ -446,7 +490,7 @@ export default function TongHopKQ() {
           </Box>
         </Box>
         
-        <Box sx={{ display: "flex", gap: 2, mb: 3, flexWrap: "wrap", justifyContent: "center" }}>
+        <Box sx={{ display: "flex", gap: 2, mb: 3, flexWrap: "nowrap", justifyContent: "center" }}>
           <TextField
             select
             label="Lớp"
