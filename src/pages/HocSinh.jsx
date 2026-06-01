@@ -409,6 +409,7 @@ export default function HocSinh() {
             mb: 4,
           }}
         >
+          {/* HEADER */}
           <Typography
             sx={{
               fontSize: 24,
@@ -430,148 +431,157 @@ export default function HocSinh() {
             Truy cập nhanh học sinh vừa thao tác
           </Typography>
 
+          {/* LIST */}
           <Box
             sx={{
               display: "flex",
               gap: 2.5,
+
               overflowX: "auto",
+              overflowY: "visible",
+
               pb: 1,
+
+              // 🔥 FIX scroll đẹp hơn
+              scrollSnapType: "x mandatory",
+              "&::-webkit-scrollbar": {
+                height: 8,
+              },
+              "&::-webkit-scrollbar-thumb": {
+                background: "#cbd5e1",
+                borderRadius: 999,
+              },
             }}
           >
-            {recentStudents.map(
-              (student, index) => (
-                <Paper
-                  key={student.id}
-                  elevation={0}
-                  onClick={() =>
-                    handleStudentClick(
-                      student
-                    )
-                  }
-                  sx={{
-                    width: 260,
-                    minWidth: 260,
-                    borderRadius:
-                      "30px",
-                    cursor: "pointer",
-                    overflow:
-                      "hidden",
-                    border:
-                      "1px solid rgba(226,232,240,.9)",
-                    background:
-                      "linear-gradient(180deg,#fff,#f8fbff)",
-                    boxShadow:
-                      "0 8px 28px rgba(15,23,42,.06)",
-                    transition:
-                      ".28s ease",
+            {recentStudents.map((student, index) => (
+              <Paper
+                key={student.id}
+                onClick={() => handleStudentClick(student)}
+                elevation={0}
+                sx={{
+                  flexShrink: 0, // 🔥 QUAN TRỌNG KHÔNG MẤT ITEM
+                  scrollSnapAlign: "start",
 
-                    "&:hover": {
-                      transform:
-                        "translateY(-4px)",
-                      boxShadow:
-                        "0 18px 40px rgba(37,99,235,.14)",
-                    },
-                  }}
-                >
+                  width: 260,
+                  minWidth: 260,
+
+                  borderRadius: "30px",
+                  cursor: "pointer",
+                  overflow: "hidden",
+                  position: "relative",
+
+                  border: "1px solid rgba(226,232,240,.9)",
+                  background: "linear-gradient(180deg,#ffffff,#f8fbff)",
+                  boxShadow: "0 8px 28px rgba(15,23,42,.06)",
+                  transition: ".25s ease",
+
+                  "&:hover": {
+                    transform: "translateY(-4px)",
+                    boxShadow: "0 18px 40px rgba(37,99,235,.16)",
+                    borderColor: "#93c5fd",
+                  },
+
+                  // 🔥 TOP BAR GIỐNG MẪU 100%
+                  "&::before": {
+                    content: '""',
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    height: 6,
+                    background:
+                      index % 2 === 0
+                        ? "linear-gradient(90deg,#2563eb,#60a5fa)"
+                        : "linear-gradient(90deg,#7c3aed,#a78bfa)",
+                  },
+                }}
+              >
+                <Box sx={{ p: 2.5, textAlign: "center" }}>
+
+                  {/* ICON */}
                   <Box
                     sx={{
-                      p: 2.5,
-                      textAlign:
-                        "center",
+                      width: 72,
+                      height: 72,
+                      borderRadius: "24px",
+                      mx: "auto",
+                      mb: 2,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      background:
+                        index % 2 === 0
+                          ? "linear-gradient(135deg,#2563eb,#60a5fa)"
+                          : "linear-gradient(135deg,#7c3aed,#a78bfa)",
+                      boxShadow: "0 14px 30px rgba(37,99,235,.22)",
                     }}
                   >
-                    <Box
-                      sx={{
-                        width: 72,
-                        height: 72,
-                        borderRadius:
-                          "24px",
-                        display:
-                          "flex",
-                        alignItems:
-                          "center",
-                        justifyContent:
-                          "center",
-                        mx: "auto",
-                        mb: 2,
-                        background:
-                          index % 2 === 0
-                            ? "linear-gradient(135deg,#2563eb,#60a5fa)"
-                            : "linear-gradient(135deg,#7c3aed,#a78bfa)",
-                      }}
-                    >
-                      <SchoolIcon
-                        sx={{
-                          color:
-                            "#fff",
-                          fontSize:
-                            34,
-                        }}
-                      />
-                    </Box>
-
-                    <Typography
-                      sx={{
-                        fontSize:
-                          18,
-                        fontWeight:
-                          700,
-                        color:
-                          "#0f172a",
-                      }}
-                    >
-                      {student.hoTen}
-                    </Typography>
-
-                    <Typography
-                      sx={{
-                        mt: 1,
-                        fontSize:
-                          13,
-                        color:
-                          "#64748b",
-                        fontWeight:
-                          600,
-                      }}
-                    >
-                      Học sinh lớp {lop}
-                    </Typography>
-
-                    <Box
-                      sx={{
-                        mt: 2.5,
-                        py: 1.2,
-                        borderRadius:
-                          "16px",
-                        fontWeight:
-                          700,
-                        fontSize:
-                          14,
-                        color:
-                          "#2563eb",
-                        background:
-                          "#eff6ff",
-                      }}
-                    >
-                      Bắt đầu làm bài
-                    </Box>
+                    <SchoolIcon sx={{ color: "#fff", fontSize: 34 }} />
                   </Box>
-                </Paper>
-              )
-            )}
+
+                  {/* NAME */}
+                  <Typography
+                    sx={{
+                      fontSize: 18,
+                      fontWeight: 700,
+                      color: "#0f172a",
+                      minHeight: 48,
+                      display: "-webkit-box",
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: "vertical",
+                      overflow: "hidden",
+                    }}
+                  >
+                    {student.hoTen}
+                  </Typography>
+
+                  {/* CLASS */}
+                  <Typography
+                    sx={{
+                      mt: 1,
+                      fontSize: 13,
+                      color: "#64748b",
+                      fontWeight: 600,
+                    }}
+                  >
+                    Học sinh lớp {lop}
+                  </Typography>
+
+                  {/* CTA */}
+                  <Box
+                    sx={{
+                      mt: 2.5,
+                      py: 1.2,
+                      borderRadius: "16px",
+                      fontWeight: 700,
+                      fontSize: 14,
+                      color: "#2563eb",
+                      background: "#eff6ff",
+                      transition: ".2s",
+
+                      "&:hover": {
+                        background: "#dbeafe",
+                      },
+                    }}
+                  >
+                    Bắt đầu làm bài
+                  </Box>
+                </Box>
+              </Paper>
+            ))}
           </Box>
 
+          {/* BUTTON */}
           <Box
             sx={{
               display: "flex",
-              justifyContent:
-                "flex-start",
+              justifyContent: "flex-start",
               mt: 3,
             }}
           >
             <Box
               onClick={() => {
-                if (!lop) return; // ⛔ chưa chọn lớp thì không làm gì
+                if (!lop) return;
                 setShowAll(true);
               }}
               sx={{
@@ -591,25 +601,9 @@ export default function HocSinh() {
                 pointerEvents: lop ? "auto" : "none",
               }}
             >
-              <GroupsIcon
-                sx={{
-                  color:
-                    "#2563eb",
-                  fontSize:
-                    28,
-                }}
-              />
+              <GroupsIcon sx={{ color: "#2563eb", fontSize: 28 }} />
 
-              <Typography
-                sx={{
-                  fontSize:
-                    16,
-                  fontWeight:
-                    700,
-                  color:
-                    "#2563eb",
-                }}
-              >
+              <Typography sx={{ fontSize: 16, fontWeight: 700, color: "#2563eb" }}>
                 Xem toàn bộ lớp
               </Typography>
             </Box>
@@ -728,12 +722,8 @@ export default function HocSinh() {
         onClose={() => setOpenResultDialog(false)}
         dialogMode="success"
         dialogMessage=""
-        studentResult={
-          config?.choXemDiem
-            ? resultData
-            : { ...resultData, diem: undefined }
-        }
-        choXemDiem={config?.choXemDiem ?? false}
+        studentResult={resultData}
+        choXemDiem={true}
         configData={config}
         convertPercentToScore={(v) => v}
       />

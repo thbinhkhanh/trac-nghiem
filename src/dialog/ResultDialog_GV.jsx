@@ -33,21 +33,16 @@ const ResultDialog_GV = ({
   const [snackbarSeverity, setSnackbarSeverity] = useState("success");
 
   const getScore = () => {
-    if (!choXemDiem) return null;
-
     if (configData?.kiemTraDinhKi) {
-      return studentResult?.diem;
+      return studentResult?.diem ?? "";
     }
-
     if (configData?.baiTapTuan) {
       return convertPercentToScore(studentResult?.diemTN);
     }
-
     if (configData?.onTap) {
-      return studentResult?.diem;
+      return studentResult?.diem ?? "";
     }
-
-    return "";
+    return studentResult?.diem ?? "";
   };
 
   const studentName =
@@ -181,7 +176,7 @@ const ResultDialog_GV = ({
                 fontSize: 36,
               }}
             >
-              {choXemDiem ? "🏆" : "✓"}
+              {hasResult ? "🏆" : "📝"}
             </Box>
 
             {/* NAME */}
@@ -215,7 +210,7 @@ const ResultDialog_GV = ({
             </Typography>
 
             {/* SCORE BOX */}
-            {hasResult && choXemDiem && (
+            {hasResult && (
               <Box
                 sx={{
                   mt: 1,
