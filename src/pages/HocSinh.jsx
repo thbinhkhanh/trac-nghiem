@@ -437,19 +437,17 @@ export default function HocSinh() {
           <Box
             sx={{
               display: "flex",
-              flexDirection: isMobile ? "column" : "row", // 🔥 FIX QUAN TRỌNG
-              flexWrap: isMobile ? "nowrap" : "nowrap",
+              flexDirection: { xs: "column", sm: "row" }, // mobile dọc, desktop ngang
 
               gap: 2.5,
 
-              overflowX: isMobile ? "visible" : "auto",
+              overflowX: { xs: "visible", sm: "auto" },
               overflowY: "visible",
 
               WebkitOverflowScrolling: "touch",
-
               pb: 1,
 
-              scrollSnapType: isMobile ? "none" : "x mandatory",
+              scrollSnapType: { xs: "none", sm: "x mandatory" },
 
               "&::-webkit-scrollbar": {
                 height: 6,
@@ -469,9 +467,8 @@ export default function HocSinh() {
                   sx={{
                     flex: "0 0 auto",
 
-                    // 🔥 FIX MOBILE WIDTH
-                    width: isMobile ? "100%" : 260,
-                    minWidth: isMobile ? "100%" : 260,
+                    width: { xs: "100%", sm: 260 },
+                    minWidth: { xs: "100%", sm: 260 },
 
                     scrollSnapAlign: "start",
 
@@ -518,7 +515,14 @@ export default function HocSinh() {
                     </Typography>
 
                     {/* CLASS */}
-                    <Typography sx={{ mt: 1, fontSize: 13, color: "#64748b", fontWeight: 600 }}>
+                    <Typography
+                      sx={{
+                        mt: 1,
+                        fontSize: 13,
+                        color: "#64748b",
+                        fontWeight: 600,
+                      }}
+                    >
                       Học sinh lớp {lop || "4A"}
                     </Typography>
 
@@ -590,75 +594,78 @@ export default function HocSinh() {
     <Box
       sx={{
         display: "grid",
-        gridTemplateColumns: isMobile ? "1fr" : "repeat(5, 1fr)",
+        gridTemplateColumns: { xs: "1fr", sm: "repeat(5, 1fr)" },
         gap: 2,
         alignItems: "start",
       }}
     >
-      {isMobile ? (
-        // 📱 MOBILE: 1 cột
-        <Box
-          sx={{
-            display: "flex",
-            flexDirection: "column",
-            gap: 2,
-          }}
-        >
-          {students.map((student, index) => (
-            <Paper
-              key={student.id}
-              elevation={3}
-              onClick={() => handleStudentClick(student)}
-              sx={{
-                p: 2,
-                borderRadius: "12px",
-                cursor: "pointer",
-                transition: ".2s",
-                "&:hover": {
-                  transform: "scale(1.02)",
-                },
-              }}
-            >
-              <Typography sx={{ fontWeight: 500, fontSize: 16 }}>
-                {index + 1}. {student.hoTen.toUpperCase()}
-              </Typography>
-            </Paper>
-          ))}
-        </Box>
-      ) : (
-        // 🖥 DESKTOP: 5 cột
-        columns.map((column, colIndex) => (
+      {/* 📱 MOBILE: 1 cột */}
+      {students.length > 0 &&
+        (typeof window !== "undefined" &&
+        window.innerWidth < 600 ? (
           <Box
-            key={colIndex}
             sx={{
               display: "flex",
               flexDirection: "column",
               gap: 2,
+              gridColumn: "1 / -1",
             }}
           >
-            {column.map((student) => (
+            {students.map((student, index) => (
               <Paper
                 key={student.id}
                 elevation={3}
                 onClick={() => handleStudentClick(student)}
                 sx={{
                   p: 2,
-                  borderRadius: "18px",
+                  borderRadius: "12px",
                   cursor: "pointer",
                   transition: ".2s",
                   "&:hover": {
-                    transform: "scale(1.03)",
+                    transform: "scale(1.02)",
                   },
                 }}
               >
                 <Typography sx={{ fontWeight: 500, fontSize: 16 }}>
-                  {student.displayIndex}. {student.hoTen}
+                  {index + 1}. {student.hoTen.toUpperCase()}
                 </Typography>
               </Paper>
             ))}
           </Box>
-        ))
-      )}
+        ) : (
+          // 🖥 DESKTOP: 5 cột
+          columns.map((column, colIndex) => (
+            <Box
+              key={colIndex}
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 2,
+              }}
+            >
+              {column.map((student) => (
+                <Paper
+                  key={student.id}
+                  elevation={3}
+                  onClick={() => handleStudentClick(student)}
+                  sx={{
+                    p: 2,
+                    borderRadius: "18px",
+                    cursor: "pointer",
+                    transition: ".2s",
+                    "&:hover": {
+                      transform: "scale(1.03)",
+                    },
+                  }}
+                >
+                  <Typography sx={{ fontWeight: 500, fontSize: 16 }}>
+                    {student.displayIndex}. {student.hoTen}
+                  </Typography>
+                </Paper>
+              ))}
+            </Box>
+          ))
+        ))}
     </Box>
 
     {/* NÚT QUAY LẠI */}
