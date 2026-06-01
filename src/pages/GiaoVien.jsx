@@ -180,7 +180,6 @@ export default function GiaoVien() {
     } else {
       setLop(filtered[0] || "");
     }
-
     setStudents([]);
   }, [khoi, classes]);
 
