@@ -54,7 +54,7 @@ export default function HocSinh() {
   useEffect(() => {
     if (!lop) return;
 
-    const key = `recent_${lop}`;
+    const key = `hs_recent_${lop}`;
     const stored = JSON.parse(localStorage.getItem(key) || "[]");
 
     setRecentStudents(stored);
@@ -85,7 +85,7 @@ export default function HocSinh() {
       // ==========================
       // 🔥 RECENT (MOVE LÊN TRƯỚC)
       // ==========================
-      const key = `recent_${lop}`;
+      const key = `hs_recent_${lop}`;
       const stored = JSON.parse(localStorage.getItem(key) || "[]");
 
       const updated = [
@@ -302,7 +302,7 @@ export default function HocSinh() {
         <Typography
           sx={{
             color: "#1976d2",
-            fontSize: 28,
+            fontSize: 26,
             fontWeight: 700,
             textAlign: "center",
           }}
