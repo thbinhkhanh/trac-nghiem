@@ -21,7 +21,6 @@ import { collection, getDocs, doc, getDoc } from "firebase/firestore";
 import HistoryIcon from "@mui/icons-material/History";
 import GroupsIcon from "@mui/icons-material/Groups";
 import ResultDialog from "../dialog/ResultDialog";
-import { useMediaQuery } from "@mui/material";
 
 // ✅ Chỉ còn 1 trường
 const SCHOOL_LIST = ["TH Lâm Văn Bền"];
@@ -43,23 +42,20 @@ export default function HocSinh() {
   const [hocKi, setHocKi] = useState("");
   const [openResultDialog, setOpenResultDialog] = useState(false);
   const [resultData, setResultData] = useState(null);
-  const isMobile = useMediaQuery("(max-width:600px)");
  
   // 🔹 Lọc lớp theo khối
   useEffect(() => {
     const soKhoi = khoi.replace("Khối ", "");
     const filtered = classes.filter(cl => cl.startsWith(soKhoi));
     setFilteredClasses(filtered);
-    setLop("");
+    //setLop("");
   }, [khoi, classes]);
 
   useEffect(() => {
     if (!lop) return;
 
     const key = `recent_${lop}`;
-    const stored = JSON.parse(
-      localStorage.getItem(key) || "[]"
-    );
+    const stored = JSON.parse(localStorage.getItem(key) || "[]");
 
     setRecentStudents(stored);
   }, [lop]);
@@ -77,23 +73,31 @@ export default function HocSinh() {
       
   const handleStudentClick = async (student) => {
     try {
-      // ==========================
-      // CONFIG
-      // ==========================
       const namHocRaw = config?.namHoc || "2025_2026";
       const namHoc = namHocRaw.replaceAll("-", "_");
       const hocKy = config?.hocKy || "Cuối năm";
       const lop = student.lop || "4A";
 
-      // ==========================
-      // FIX KEY (quan trọng nhất)
-      // ==========================
       const studentKey = (student.id || "")
         .trim()
-        .replace(/_$/, ""); // bỏ "_" cuối nếu có
+        .replace(/_$/, "");
 
       // ==========================
-      // FIRESTORE REF (FIX CỨNG DB ROOT)
+      // 🔥 RECENT (MOVE LÊN TRƯỚC)
+      // ==========================
+      const key = `recent_${lop}`;
+      const stored = JSON.parse(localStorage.getItem(key) || "[]");
+
+      const updated = [
+        student,
+        ...stored.filter((s) => s.id !== student.id),
+      ].slice(0, 4);
+
+      localStorage.setItem(key, JSON.stringify(updated));
+      setRecentStudents(updated);
+
+      // ==========================
+      // FIRESTORE CHECK
       // ==========================
       const examRef = doc(
         db,
@@ -105,9 +109,6 @@ export default function HocSinh() {
 
       const examSnap = await getDoc(examRef);
 
-      // ==========================
-      // CHECK ĐÃ LÀM BÀI
-      // ==========================
       if (examSnap.exists()) {
         const data = examSnap.data();
 
@@ -120,19 +121,6 @@ export default function HocSinh() {
         setOpenResultDialog(true);
         return;
       }
-
-      // ==========================
-      // RECENT STUDENTS
-      // ==========================
-      const key = `recent_${lop}`;
-
-      const updated = [
-        student,
-        ...recentStudents.filter((s) => s.id !== student.id),
-      ].slice(0, 8);
-
-      localStorage.setItem(key, JSON.stringify(updated));
-      setRecentStudents(updated);
 
       // ==========================
       // UPDATE CONFIG
@@ -433,24 +421,24 @@ export default function HocSinh() {
             Truy cập nhanh học sinh vừa thao tác
           </Typography>
 
-          {/* LIST - FIX MOBILE SCROLL */}
+          {/* LIST */}
           <Box
             sx={{
               display: "flex",
-              flexDirection: { xs: "column", sm: "row" }, // mobile dọc, desktop ngang
+              flexDirection: { xs: "column", sm: "row" },
 
               gap: 2.5,
 
               overflowX: { xs: "visible", sm: "auto" },
               overflowY: "visible",
 
-              WebkitOverflowScrolling: "touch",
               pb: 1,
 
+              // chỉ scroll ngang trên desktop
               scrollSnapType: { xs: "none", sm: "x mandatory" },
 
               "&::-webkit-scrollbar": {
-                height: 6,
+                height: 8,
               },
               "&::-webkit-scrollbar-thumb": {
                 background: "#cbd5e1",
@@ -458,96 +446,120 @@ export default function HocSinh() {
               },
             }}
           >
-            {recentStudents?.length > 0 ? (
-              recentStudents.map((student, index) => (
-                <Paper
-                  key={student.id || index}
-                  onClick={() => handleStudentClick(student)}
-                  elevation={0}
-                  sx={{
-                    flex: "0 0 auto",
+            {recentStudents.map((student, index) => (
+              <Paper
+                key={student.id}
+                onClick={() => handleStudentClick(student)}
+                elevation={0}
+                sx={{
+                  flexShrink: 0,
 
-                    width: { xs: "100%", sm: 260 },
-                    minWidth: { xs: "100%", sm: 260 },
+                  width: { xs: "100%", sm: 260 },
+                  minWidth: { xs: "100%", sm: 260 },
 
-                    scrollSnapAlign: "start",
+                  borderRadius: "30px",
+                  cursor: "pointer",
+                  overflow: "hidden",
+                  position: "relative",
 
-                    borderRadius: "30px",
-                    cursor: "pointer",
-                    overflow: "hidden",
+                  border: "1px solid rgba(226,232,240,.9)",
+                  background: "linear-gradient(180deg,#ffffff,#f8fbff)",
+                  boxShadow: "0 8px 28px rgba(15,23,42,.06)",
+                  transition: ".25s ease",
 
-                    border: "1px solid rgba(226,232,240,.9)",
-                    background: "linear-gradient(180deg,#fff,#f8fbff)",
-                    boxShadow: "0 8px 28px rgba(15,23,42,.06)",
-                    transition: ".28s ease",
+                  "&:hover": {
+                    transform: "translateY(-4px)",
+                    boxShadow: "0 18px 40px rgba(37,99,235,.16)",
+                    borderColor: "#93c5fd",
+                  },
 
-                    "&:hover": {
-                      transform: "translateY(-4px)",
-                      boxShadow: "0 18px 40px rgba(37,99,235,.14)",
-                    },
-                  }}
-                >
-                  <Box sx={{ p: 2.5, textAlign: "center" }}>
-                    
-                    {/* ICON */}
-                    <Box
-                      sx={{
-                        width: 72,
-                        height: 72,
-                        borderRadius: "24px",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        mx: "auto",
-                        mb: 2,
-                        background:
-                          index % 2 === 0
-                            ? "linear-gradient(135deg,#2563eb,#60a5fa)"
-                            : "linear-gradient(135deg,#7c3aed,#a78bfa)",
-                      }}
-                    >
-                      <SchoolIcon sx={{ color: "#fff", fontSize: 34 }} />
-                    </Box>
-
-                    {/* NAME */}
-                    <Typography sx={{ fontSize: 18, fontWeight: 700 }}>
-                      {student.hoTen}
-                    </Typography>
-
-                    {/* CLASS */}
-                    <Typography
-                      sx={{
-                        mt: 1,
-                        fontSize: 13,
-                        color: "#64748b",
-                        fontWeight: 600,
-                      }}
-                    >
-                      Học sinh lớp {lop || "4A"}
-                    </Typography>
-
-                    {/* CTA */}
-                    <Box
-                      sx={{
-                        mt: 2.5,
-                        py: 1.2,
-                        borderRadius: "16px",
-                        fontWeight: 700,
-                        fontSize: 14,
-                        color: "#2563eb",
-                        background: "#eff6ff",
-                      }}
-                    >
-                      Bắt đầu làm bài
-                    </Box>
+                  "&::before": {
+                    content: '""',
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    height: 6,
+                    background:
+                      index % 2 === 0
+                        ? "linear-gradient(90deg,#2563eb,#60a5fa)"
+                        : "linear-gradient(90deg,#7c3aed,#a78bfa)",
+                  },
+                }}
+              >
+                <Box sx={{ p: 2.5, textAlign: "center" }}>
+                  
+                  {/* ICON */}
+                  <Box
+                    sx={{
+                      width: 72,
+                      height: 72,
+                      borderRadius: "24px",
+                      mx: "auto",
+                      mb: 2,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      background:
+                        index % 2 === 0
+                          ? "linear-gradient(135deg,#2563eb,#60a5fa)"
+                          : "linear-gradient(135deg,#7c3aed,#a78bfa)",
+                      boxShadow: "0 14px 30px rgba(37,99,235,.22)",
+                    }}
+                  >
+                    <SchoolIcon sx={{ color: "#fff", fontSize: 34 }} />
                   </Box>
-                </Paper>
-              ))
-            ) : (
-              <Box sx={{ p: 2, color: "#64748b" }}>
-                Không có học sinh gần đây
-              </Box>
-            )}
+
+                  {/* NAME */}
+                  <Typography
+                    sx={{
+                      fontSize: 18,
+                      fontWeight: 700,
+                      color: "#0f172a",
+                      minHeight: 48,
+                      display: "-webkit-box",
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: "vertical",
+                      overflow: "hidden",
+                    }}
+                  >                   
+                    {student.hoTen.toUpperCase()}
+                  </Typography>
+
+                  {/* CLASS */}
+                  <Typography
+                    sx={{
+                      mt: 1,
+                      fontSize: 13,
+                      color: "#64748b",
+                      fontWeight: 600,
+                    }}
+                  >
+                    Học sinh lớp {lop}
+                  </Typography>
+
+                  {/* CTA */}
+                  <Box
+                    sx={{
+                      mt: 2.5,
+                      py: 1.2,
+                      borderRadius: "16px",
+                      fontWeight: 700,
+                      fontSize: 14,
+                      color: "#2563eb",
+                      background: "#eff6ff",
+                      transition: ".2s",
+
+                      "&:hover": {
+                        background: "#dbeafe",
+                      },
+                    }}
+                  >
+                    Bắt đầu làm bài
+                  </Box>
+                </Box>
+              </Paper>
+            ))}
           </Box>
 
           {/* BUTTON */}
@@ -575,7 +587,9 @@ export default function HocSinh() {
                   ? "linear-gradient(135deg,#eff6ff,#f8fbff)"
                   : "#e5e7eb",
                 border: "1px solid #dbeafe",
+                boxShadow: "0 8px 22px rgba(37,99,235,.12)",
                 opacity: lop ? 1 : 0.5,
+                pointerEvents: lop ? "auto" : "none",
               }}
             >
               <GroupsIcon sx={{ color: "#2563eb", fontSize: 28 }} />
@@ -590,129 +604,83 @@ export default function HocSinh() {
 
       {/* TOÀN BỘ LỚP */}
       {showAll && (
-  <>
-    <Box
-      sx={{
-        display: "grid",
-        gridTemplateColumns: { xs: "1fr", sm: "repeat(5, 1fr)" },
-        gap: 2,
-        alignItems: "start",
-      }}
-    >
-      {/* 📱 MOBILE: 1 cột */}
-      {students.length > 0 &&
-        (typeof window !== "undefined" &&
-        window.innerWidth < 600 ? (
+        <>
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: {
+                xs: "1fr", // 📱 1 cột trên điện thoại
+                sm: "repeat(5, 1fr)", // 💻 desktop giữ 5 cột
+              },
+              gap: 2,
+              alignItems: "start",
+            }}
+          >
+            {columns.map((column, colIndex) => (
+              <Box
+                key={colIndex}
+                sx={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 2,
+                }}
+              >
+                {column.map((student) => (
+                  <Paper
+                    key={student.id}
+                    elevation={3}
+                    onClick={() => handleStudentClick(student)}
+                    sx={{
+                      p: 2,
+                      borderRadius: "8px",
+                      cursor: "pointer",
+                      transition: ".2s",
+
+                      "&:hover": {
+                        transform: "scale(1.03)",
+                      },
+                    }}
+                  >
+                    <Typography sx={{ fontWeight: 500, fontSize: 16 }}>
+                      {student.displayIndex}. {student.hoTen.toUpperCase()}
+                    </Typography>
+                  </Paper>
+                ))}
+              </Box>
+            ))}
+          </Box>
+
+          {/* NÚT QUAY LẠI */}
           <Box
             sx={{
               display: "flex",
-              flexDirection: "column",
-              gap: 2,
-              gridColumn: "1 / -1",
+              justifyContent: "flex-start",
+              mt: 4,
             }}
           >
-            {students.map((student, index) => (
-              <Paper
-                key={student.id}
-                elevation={3}
-                onClick={() => handleStudentClick(student)}
-                sx={{
-                  p: 2,
-                  borderRadius: "12px",
-                  cursor: "pointer",
-                  transition: ".2s",
-                  "&:hover": {
-                    transform: "scale(1.02)",
-                  },
-                }}
-              >
-                <Typography sx={{ fontWeight: 500, fontSize: 16 }}>
-                  {index + 1}. {student.hoTen.toUpperCase()}
-                </Typography>
-              </Paper>
-            ))}
-          </Box>
-        ) : (
-          // 🖥 DESKTOP: 5 cột
-          columns.map((column, colIndex) => (
             <Box
-              key={colIndex}
+              onClick={() => setShowAll(false)}
               sx={{
                 display: "flex",
-                flexDirection: "column",
-                gap: 2,
+                alignItems: "center",
+                gap: 1.5,
+                px: 3,
+                py: 1.6,
+                borderRadius: "18px",
+                cursor: "pointer",
+                background: "linear-gradient(135deg,#eff6ff,#f8fbff)",
+                border: "1px solid #dbeafe",
               }}
             >
-              {column.map((student) => (
-                <Paper
-                  key={student.id}
-                  elevation={3}
-                  onClick={() => handleStudentClick(student)}
-                  sx={{
-                    p: 2,
-                    borderRadius: "18px",
-                    cursor: "pointer",
-                    transition: ".2s",
-                    "&:hover": {
-                      transform: "scale(1.03)",
-                    },
-                  }}
-                >
-                  <Typography sx={{ fontWeight: 500, fontSize: 16 }}>
-                    {student.displayIndex}. {student.hoTen}
-                  </Typography>
-                </Paper>
-              ))}
+              <HistoryIcon sx={{ color: "#2563eb", fontSize: 28 }} />
+
+              <Typography sx={{ fontSize: 16, fontWeight: 700, color: "#2563eb" }}>
+                Chế độ xem: Gần đây
+              </Typography>
             </Box>
-          ))
-        ))}
-    </Box>
-
-    {/* NÚT QUAY LẠI */}
-    <Box
-      sx={{
-        display: "flex",
-        justifyContent: "flex-start",
-        mt: 4,
-      }}
-    >
-      <Box
-        onClick={() => setShowAll(false)}
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          gap: 1.5,
-          px: 3,
-          py: 1.6,
-          borderRadius: "18px",
-          cursor: "pointer",
-          background: "linear-gradient(135deg,#eff6ff,#f8fbff)",
-          border: "1px solid #dbeafe",
-          boxShadow: "0 8px 22px rgba(37,99,235,.12)",
-          transition: ".25s",
-
-          "&:hover": {
-            transform: "translateY(-2px)",
-            boxShadow: "0 14px 32px rgba(37,99,235,.2)",
-            borderColor: "#93c5fd",
-          },
-        }}
-      >
-        <HistoryIcon sx={{ color: "#2563eb", fontSize: 28 }} />
-
-        <Typography
-          sx={{
-            fontSize: 16,
-            fontWeight: 700,
-            color: "#2563eb",
-          }}
-        >
-          Chế độ xem: Gần đây
-        </Typography>
-      </Box>
-    </Box>
-  </>
-)}
+          </Box>
+        </>
+      )}
 
       <ResultDialog
         open={openResultDialog}

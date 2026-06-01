@@ -21,12 +21,11 @@ import { collection, getDocs, doc, getDoc } from "firebase/firestore";
 import HistoryIcon from "@mui/icons-material/History";
 import GroupsIcon from "@mui/icons-material/Groups";
 import ResultDialog_GV from "../dialog/ResultDialog_GV";
-import { useMediaQuery } from "@mui/material";
 
 // ✅ Chỉ còn 1 trường
 const SCHOOL_LIST = ["TH Lâm Văn Bền"];
 
-export default function GiaoVien() {
+export default function HocSinh() {
   const [school, setSchool] = useState("TH Lâm Văn Bền"); // mặc định
   //const [fullname, setFullname] = useState("");
   const [lop, setLop] = useState("");
@@ -37,34 +36,27 @@ export default function GiaoVien() {
   const [students, setStudents] = useState([]);
   const [recentStudents, setRecentStudents] = useState([]);
   const [showAll, setShowAll] = useState(false);
+  const [hasResult, setHasResult] = useState(false);
 
   const navigate = useNavigate();
   const { config, setConfig } = useContext(ConfigContext);
   const [hocKi, setHocKi] = useState("");
   const [openResultDialog, setOpenResultDialog] = useState(false);
   const [resultData, setResultData] = useState(null);
-  const [hasResult, setHasResult] = useState(false);
-
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const [snackbarMessage, setSnackbarMessage] = useState("");
-  const [snackbarSeverity, setSnackbarSeverity] = useState("success");
-  const isMobile = useMediaQuery("(max-width:600px)");
  
   // 🔹 Lọc lớp theo khối
   useEffect(() => {
     const soKhoi = khoi.replace("Khối ", "");
     const filtered = classes.filter(cl => cl.startsWith(soKhoi));
     setFilteredClasses(filtered);
-    setLop("");
+    //setLop("");
   }, [khoi, classes]);
 
   useEffect(() => {
     if (!lop) return;
 
     const key = `recent_${lop}`;
-    const stored = JSON.parse(
-      localStorage.getItem(key) || "[]"
-    );
+    const stored = JSON.parse(localStorage.getItem(key) || "[]");
 
     setRecentStudents(stored);
   }, [lop]);
@@ -81,65 +73,69 @@ export default function GiaoVien() {
       .replace(/\s+/g, "_");
       
   const handleStudentClick = async (student) => {
-  try {
-    const namHocRaw = config?.namHoc || "2025_2026";
-    const namHoc = namHocRaw.replaceAll("-", "_");
-    const hocKy = config?.hocKy || "Cuối năm";
-    const lop = student.lop || "4A";
+    try {
+      const namHocRaw = config?.namHoc || "2025_2026";
+      const namHoc = namHocRaw.replaceAll("-", "_");
+      const hocKy = config?.hocKy || "Cuối năm";
+      const lop = student.lop || "4A";
 
-    const studentKey = (student.id || "")
-      .trim()
-      .replace(/_$/, "");
+      const studentKey = (student.id || "").trim().replace(/_$/, "");
 
-    const examRef = doc(
-      db,
-      `DATA_KTDK_${namHoc}`,
-      hocKy,
-      lop,
-      studentKey
-    );
+      const key = `recent_${lop}`;
+      const stored = JSON.parse(localStorage.getItem(key) || "[]");
 
-    const examSnap = await getDoc(examRef);
+      const updated = [
+        student,
+        ...stored.filter((s) => s.id !== student.id),
+      ].slice(0, 4);
 
-    // ======================
-    // CÓ KẾT QUẢ
-    // ======================
-    if (examSnap.exists()) {
-      const data = examSnap.data();
+      localStorage.setItem(key, JSON.stringify(updated));
+      setRecentStudents(updated);
 
+      const examRef = doc(
+        db,
+        `DATA_KTDK_${namHoc}`,
+        hocKy,
+        lop,
+        studentKey
+      );
+
+      const examSnap = await getDoc(examRef);
+
+      // ======================
+      // CÓ ĐIỂM
+      // ======================
+      if (examSnap.exists()) {
+        const data = examSnap.data();
+
+        setResultData({
+          ...data,
+          lop,
+          hoVaTen: student.hoTen,
+        });
+
+        setHasResult(true);
+        setOpenResultDialog(true);
+        return;
+      }
+
+      // ======================
+      // KHÔNG CÓ ĐIỂM
+      // ======================
       setResultData({
-        ...data,
         lop,
         hoVaTen: student.hoTen,
       });
 
-      setHasResult(true);
+      setHasResult(false);
       setOpenResultDialog(true);
-      return; // 👈 QUAN TRỌNG
+      return;
+
+    } catch (err) {
+      console.error(err);
+      alert("Lỗi kiểm tra dữ liệu");
     }
-
-    // ======================
-    // KHÔNG CÓ KẾT QUẢ
-    // ======================
-    setResultData({
-      lop,
-      hoVaTen: student.hoTen,
-    });
-
-    setHasResult(false);
-    setOpenResultDialog(true);
-
-    setSnackbarMessage("Học sinh chưa có kết quả!");
-    setSnackbarSeverity("warning");
-    setSnackbarOpen(true);
-
-  } catch (err) {
-    console.error("🔥 ERROR FULL:", err);
-    setSnackbarMessage("Không kiểm tra được dữ liệu!");
-    setSnackbarSeverity("error");
-    setSnackbarOpen(true);
-  }
-};
+  };
 
   // 🔹 Fetch danh sách lớp (LAMVANBEN)
   useEffect(() => {
@@ -301,7 +297,7 @@ export default function GiaoVien() {
           }}
         >
           {config?.examType === "on_tap"
-            ? `KẾT QUẢ ÔN TẬP - ${(config?.hocKy || "").toUpperCase()}`
+            ? `KÉT QUẢ ÔN TẬP - ${(config?.hocKy || "").toUpperCase()}`
             : `KẾT QUẢ KTĐK - ${(config?.hocKy || "").toUpperCase()}`}
         </Typography>
       </Box>
@@ -414,20 +410,22 @@ export default function GiaoVien() {
             Truy cập nhanh học sinh vừa thao tác
           </Typography>
 
-          {/* LIST - FIX QUAN TRỌNG Ở ĐÂY */}
+          {/* LIST */}
           <Box
             sx={{
               display: "flex",
-              flexDirection: isMobile ? "column" : "row",
-
-              // 🔥 FIX: KHÔNG dùng overflowY + column cùng lúc gây “mất list”
-              overflowX: isMobile ? "visible" : "auto",
-              overflowY: "visible",
+              flexDirection: { xs: "column", sm: "row" },
 
               gap: 2.5,
+
+              overflowX: { xs: "visible", sm: "auto" },
+              overflowY: "visible",
+
               pb: 1,
 
-              // 🔥 FIX: để scroll ngang không bị cắt card
+              // chỉ scroll ngang trên desktop
+              scrollSnapType: { xs: "none", sm: "x mandatory" },
+
               "&::-webkit-scrollbar": {
                 height: 8,
               },
@@ -443,10 +441,10 @@ export default function GiaoVien() {
                 onClick={() => handleStudentClick(student)}
                 elevation={0}
                 sx={{
-                  flexShrink: 0, // 🔥 QUAN TRỌNG: không co card => không mất item
+                  flexShrink: 0,
 
-                  width: isMobile ? "100%" : 260,
-                  minWidth: isMobile ? "100%" : 260,
+                  width: { xs: "100%", sm: 260 },
+                  minWidth: { xs: "100%", sm: 260 },
 
                   borderRadius: "30px",
                   cursor: "pointer",
@@ -454,17 +452,16 @@ export default function GiaoVien() {
                   position: "relative",
 
                   border: "1px solid rgba(226,232,240,.9)",
-                  background: "linear-gradient(180deg,#fff,#f8fbff)",
+                  background: "linear-gradient(180deg,#ffffff,#f8fbff)",
                   boxShadow: "0 8px 28px rgba(15,23,42,.06)",
                   transition: ".25s ease",
 
                   "&:hover": {
                     transform: "translateY(-4px)",
-                    boxShadow: "0 18px 40px rgba(37,99,235,.14)",
+                    boxShadow: "0 18px 40px rgba(37,99,235,.16)",
                     borderColor: "#93c5fd",
                   },
 
-                  // 🔥 TOP BAR (giống mẫu)
                   "&::before": {
                     content: '""',
                     position: "absolute",
@@ -496,7 +493,7 @@ export default function GiaoVien() {
                         index % 2 === 0
                           ? "linear-gradient(135deg,#2563eb,#60a5fa)"
                           : "linear-gradient(135deg,#7c3aed,#a78bfa)",
-                      boxShadow: "0 14px 30px rgba(37,99,235,.2)",
+                      boxShadow: "0 14px 30px rgba(37,99,235,.22)",
                     }}
                   >
                     <SchoolIcon sx={{ color: "#fff", fontSize: 34 }} />
@@ -514,8 +511,8 @@ export default function GiaoVien() {
                       WebkitBoxOrient: "vertical",
                       overflow: "hidden",
                     }}
-                  >
-                    {student.hoTen}
+                  >                   
+                    {student.hoTen.toUpperCase()}
                   </Typography>
 
                   {/* CLASS */}
@@ -540,9 +537,14 @@ export default function GiaoVien() {
                       fontSize: 14,
                       color: "#2563eb",
                       background: "#eff6ff",
+                      transition: ".2s",
+
+                      "&:hover": {
+                        background: "#dbeafe",
+                      },
                     }}
                   >
-                    Xem kết quả
+                    Bắt đầu làm bài
                   </Box>
                 </Box>
               </Paper>
@@ -595,23 +597,24 @@ export default function GiaoVien() {
           <Box
             sx={{
               display: "grid",
-              gridTemplateColumns: isMobile
-                ? "1fr"
-                : "repeat(5, 1fr)",
+              gridTemplateColumns: {
+                xs: "1fr", // 📱 1 cột trên điện thoại
+                sm: "repeat(5, 1fr)", // 💻 desktop giữ 5 cột
+              },
               gap: 2,
               alignItems: "start",
             }}
           >
-            {isMobile ? (
-              // 📱 MOBILE: 1 CỘT DUY NHẤT
+            {columns.map((column, colIndex) => (
               <Box
+                key={colIndex}
                 sx={{
                   display: "flex",
                   flexDirection: "column",
                   gap: 2,
                 }}
               >
-                {students.map((student, index) => (
+                {column.map((student) => (
                   <Paper
                     key={student.id}
                     elevation={3}
@@ -621,54 +624,22 @@ export default function GiaoVien() {
                       borderRadius: "8px",
                       cursor: "pointer",
                       transition: ".2s",
+
                       "&:hover": {
-                        transform: "scale(1.02)",
+                        transform: "scale(1.03)",
                       },
                     }}
                   >
                     <Typography sx={{ fontWeight: 500, fontSize: 16 }}>
-                      {index + 1}. {student.hoTen.toUpperCase()}
+                      {student.displayIndex}. {student.hoTen.toUpperCase()}
                     </Typography>
                   </Paper>
                 ))}
               </Box>
-            ) : (
-              // 🖥 DESKTOP: GIỮ NGUYÊN 5 CỘT
-              columns.map((column, colIndex) => (
-                <Box
-                  key={colIndex}
-                  sx={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 2,
-                  }}
-                >
-                  {column.map((student) => (
-                    <Paper
-                      key={student.id}
-                      elevation={3}
-                      onClick={() => handleStudentClick(student)}
-                      sx={{
-                        p: 2,
-                        borderRadius: "18px",
-                        cursor: "pointer",
-                        transition: ".2s",
-                        "&:hover": {
-                          transform: "scale(1.03)",
-                        },
-                      }}
-                    >
-                      <Typography sx={{ fontWeight: 500, fontSize: 16 }}>
-                        {student.displayIndex}. {student.hoTen}
-                      </Typography>
-                    </Paper>
-                  ))}
-                </Box>
-              ))
-            )}
+            ))}
           </Box>
 
-          {/* NÚT Ở CUỐI DANH SÁCH */}
+          {/* NÚT QUAY LẠI */}
           <Box
             sx={{
               display: "flex",
@@ -686,35 +657,13 @@ export default function GiaoVien() {
                 py: 1.6,
                 borderRadius: "18px",
                 cursor: "pointer",
-                background:
-                  "linear-gradient(135deg,#eff6ff,#f8fbff)",
+                background: "linear-gradient(135deg,#eff6ff,#f8fbff)",
                 border: "1px solid #dbeafe",
-                boxShadow:
-                  "0 8px 22px rgba(37,99,235,.12)",
-                transition: ".25s",
-
-                "&:hover": {
-                  transform: "translateY(-2px)",
-                  boxShadow:
-                    "0 14px 32px rgba(37,99,235,.2)",
-                  borderColor: "#93c5fd",
-                },
               }}
             >
-              <HistoryIcon
-                sx={{
-                  color: "#2563eb",
-                  fontSize: 28,
-                }}
-              />
+              <HistoryIcon sx={{ color: "#2563eb", fontSize: 28 }} />
 
-              <Typography
-                sx={{
-                  fontSize: 16,
-                  fontWeight: 700,
-                  color: "#2563eb",
-                }}
-              >
+              <Typography sx={{ fontSize: 16, fontWeight: 700, color: "#2563eb" }}>
                 Chế độ xem: Gần đây
               </Typography>
             </Box>
@@ -727,9 +676,9 @@ export default function GiaoVien() {
         onClose={() => setOpenResultDialog(false)}
         dialogMode="success"
         dialogMessage=""
-        studentResult={resultData}   // ✅ luôn giữ data gốc
-        hasResult={hasResult}
-        choXemDiem={true}            // hoặc bỏ luôn nếu không dùng
+        studentResult={resultData}
+        hasResult={!!resultData?.diem}   // ✅ FIX ĐÚNG
+        choXemDiem={true}
         configData={config}
         convertPercentToScore={(v) => v}
       />
