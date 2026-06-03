@@ -7,20 +7,7 @@ import {
   useLocation,
   useNavigate,
 } from "react-router-dom";
-
-import {
-  AppBar,
-  Toolbar,
-  Button,
-  Typography,
-  Box,
-  IconButton,
-  Menu,
-  MenuItem,
-  Divider,
-} from "@mui/material";
-
-import AppsIcon from "@mui/icons-material/Apps";
+import { AppBar, Toolbar, Button, Typography, Box } from "@mui/material";
 
 // 🔹 Pages
 import Info from "./pages/Info";
@@ -49,7 +36,7 @@ import { StudentDataProvider } from "./context/StudentDataContext";
 import { StudentKTDKProvider } from "./context/StudentKTDKContext";
 import { SelectedClassProvider } from "./context/SelectedClassContext";
 
-// 🔥 DASHBOARD
+// 🔥 DASHBOARD THẺ
 function Dashboard({ isLoggedIn }) {
   const navigate = useNavigate();
 
@@ -92,12 +79,14 @@ function Dashboard({ isLoggedIn }) {
               cursor: "pointer",
               transition: "0.25s",
               boxShadow: "0 4px 14px rgba(0,0,0,0.08)",
+
               "&:hover": {
                 transform: "translateY(-8px)",
                 boxShadow: "0 14px 28px rgba(0,0,0,0.18)",
               },
             }}
           >
+            {/* ICON */}
             <Box
               sx={{
                 width: 64,
@@ -115,6 +104,7 @@ function Dashboard({ isLoggedIn }) {
               {item.icon}
             </Box>
 
+            {/* LABEL */}
             <Typography fontWeight={700} fontSize={18}>
               {item.label}
             </Typography>
@@ -129,8 +119,8 @@ function Dashboard({ isLoggedIn }) {
   );
 }
 
-// 🔥 APP CONTENT
 function AppContent() {
+  const location = useLocation();
   const navigate = useNavigate();
   const { config, setConfig } = useContext(ConfigContext);
 
@@ -138,36 +128,28 @@ function AppContent() {
     localStorage.getItem("loggedIn") === "true"
   );
 
+  const [loading, setLoading] = useState(true);
+  const [openLockedDialog, setOpenLockedDialog] = useState(false);
   const [openLogo, setOpenLogo] = useState(false);
 
-  // MENU STATE
-  const [anchorEl, setAnchorEl] = useState(null);
-  const openMenu = Boolean(anchorEl);
-
-  const handleMenuOpen = (e) => setAnchorEl(e.currentTarget);
-  const handleMenuClose = () => setAnchorEl(null);
-
   useEffect(() => {
-    setIsLoggedIn(localStorage.getItem("loggedIn") === "true");
+    setLoading(false);
   }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem("loggedIn");
-    localStorage.removeItem("account");
-
+    localStorage.clear();
     setIsLoggedIn(false);
     setConfig((prev) => ({ ...prev, login: false }));
-
-    navigate("/hocsinh", { replace: true });
+    navigate("/login", { replace: true });
   };
+
+  if (loading) return null;
 
   return (
     <>
       {/* ===== APP BAR ===== */}
       <AppBar position="fixed" sx={{ background: "#1976d2" }}>
-        <Toolbar sx={{ display: "flex", gap: 1, position: "relative" }}>
-
-          {/* LOGO */}
+        <Toolbar sx={{ display: "flex", gap: 1 }}>
           <Box
             component="img"
             src="/Logo.png"
@@ -175,132 +157,101 @@ function AppContent() {
             sx={{ height: 34, cursor: "pointer" }}
           />
 
-          {/* MENU TRÁI */}
-          {!isLoggedIn && (
-            <Button component={Link} to="/hocsinh" sx={{ color: "white" }}>
-              Học sinh
-            </Button>
-          )}
+          <Button component={Link} to="/hocsinh" sx={{ color: "white" }}>
+            Học sinh
+          </Button>
 
+          {/* 🔥 CHỈ HIỆN DASHBOARD KHI ĐÃ ĐĂNG NHẬP */}
           {isLoggedIn && (
             <Button component={Link} to="/dashboard" sx={{ color: "white" }}>
               Dashboard
             </Button>
           )}
 
-          {/* 🔥 NĂM HỌC CĂN GIỮA */}
-          {isLoggedIn && (
-            <Box
-              sx={{
-                position: "absolute",
-                left: "50%",
-                transform: "translateX(-50%)",
-                px: 1.3,
-                py: 0.4,
-                borderRadius: "999px",
-                fontSize: 13,
-                fontWeight: 600,
-                bgcolor: "rgba(255,255,255,0.12)",
-                color: "#fff",
-                border: "1px solid rgba(255,255,255,0.3)",
-              }}
-            >
-              📅 {config?.namHoc || "2025-2026"}
-            </Box>
-          )}
+          <Box sx={{ ml: "auto", display: "flex", alignItems: "center", gap: 1 }}>
 
-          {/* RIGHT MENU ICON */}
-          <Box sx={{ ml: "auto" }}>
+            {/* 👤 ACCOUNT */}
+            {isLoggedIn && (
+              <Box
+                sx={{
+                  px: 1.3,
+                  py: 0.4,
+                  borderRadius: "999px",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 0.5,
+                  bgcolor: "rgba(34,197,94,0.25)",
+                  color: "#fff",
+                  border: "1px solid rgba(255,255,255,0.3)",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                <span>👤</span>
+                <span>{localStorage.getItem("account") || "Admin"}</span>
+              </Box>
+            )}
+
+            {/* 📅 NĂM HỌC */}
+            {isLoggedIn && (
+              <Box
+                sx={{
+                  px: 1.3,
+                  py: 0.4,
+                  borderRadius: "999px",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  bgcolor: "rgba(255,255,255,0.12)",
+                  color: "#fff",
+                  border: "1px solid rgba(255,255,255,0.3)",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                📅 {config?.namHoc || "2025-2026"}
+              </Box>
+            )}
+
+            {/* 🔘 LOGIN / LOGOUT */}
             {isLoggedIn ? (
-              <>
-                <IconButton onClick={handleMenuOpen} sx={{ color: "white" }}>
-                  <AppsIcon />
-                </IconButton>
-
-                <Menu
-                  anchorEl={anchorEl}
-                  open={openMenu}
-                  onClose={handleMenuClose}
-                  PaperProps={{
-                    sx: {
-                      width: 140,
-                      borderRadius: 1,
-                      overflow: "hidden",
-                      boxShadow: "0 8px 20px rgba(0,0,0,0.15)",
-                    },
-                  }}
-                  anchorOrigin={{
-                    vertical: "bottom",
-                    horizontal: "right",
-                  }}
-                  transformOrigin={{
-                    vertical: "top",
-                    horizontal: "right",
-                  }}
-                >
-                  {/* ===== TITLE ===== */}
-                  <Box
-                    sx={{
-                      px: 2,
-                      py: 1.5,
-                      bgcolor: "#ffffff",
-                      fontWeight: 700,
-                      fontSize: 14,
-                      borderBottom: "1px solid #eee",
-                      color: "red", // 👈 đổi màu tiêu đề
-                    }}
-                  >
-                    THÔNG TIN
-                  </Box>
-
-                  {/* ===== ĐỔI MẬT KHẨU ===== */}
-                  <Box
-                    onClick={() => {
-                      handleMenuClose();
-                      navigate("/doi-mat-khau");
-                    }}
-                    sx={{
-                      px: 2,
-                      py: 1.2,
-                      bgcolor: "#f5f5f5",
-                      cursor: "pointer",
-                      color: "#000", // 👈 chữ đen
-                      "&:hover": { bgcolor: "#eeeeee" },
-                    }}
-                  >
-                    Đổi mật khẩu
-                  </Box>
-
-                  {/* ===== DIVIDER ===== */}
-                  <Box
-                    sx={{
-                      height: "1px",
-                      bgcolor: "#e0e0e0",
-                    }}
-                  />
-
-                  {/* ===== ĐĂNG XUẤT ===== */}
-                  <Box
-                    onClick={() => {
-                      handleMenuClose();
-                      handleLogout();
-                    }}
-                    sx={{
-                      px: 2,
-                      py: 1.2,
-                      bgcolor: "#f5f5f5",
-                      cursor: "pointer",
-                      color: "#000", // 👈 chữ đen
-                      fontWeight: 400,
-                      "&:hover": { bgcolor: "#eeeeee" },
-                    }}
-                  >
-                    Đăng xuất
-                  </Box>
-                </Menu>
-              </>
+              <Button
+                onClick={handleLogout}
+                sx={{
+                  color: "white",
+                  borderRadius: "999px",
+                  px: 2,
+                  py: 0.4,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  textTransform: "none",
+                  bgcolor: "rgba(239,68,68,0.25)",
+                  border: "1px solid rgba(255,255,255,0.3)",
+                  "&:hover": {
+                    bgcolor: "rgba(239,68,68,0.4)",
+                  },
+                }}
+              >
+                Đăng xuất
+              </Button>
             ) : (
-              <Button component={Link} to="/login" sx={{ color: "white" }}>
+              <Button
+                component={Link}
+                to="/login"
+                sx={{
+                  color: "white",
+                  borderRadius: "999px",
+                  px: 2,
+                  py: 0.4,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  textTransform: "none",
+                  bgcolor: "rgba(59,130,246,0.25)",
+                  border: "1px solid rgba(255,255,255,0.3)",
+                  "&:hover": {
+                    bgcolor: "rgba(59,130,246,0.4)",
+                  },
+                }}
+              >
                 Đăng nhập
               </Button>
             )}
@@ -318,6 +269,7 @@ function AppContent() {
             element={<Login setIsLoggedIn={setIsLoggedIn} />}
           />
 
+          {/* 🔥 DASHBOARD */}
           <Route
             path="/dashboard"
             element={<Dashboard isLoggedIn={isLoggedIn} />}
@@ -339,17 +291,14 @@ function AppContent() {
 
       {/* LOGO POPUP */}
       {openLogo && (
-        <Box
-          onClick={() => setOpenLogo(false)}
-          sx={{
-            position: "fixed",
-            inset: 0,
-            bgcolor: "rgba(0,0,0,0.6)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
+        <Box onClick={() => setOpenLogo(false)} sx={{
+          position: "fixed",
+          inset: 0,
+          bgcolor: "rgba(0,0,0,0.6)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center"
+        }}>
           <Box sx={{ bgcolor: "white", p: 3, borderRadius: 2 }}>
             <img src="/Logo.png" width={200} />
           </Box>
@@ -359,7 +308,7 @@ function AppContent() {
   );
 }
 
-// ===== PROVIDERS =====
+// ===== PROVIDERS GIỮ NGUYÊN =====
 export default function App() {
   return (
     <TeacherQuizProvider>
