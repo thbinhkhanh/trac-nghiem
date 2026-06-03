@@ -570,7 +570,7 @@ const confirmDeleteOnTap = async () => {
         sx={{
           width: "100%",
           maxWidth: 800,
-          borderRadius: "10px",
+          borderRadius: "12px",
           overflow: "hidden",
           boxShadow: "0 10px 35px rgba(0,0,0,0.08)",
           background: "#fff",
@@ -578,7 +578,7 @@ const confirmDeleteOnTap = async () => {
       >
 
       {/* HEADER */}
-      <Box sx={{ px: 3, py: 1.5, background: "#1976d2", color: "#fff" }}>
+      <Box sx={{ px: 3, py: 2, background: "#1976d2", color: "#fff" }}>
         <Typography sx={{ fontSize: 17, fontWeight: 700 }}>Quản lý đề kiểm tra</Typography>
       </Box>
 

@@ -92,9 +92,9 @@ function AppContent() {
     ...(isLoggedIn
       ? [
           { path: "/giaovien", label: "Giáo viên" }, 
-          { path: "/danhsach", label: "Danh sách" }, 
+          { path: "/ketqua", label: "Kết quả" },          
           { path: "/nhapdiem-ktdk", label: "Nhập điểm" },
-          { path: "/ketqua", label: "Kết quả" },
+          { path: "/danhsach", label: "Danh sách" }, 
           { path: "/tracnghiem-gv", label: "Soạn đề" },
           { path: "/tracnghiem-test", label: "Test đề" },
           { path: "/de-thi", label: "Đề thi" },

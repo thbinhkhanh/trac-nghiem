@@ -47,7 +47,6 @@ import {
 import { Delete, DeleteForever, FileDownload } from "@mui/icons-material";
 import CloseIcon from "@mui/icons-material/Close";
 import SyncIcon from "@mui/icons-material/Sync";
-import DeleteIcon from "@mui/icons-material/Delete";
 
 /* =======================
    Utils
@@ -61,7 +60,6 @@ import { syncMasterHocSinh } from "../utils/syncMasterHocSinh";
 ======================= */
 import ConfirmDialog from "../dialog/ConfirmDialog";
 import DeleteDataClassesDialog from "../dialog/DeleteDataClassesDialog";
-import DeleteStudentConfirmDialog from "../dialog/DeleteStudentConfirmDialog";
 
 export default function TongHopKQ() {
   // =========================
@@ -74,12 +72,6 @@ export default function TongHopKQ() {
   const [config, setConfig] = useState(null);
 
   const [syncing, setSyncing] = useState(false);
-
-  const [deleteItem, setDeleteItem] = useState(null);
-  const [openDeleteRow, setOpenDeleteRow] = useState(false);
-  const [hoverRow, setHoverRow] = useState(null);
-  const [deleteStudent, setDeleteStudent] = useState(null);
-  const [deleteOpen, setDeleteOpen] = useState(false);
 
   // =========================
   // STATE - DATA
@@ -167,7 +159,7 @@ export default function TongHopKQ() {
     }
   };
 
-  const handleSyncData = () => {
+  /*const handleSyncData = () => {
     openConfirmDialog(
       "Đồng bộ dữ liệu",
       "Bạn có chắc muốn đồng bộ LAMVANBEN → DATA KTDK? Dữ liệu có thể bị ghi đè!",
@@ -193,7 +185,7 @@ export default function TongHopKQ() {
         }
       }
     );
-  };
+  };*/
 
   // 🔹 Lấy học kỳ từ CONFIG/config
   useEffect(() => {
@@ -248,34 +240,6 @@ export default function TongHopKQ() {
     fetchClasses();
   }, [config?.namHoc]);
 
-  //Sort danh sách
-  const compareFullNamesRightToLeft = (a, b) => {
-    const partsA = (a.hoVaTen || "")
-      .replace(/\//g, " ")
-      .trim()
-      .split(/\s+/);
-
-    const partsB = (b.hoVaTen || "")
-      .replace(/\//g, " ")
-      .trim()
-      .split(/\s+/);
-
-    const len = Math.max(partsA.length, partsB.length);
-
-    for (let i = 1; i <= len; i++) {
-      const wordA = partsA[partsA.length - i] || "";
-      const wordB = partsB[partsB.length - i] || "";
-
-      const cmp = wordA.localeCompare(wordB, "vi", {
-        sensitivity: "base",
-      });
-
-      if (cmp !== 0) return cmp;
-    }
-
-    return 0;
-  };
-
   // Load kết quả
   const loadResults = async () => {
     if (!selectedLop || !hocKi || !loai) return;
@@ -285,16 +249,23 @@ export default function TongHopKQ() {
     try {
       const classKey = selectedLop.replace(".", "_");
 
-      const colRef = collection(db, folder, hocKi, classKey);
+      const colRef = collection(
+        db,
+        folder,
+        hocKi,
+        classKey
+      );
 
       const snapshot = await getDocs(colRef);
 
       if (snapshot.empty) {
+        console.warn("⚠️ NO DATA FOUND AT THIS PATH!");
         setResults([]);
+        setLoading(false);
         return;
       }
 
-      let data = snapshot.docs.map((docSnap) => {
+      const data = snapshot.docs.map((docSnap, idx) => {
         const d = docSnap.data();
 
         return {
@@ -307,16 +278,13 @@ export default function TongHopKQ() {
         };
       });
 
-      // ✅ CHỈ SORT 1 LẦN DUY NHẤT
-      data = data.sort(compareFullNamesRightToLeft);
+      setResults(
+        data.map((item, idx) => ({
+          ...item,
+          stt: idx + 1,
+        }))
+      );
 
-      // ✅ MAP STT SAU KHI SORT
-      const finalData = data.map((item, idx) => ({
-        ...item,
-        stt: idx + 1,
-      }));
-
-      setResults(finalData);
     } catch (err) {
       console.error("❌ LOAD RESULTS ERROR:", err);
     } finally {
@@ -396,39 +364,6 @@ export default function TongHopKQ() {
     );
   };
 
-  const handleDeleteRow = async () => {
-    if (!deleteItem) return;
-
-    try {
-      const classKey = selectedLop.replace(".", "_");
-
-      const docRef = doc(
-        db,
-        folder,
-        hocKi,
-        classKey,
-        deleteItem.docId
-      );
-
-      await deleteDoc(docRef);
-
-      setSnackbarSeverity("success");
-      setSnackbarMessage("🗑️ Đã xóa học sinh!");
-      setSnackbarOpen(true);
-
-      setOpenDeleteRow(false);
-      setDeleteItem(null);
-
-      loadResults(); // reload lại bảng
-    } catch (err) {
-      console.error("DELETE ROW ERROR:", err);
-
-      setSnackbarSeverity("error");
-      setSnackbarMessage("❌ Xóa thất bại!");
-      setSnackbarOpen(true);
-    }
-  };
-
   const openConfirmDialog = (title, content, onConfirm) => {
     setDialogTitle(title);
     setDialogContent(content);
@@ -464,7 +399,7 @@ export default function TongHopKQ() {
         justifyContent: "center",
       }}
     >
-      <Paper sx={{ p: 4, borderRadius: 3, width: "100%", maxWidth: 800, bgcolor: "white" }} elevation={6}>
+      <Paper sx={{ p: 4, borderRadius: 3, width: "100%", maxWidth: 700, bgcolor: "white" }} elevation={6}>
         <Box
           sx={{
             position: "relative",
@@ -518,26 +453,25 @@ export default function TongHopKQ() {
                 >
                   <SyncIcon />
                 </IconButton>
-              </Tooltip>
-
-              <Tooltip title="Đồng bộ danh sách học sinh">
-                <IconButton
-                  onClick={handleSyncHocSinh}
-                  disabled={syncing}
-                  sx={{
-                    ...circleIconStyle,
-                    color: "secondary.main",
-                    "&:hover": {
-                      bgcolor: "secondary.main",
-                      color: "#fff",
-                    },
-                  }}
-                >
-                  <SyncIcon />
-                </IconButton>
               </Tooltip>*/}
-
             </Stack>
+
+            <Tooltip title="Đồng bộ danh sách học sinh">
+              <IconButton
+                onClick={handleSyncHocSinh}
+                disabled={syncing}
+                sx={{
+                  ...circleIconStyle,
+                  color: "secondary.main",
+                  "&:hover": {
+                    bgcolor: "secondary.main",
+                    color: "#fff",
+                  },
+                }}
+              >
+                <SyncIcon />
+              </IconButton>
+            </Tooltip>
           </Box>
 
           {/* TIÊU ĐỀ – căn giữa như mẫu */}
@@ -632,16 +566,6 @@ export default function TongHopKQ() {
                     )}
                     <TableCell sx={{ bgcolor: "#1976d2", color: "#fff", textAlign: "center", width: 70 }}>Thời gian</TableCell>
                     <TableCell sx={{ bgcolor: "#1976d2", color: "#fff", textAlign: "center", width: 100 }}>Ngày</TableCell>
-                    <TableCell
-                      sx={{
-                        bgcolor: "#1976d2",
-                        color: "#fff",
-                        textAlign: "center",
-                        width: 40,
-                      }}
-                    >
-                      Xóa
-                    </TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -665,22 +589,13 @@ export default function TongHopKQ() {
                           }));
 
                     return displayData.map(r => (
-                      <TableRow
-                        key={r.stt}
-                        onMouseEnter={() => setHoverRow(r.stt)}
-                        onMouseLeave={() => setHoverRow(null)}
-                        sx={{
-                          "&:hover": {
-                           backgroundColor: "rgba(25,118,210,0.05)",
-                          },
-                        }}
-                      >
+                      <TableRow key={r.stt}>
                         <TableCell sx={{ px: 1, textAlign: "center", border: "1px solid rgba(0,0,0,0.12)" }}>
                           {r.stt}
                         </TableCell>
 
                         <TableCell sx={{ px: 1, textAlign: "left", border: "1px solid rgba(0,0,0,0.12)" }}>
-                          {r.hoVaTen?.toUpperCase()}
+                          {r.hoVaTen}
                         </TableCell>
 
                         <TableCell sx={{ px: 1, textAlign: "center", border: "1px solid rgba(0,0,0,0.12)", fontWeight: "bold" }}>
@@ -688,7 +603,13 @@ export default function TongHopKQ() {
                         </TableCell>
 
                         {loai === "ontap" && (
-                          <TableCell sx={{ px: 1, textAlign: "center", border: "1px solid rgba(0,0,0,0.12)" }}>
+                          <TableCell
+                            sx={{
+                              px: 1,
+                              textAlign: "center",
+                              border: "1px solid rgba(0,0,0,0.12)",
+                            }}
+                          >
                             {r.soLanLam}
                           </TableCell>
                         )}
@@ -699,29 +620,6 @@ export default function TongHopKQ() {
 
                         <TableCell sx={{ px: 1, textAlign: "center", border: "1px solid rgba(0,0,0,0.12)" }}>
                           {r.ngayHienThi}
-                        </TableCell>
-
-                        {/* ================= ICON XÓA ================= */}
-                        <TableCell
-                          sx={{
-                            width: 40,
-                            textAlign: "center",
-                            border: "1px solid rgba(0,0,0,0.12)",
-                          }}
-                        >
-                          <IconButton
-                            size="small"
-                            onClick={() => {
-                              setDeleteStudent(r);
-                              setDeleteOpen(true);
-                            }}
-                            sx={{
-                              visibility: hoverRow === r.stt ? "visible" : "hidden",
-                              color: "error.main",
-                            }}
-                          >
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
                         </TableCell>
                       </TableRow>
                     ));
@@ -817,29 +715,8 @@ export default function TongHopKQ() {
         }}
       />
 
-      <DeleteStudentConfirmDialog
-        open={deleteOpen}
-        student={deleteStudent}
-        onClose={() => setDeleteOpen(false)}
-        onConfirm={async (student) => {
-          try {
-            await deleteDoc(
-              doc(db, folder, hocKi, selectedLop.replace(".", "_"), student.docId)
-            );
+    </Box>
 
-            setResults(prev =>
-              prev
-                .filter(r => r.docId !== student.docId)
-                .map((r, i) => ({ ...r, stt: i + 1 }))
-            );
-
-            setDeleteOpen(false);
-          } catch (err) {
-            console.error(err);
-          }
-        }}
-      />
-
-    </Box>    
+    
   );
 }

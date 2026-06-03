@@ -16,11 +16,11 @@ const generateClassList = () => {
 export const syncLamVanBenToKTDK = async ({
   db,
   namHoc = "2025-2026",
-  sourceHocKy = "Cả năm",
-  targetHocKy = "Cuối năm",
+  sourceHocKy = "Cuối kỳ I",
+  targetHocKy = "Cuối kỳ I",
 }) => {
   try {
-    const targetRoot = `DS_HOCSINH_${namHoc.replace(/-/g, "_")}`;
+    const targetRoot = `DATA_KTDK_${namHoc.replace(/-/g, "_")}`;
     const classList = generateClassList();
 
     await Promise.all(

@@ -217,81 +217,93 @@ export default function DanhSach() {
     fetchClasses();
   }, [namHocKey, config?.lop]);
 
-  // 🔹 Lấy danh sách học sinh
+  //Sort danh sách học sinh
+  const compareFullNamesRightToLeft = (a, b) => {
+    const partsA = a.hoTen.replace(/\//g, " ").trim().split(/\s+/);
+    const partsB = b.hoTen.replace(/\//g, " ").trim().split(/\s+/);
+
+    const len = Math.max(partsA.length, partsB.length);
+
+    for (let i = 1; i <= len; i++) {
+      const wordA = partsA[partsA.length - i] || "";
+      const wordB = partsB[partsB.length - i] || "";
+
+      const cmp = wordA.localeCompare(wordB, "vi", {
+        sensitivity: "base",
+      });
+
+      if (cmp !== 0) return cmp;
+    }
+
+    return 0;
+  };
+
   useEffect(() => {
-    if (!selectedClass) return;
+    if (!selectedClass || !namHocKey) return;
 
-    // Hàm so sánh từng chữ từ phải sang trái
-    const compareFullNamesRightToLeft = (a, b) => {
-      const partsA = a.hoTen.replace(/\//g, " ").trim().split(/\s+/);
-      const partsB = b.hoTen.replace(/\//g, " ").trim().split(/\s+/);
-      const len = Math.max(partsA.length, partsB.length);
+    const cached = studentData?.[namHocKey]?.[selectedClass];
 
-      for (let i = 1; i <= len; i++) { // bắt đầu từ cuối
-        const wordA = partsA[partsA.length - i] || "";
-        const wordB = partsB[partsB.length - i] || "";
-        const cmp = wordA.localeCompare(wordB, "vi", { sensitivity: "base" });
-        if (cmp !== 0) return cmp;
-      }
+    if (cached?.length) {
+      const sorted = [...cached]
+        .sort(compareFullNamesRightToLeft)
+        .map((s, i) => ({ ...s, stt: i + 1 }));
 
-      return 0;
-    };
-
-    // Lấy dữ liệu từ cache nếu có
-    const cached = studentData[selectedClass];
-    if (cached && cached.length > 0) {
-      const sorted = [...cached].sort(compareFullNamesRightToLeft).map((stu, idx) => ({
-        ...stu,
-        stt: idx + 1,
-      }));
       setStudents(sorted);
       return;
     }
 
-    // Nếu chưa có cache, fetch từ Firestore
-    const fetchStudents = async () => {
-      try {
-        const studentsRef = collection(
-          db,
-          `DS_HOCSINH_${namHocKey}`,
-          selectedClass,
-          "STUDENTS"
-        );
+    fetchStudents();
+  }, [selectedClass, namHocKey]);
 
-        const snap = await getDocs(studentsRef);
+  // 🔹 Lấy danh sách học sinh
+  const fetchStudents = async () => {
+    try {
+      const studentsRef = collection(
+        db,
+        `DS_HOCSINH_${namHocKey}`,
+        selectedClass,
+        "STUDENTS"
+      );
 
-        if (snap.empty) {
-          setStudents([]);
-          setStudentData((prev) => ({ ...prev, [selectedClass]: [] }));
-          return;
-        }
+      const snap = await getDocs(studentsRef);
 
-        let studentList = snap.docs.map((d) => {
-          const data = d.data();
-
-          return {
-            maDinhDanh: d.id,
-            hoTen: data.hoTen,
-            stt: data.stt || null,
-            lop: data.lop,
-            ghiChu: "",
-          };
-        });
+      if (snap.empty) {
+        setStudents([]);
 
         setStudentData((prev) => ({
           ...prev,
-          [selectedClass]: studentList,
+          [namHocKey]: {
+            ...(prev?.[namHocKey] || {}),
+            [selectedClass]: [],
+          },
         }));
 
-        setStudents(studentList);
-      } catch (err) {
-        console.error("❌ Lỗi load students:", err);
-        setStudents([]);
+        return;
       }
-    };
 
-    fetchStudents();
-  }, [selectedClass, studentData, setStudentData]);
+      let studentList = snap.docs.map((d) => ({
+        maDinhDanh: d.id,
+        ...d.data(),
+      }));
+
+      studentList = studentList
+        .sort(compareFullNamesRightToLeft)
+        .map((s, i) => ({ ...s, stt: i + 1 }));
+
+      setStudentData((prev) => ({
+        ...prev,
+        [namHocKey]: {
+          ...(prev?.[namHocKey] || {}),
+          [selectedClass]: studentList,
+        },
+      }));
+
+      setStudents(studentList);
+    } catch (err) {
+      console.error("❌ Lỗi load students:", err);
+      setStudents([]);
+    }
+  };
  
   const handleClassChange = (e) => {
     const newClass = e.target.value;
@@ -425,7 +437,10 @@ export default function DanhSach() {
       // 3️⃣ Cập nhật cache StudentContext
       setStudentData((prev) => ({
         ...prev,
-        [selectedClass]: updatedStudents,
+        [namHocKey]: {
+          ...(prev?.[namHocKey] || {}),
+          [selectedClass]: updatedStudents,
+        },
       }));
 
       // 4️⃣ Reset input
@@ -479,7 +494,10 @@ export default function DanhSach() {
       // 3️⃣ Cập nhật cache StudentContext
       setStudentData((prev) => ({
         ...prev,
-        [selectedClass]: updatedStudents,
+        [namHocKey]: {
+          ...(prev?.[namHocKey] || {}),
+          [selectedClass]: updatedStudents,
+        },
       }));
 
       // 4️⃣ 🔹 Cập nhật DATA chạy nền
@@ -521,7 +539,10 @@ export default function DanhSach() {
       // 4️⃣ Cập nhật cache StudentContext
       setStudentData((prev) => ({
         ...prev,
-        [selectedClass]: updatedStudents,
+        [namHocKey]: {
+          ...(prev?.[namHocKey] || {}),
+          [selectedClass]: updatedStudents,
+        },
       }));
 
       // 5️⃣ Reset trạng thái hover nếu cần
