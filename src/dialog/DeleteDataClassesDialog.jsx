@@ -9,6 +9,8 @@ import {
   Checkbox,
   Box,
   IconButton,
+  TextField,
+  MenuItem
 } from "@mui/material";
 
 import CloseIcon from "@mui/icons-material/Close";
@@ -19,17 +21,22 @@ export default function DeleteDataClassesDialog({
   open,
   onClose,
   classesList,
+  selectedLop,
+  hocKi,
+  setHocKi,
   onConfirmDelete,
 }) {
   const [selected, setSelected] = useState([]);
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   useEffect(() => {
-    if (!open) {
+    if (open) {
+      setSelected(selectedLop ? [selectedLop] : []);
+    } else {
       setSelected([]);
       setConfirmOpen(false);
     }
-  }, [open]);
+  }, [open, selectedLop]);
 
   // =========================
   // GROUP DATA (3,4,5...)
@@ -105,98 +112,175 @@ export default function DeleteDataClassesDialog({
     selected.length === classesList.length;
 
   return (
-    <>
-      {/* ===================== DIALOG ===================== */}
-      <Dialog
-        open={open}
-        onClose={onClose}
-        maxWidth="sm"
-        fullWidth
-        PaperProps={{
-          sx: {
-            height: "75vh",
-            borderRadius: "14px",
-            overflow: "hidden",
-            background: "#f8fafc",
-            display: "flex",
-            flexDirection: "column",
-          },
+  <>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="sm"
+      fullWidth
+      PaperProps={{
+        sx: {
+          height: "75vh",
+          borderRadius: "14px",
+          overflow: "hidden",
+          background: "#f8fafc",
+          display: "flex",
+          flexDirection: "column",
+        },
+      }}
+    >
+      {/* HEADER */}
+      <Box
+        sx={{
+          px: 3,
+          py: 1.5,
+          bgcolor: "#1976d2",
+          color: "#fff",
         }}
       >
-        {/* HEADER */}
         <Box
           sx={{
-            px: 3,
-            py: 1.3,
-            bgcolor: "#1976d2",
-            color: "#fff",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
           }}
         >
+          <Typography
+            sx={{
+              fontSize: 16,
+              fontWeight: 700,
+            }}
+          >
+            🎯 Xóa kết quả kiểm tra
+          </Typography>
+
+          <IconButton
+            onClick={onClose}
+            sx={{
+              color: "#fff",
+              p: 0.5,
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </Box>
+      </Box>
+
+      {/* CONTENT */}
+      <DialogContent
+        sx={{
+          flex: 1,
+          px: 3,
+          py: 2,
+          overflowY: "auto",
+        }}
+      >
+        <Typography
+          sx={{
+            mb: 2,
+            color: "#64748b",
+            fontSize: 14,
+          }}
+        >
+          Chọn các lớp cần xóa dữ liệu
+        </Typography>
+
+        {/* TOÀN TRƯỜNG */}
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            mb: 2,
+            gap: 2,
+          }}
+        >
+          {/* TOÀN TRƯỜNG */}
           <Box
             sx={{
               display: "flex",
-              justifyContent: "space-between",
               alignItems: "center",
+              px: 1,
+              py: 0.6,
+              bgcolor: "#f1f5f9",
+              border: "1px solid #e2e8f0",
+              borderRadius: "8px",
+              flex: 1,
             }}
           >
-            <Typography sx={{ fontSize: 17, fontWeight: 700 }}>
-              Xóa dữ liệu lớp
-            </Typography>
-
-            <IconButton onClick={onClose} sx={{ color: "#fff" }}>
-              <CloseIcon />
-            </IconButton>
-          </Box>
-
-          {/* TỔNG TRƯỜNG */}
-          <Box sx={{ mt: 1 }}>
             <Checkbox
-              size="small"
               checked={isAllSelected}
+              indeterminate={
+                selected.length > 0 &&
+                selected.length < classesList.length
+              }
               onChange={toggleAll}
-              sx={{ color: "#fff", "&.Mui-checked": { color: "#fff" } }}
             />
+
             <Typography
-              component="span"
-              sx={{ color: "#fff", fontWeight: 600 }}
+              sx={{
+                fontWeight: 700,
+                color: "#1e293b",
+              }}
             >
               Toàn trường ({selected.length}/{classesList.length})
             </Typography>
           </Box>
+
+          {/* HỌC KỲ */}
+          <TextField
+            select
+            size="small"
+            label="Học kỳ"
+            value={hocKi}
+            onChange={(e) => setHocKi(e.target.value)}
+            sx={{ width: 150 }}
+          >
+            <MenuItem value="Giữa kỳ I">Giữa kỳ I</MenuItem>
+            <MenuItem value="Cuối kỳ I">Cuối kỳ I</MenuItem>
+            <MenuItem value="Giữa kỳ II">Giữa kỳ II</MenuItem>
+            <MenuItem value="Cuối năm">Cuối năm</MenuItem>
+          </TextField>
         </Box>
 
-        {/* CONTENT */}
-        <DialogContent
+        {/* DANH SÁCH KHỐI */}
+        <Box
           sx={{
-            flex: 1,
-            px: 3,
-            py: 2,
-            overflowY: "auto",
+            bgcolor: "#fff",
+            border: "1px solid #e2e8f0",
+            borderRadius: "8px",
+            p: 1.5,
           }}
         >
-          <Typography sx={{ mb: 2, color: "#64748b", fontSize: 14 }}>
-            Chọn các lớp cần xóa dữ liệu
-          </Typography>
-
           <Box
             sx={{
-              bgcolor: "#fff",
-              border: "1px solid #e2e8f0",
-              borderRadius: "8px",
-              p: 1.5,
+              display: "grid",
+              gridTemplateColumns: {
+                xs: "1fr",
+                md: "repeat(3, 1fr)",
+              },
+              gap: 2,
+              alignItems: "start",
             }}
           >
             {Object.entries(khoiGroups).map(([khoi, group]) => (
-              <Box key={khoi} sx={{ mb: 2 }}>
-                {/* KHỐI */}
+              <Box
+                key={khoi}
+                sx={{
+                  border: "1px solid #e2e8f0",
+                  borderRadius: "8px",
+                  overflow: "hidden",
+                }}
+              >
+                {/* HEADER KHỐI */}
                 <Box
                   sx={{
                     display: "flex",
                     alignItems: "center",
-                    bgcolor: "#f1f5f9",
-                    borderRadius: "6px",
+                    bgcolor: "#f8fafc",
+                    borderBottom: "1px solid #e2e8f0",
                     px: 1,
-                    py: 0.5,
+                    py: 0.4,
                   }}
                 >
                   <Checkbox
@@ -206,13 +290,32 @@ export default function DeleteDataClassesDialog({
                     onChange={() => toggleKhoi(group)}
                   />
 
-                  <Typography fontWeight={700}>
+                  <Typography
+                    sx={{
+                      fontWeight: 700,
+                      color: "#1e293b",
+                    }}
+                  >
                     Khối {khoi}
+                  </Typography>
+
+                  <Typography
+                    sx={{
+                      ml: 1,
+                      fontSize: 12,
+                      color: "#64748b",
+                    }}
+                  >
+                    ({group.length})
                   </Typography>
                 </Box>
 
-                {/* LỚP */}
-                <Box sx={{ pl: 3, mt: 0.5 }}>
+                {/* DANH SÁCH LỚP */}
+                <Box
+                  sx={{
+                    p: 1,
+                  }}
+                >
                   {group.map((lop) => (
                     <Box
                       key={lop}
@@ -228,7 +331,11 @@ export default function DeleteDataClassesDialog({
                       />
 
                       <Typography
-                        sx={{ fontSize: 14, cursor: "pointer" }}
+                        sx={{
+                          fontSize: 14,
+                          cursor: "pointer",
+                          userSelect: "none",
+                        }}
                         onClick={() => toggleLop(lop)}
                       >
                         {lop}
@@ -239,44 +346,55 @@ export default function DeleteDataClassesDialog({
               </Box>
             ))}
           </Box>
-        </DialogContent>
+        </Box>
+      </DialogContent>
 
-        {/* FOOTER */}
-        <DialogActions
-          sx={{
-            px: 3,
-            pb: 3,
-            justifyContent: "space-between",
+      {/* FOOTER */}
+      <DialogActions
+        sx={{
+          px: 3,
+          pb: 3,
+          justifyContent: "space-between",
+        }}
+      >
+        <Button
+          onClick={() => {
+            setSelected([]);
+            onClose();
           }}
         >
-          <Button onClick={onClose}>Đóng</Button>
+          Đóng
+        </Button>
 
-          <Button
-            variant="contained"
-            color="error"
-            disabled={selected.length === 0}
-            startIcon={<DeleteOutlineIcon />}
-            onClick={() => setConfirmOpen(true)}
-          >
-            Xóa ({selected.length})
-          </Button>
-        </DialogActions>
-      </Dialog>
+        <Button
+          variant="contained"
+          color="error"
+          disabled={selected.length === 0}
+          startIcon={<DeleteOutlineIcon />}
+          onClick={() => setConfirmOpen(true)}
+          sx={{
+            borderRadius: "12px",
+          }}
+        >
+          Xóa ({selected.length})
+        </Button>
+      </DialogActions>
+    </Dialog>
 
-      {/* CONFIRM */}
-      <DeleteDataClassesConfirmDialog
-        open={confirmOpen}
-        selectedCount={selected.length}
-        selectedClasses={selected}
-        onClose={() => setConfirmOpen(false)}
-        onConfirm={async () => {
-          setConfirmOpen(false);
-          onClose();
+    <DeleteDataClassesConfirmDialog
+      open={confirmOpen}
+      selectedCount={selected.length}
+      selectedClasses={selected}
+      onClose={() => setConfirmOpen(false)}
+      onConfirm={async () => {
+        setConfirmOpen(false);
+        onClose();
 
-          await onConfirmDelete(selected);
-          setSelected([]);
-        }}
-      />
-    </>
-  );
+        await onConfirmDelete(selected);
+
+        setSelected([]);
+      }}
+    />
+  </>
+);
 }

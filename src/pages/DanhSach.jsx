@@ -90,6 +90,10 @@ export default function DanhSach() {
   const [selectedClass, setSelectedClass] = useState("");
   const [students, setStudents] = useState([]);
   const [selectedNamHoc, setSelectedNamHoc] = useState(config?.namHoc || "");
+  
+  const [deleteNamHoc, setDeleteNamHoc] = useState(
+    config?.namHoc || "2025-2026"
+  );
 
   /* =======================
     Refs
@@ -1038,6 +1042,9 @@ export default function DanhSach() {
       open={deleteClassesOpen}
       onClose={() => setDeleteClassesOpen(false)}
       classes={classes}
+      selectedClass={selectedClass}
+      deleteNamHoc={deleteNamHoc}
+      setDeleteNamHoc={setDeleteNamHoc}
       onDelete={handleDeleteClasses}
     />
 

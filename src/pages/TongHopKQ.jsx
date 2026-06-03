@@ -246,12 +246,11 @@ export default function TongHopKQ() {
     setLoading(true);
 
     try {
-      const yearKey = (config?.namHoc || "2025-2026").replace(/-/g, "_");
-      const sourceRoot = `DATA_KTDK_${yearKey}`;
       const classKey = selectedLop.replace(".", "_");
+
       const colRef = collection(
         db,
-        sourceRoot,
+        folder,
         hocKi,
         classKey
       );
@@ -299,14 +298,11 @@ export default function TongHopKQ() {
   // Xóa lớp
   const handleDeleteClass = async () => {
     try {
-      const yearKey = (config?.namHoc || "2025-2026").replace(/-/g, "_");
-      const sourceRoot = `DATA_KTDK_${yearKey}`;
-
       const classKey = selectedLop.replace(".", "_");
 
       const colRef = collection(
         db,
-        sourceRoot,
+        folder,
         hocKi,
         classKey
       );
@@ -424,7 +420,7 @@ export default function TongHopKQ() {
                 </IconButton>
               </Tooltip>
 
-              <Tooltip title="Xóa lớp">
+              <Tooltip title="Xóa kết quả kiểm tra">
                 <IconButton
                   onClick={() => setDeleteDialogOpen(true)}
                   disabled={deleting}
@@ -677,6 +673,9 @@ export default function TongHopKQ() {
         open={deleteDialogOpen}
         onClose={() => setDeleteDialogOpen(false)}
         classesList={classesList}
+        selectedLop={selectedLop}
+        hocKi={hocKi}
+        setHocKi={setHocKi}
         onConfirmDelete={async (selected) => {
           try {
             setDeleting(true);
@@ -684,7 +683,13 @@ export default function TongHopKQ() {
             const batch = writeBatch(db);
 
             for (const lop of selected) {
-              const colRef = collection(db, `${folder}/${hocKi}/${lop}`);
+              const colRef = collection(
+                db,
+                folder,
+                hocKi,
+                lop
+              );
+
               const snap = await getDocs(colRef);
 
               snap.docs.forEach((d) => batch.delete(d.ref));

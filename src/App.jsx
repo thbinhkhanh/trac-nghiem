@@ -168,7 +168,7 @@ function AppContent() {
           {isLoggedIn && (
             <Box
               sx={{
-                minWidth: 100,
+                minWidth: 80,
                 px: 1.5,
                 py: 0.4,
                 mr: 1,

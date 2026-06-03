@@ -48,7 +48,7 @@ export default function DeleteDataClassesConfirmDialog({
       <Box
         sx={{
           px: 3,
-          py: 2,
+          py: 1.5,
           color: "#fff",
           background: "linear-gradient(135deg, #ef4444, #f97316)",
           position: "relative",
@@ -68,7 +68,7 @@ export default function DeleteDataClassesConfirmDialog({
               boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
             }}
           >
-            ⚠️
+            ❓
           </Box>
 
           <Typography sx={{ fontSize: 16, fontWeight: 700 }}>

@@ -157,13 +157,22 @@ const OpenExamDialog = ({
     >
 
       {/* HEADER */}
-      <Box sx={{ px: 3, py: 1.4, bgcolor: "#1976d2", color: "#fff" }}>
-        <Stack direction="row" justifyContent="space-between">
+      <Box
+        sx={{
+          px: 3,
+          py: 1.5,
+          bgcolor: "#1976d2",
+          color: "#fff",
+          borderRadius: "12px 12px 0 0",
+          boxShadow: "0 8px 20px rgba(25, 118, 210, 0.25)",
+        }}
+      >
+        <Stack direction="row" justifyContent="space-between" alignItems="center">
           <Typography sx={{ fontSize: 17, fontWeight: 700 }}>
             Danh sách đề kiểm tra
           </Typography>
 
-          <IconButton onClick={onClose} sx={{ color: "#fff" }}>
+          <IconButton onClick={onClose} sx={{ color: "#fff", p: 0.5 }}>
             <CloseIcon />
           </IconButton>
         </Stack>

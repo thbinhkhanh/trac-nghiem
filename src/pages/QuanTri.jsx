@@ -343,7 +343,7 @@ export default function QuanTri() {
       minHeight: "100vh",
       background: "#f1f5f9",
       py: 3,
-      px: 2,
+      px: 0.5,
       display: "flex",
       justifyContent: "center",
       fontFamily: '"Roboto","Inter","Arial",sans-serif',
@@ -370,7 +370,7 @@ export default function QuanTri() {
           <Box
             sx={{
               px: 3,
-              py: 1.5,
+              py: 1,
               background: "#1976d2",
               color: "#fff",
             }}
