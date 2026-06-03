@@ -101,7 +101,12 @@ export default function DeleteExamDialog({
               whiteSpace: "pre-line",
             }}
           >
-            {content}
+            Bạn có chắc chắn muốn xóa đề thi này?
+            {"\n"}
+            <Box component="span" sx={{ color: "#ef4444", fontWeight: 500 }}>
+              <br />
+              Hành động này không thể hoàn tác.
+            </Box>
           </Typography>
         </Box>
       </DialogContent>

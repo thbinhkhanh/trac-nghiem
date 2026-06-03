@@ -71,7 +71,7 @@ export default function DeleteClassesConfirmDialog({
           </Box>
 
           <Typography sx={{ fontSize: 15.5, fontWeight: 600 }}>
-            Xác nhận xóa lớp
+            Xác nhận xóa
           </Typography>
         </Box>
 
@@ -96,12 +96,12 @@ export default function DeleteClassesConfirmDialog({
           <Typography sx={{ fontSize: 14, color: "#334155" }}>
             {selectedCount === 1 ? (
               <>
-                Bạn có chắc chắn muốn xóa lớp{" "}
+                Bạn có chắc chắn muốn xóa danh sách lớp{" "}
                 <b>{selectedClasses[0]}</b>?
               </>
             ) : (
               <>
-                Bạn có chắc chắn muốn xóa{" "}
+                Bạn có chắc chắn muốn xóa danh sách{" "}
                 <b>{selectedCount}</b> lớp đã chọn?
               </>
             )}
@@ -115,8 +115,8 @@ export default function DeleteClassesConfirmDialog({
               lineHeight: 1.6,
             }}
           >
-            Thao tác này sẽ xóa toàn bộ học sinh và dữ liệu của các lớp đã chọn.
-            <br />
+            {/*Thao tác này sẽ xóa toàn bộ học sinh và dữ liệu của các lớp đã chọn.
+            <br />*/}
             Hành động này không thể hoàn tác.
           </Typography>
         </Box>

@@ -65,7 +65,7 @@ export default function DeleteStudentConfirmDialog({
           </Box>
 
           <Typography sx={{ fontSize: 15.5, fontWeight: 600 }}>
-            Xóa học sinh
+            Xóa kết quả kiểm tra
           </Typography>
         </Box>
 
@@ -88,7 +88,7 @@ export default function DeleteStudentConfirmDialog({
       <DialogContent sx={{ px: 3, py: 3 }}>
         <Box sx={{ textAlign: "center", py: 1 }}>
           <Typography sx={{ fontSize: 14, color: "#334155" }}>
-            Bạn có chắc chắn muốn xóa học sinh
+            Bạn có chắc chắn muốn xóa kết quả kiểm tra của học sinh
           </Typography>
 
           <Typography
@@ -111,7 +111,7 @@ export default function DeleteStudentConfirmDialog({
               lineHeight: 1.6,
             }}
           >
-            Thao tác này sẽ xóa học sinh khỏi danh sách.<br />
+            {/*Thao tác này sẽ xóa kết quả bài kiểm tra của học sinh khỏi danh sách.<br />*/}
             Hành động này không thể hoàn tác.
           </Typography>
         </Box>
