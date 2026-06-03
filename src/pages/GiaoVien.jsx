@@ -57,7 +57,7 @@ export default function HocSinh() {
     FORM / SELECTION STATE
   ======================= */
   const [school, setSchool] = useState("TH Lâm Văn Bền"); // mặc định
-  const [lop, setLop] = useState("4A");
+  const [lop, setLop] = useState("");
   const [khoi, setKhoi] = useState("Khối 4");
   const [hocKi, setHocKi] = useState("");
 
@@ -89,7 +89,7 @@ export default function HocSinh() {
     const soKhoi = khoi.replace("Khối ", "");
     const filtered = classes.filter(cl => cl.startsWith(soKhoi));
     setFilteredClasses(filtered);
-    //setLop("");
+    setLop("");
   }, [khoi, classes]);
 
   useEffect(() => {
@@ -218,7 +218,7 @@ export default function HocSinh() {
     setFilteredClasses(filtered);
 
     // chỉ reset lớp, KHÔNG auto chọn lớp đầu
-    //setLop("");
+    setLop("");
     setStudents([]);
   }, [khoi, classes]);
 
