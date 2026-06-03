@@ -192,7 +192,7 @@ export const handleSubmitQuiz = async ({
     setStudentResult({
       hoVaTen: capitalizeName(studentName),
       lop: studentClass,
-      diem: total,
+      lyThuyet: total,
     });
 
     setOpenResultDialog(true);
@@ -240,11 +240,11 @@ export const handleSubmitQuiz = async ({
     if (docSnap.exists()) {
       const oldData = docSnap.data();
 
-      const oldScore = oldData?.diem ?? 0;
+      const oldScore = oldData?.lyThuyet ?? 0;
       const soLanLam = (oldData?.soLanLam ?? 0) + 1;
 
       await updateDoc(docRef, {
-        diem: total > oldScore ? total : oldScore,
+        lyThuyet: total > oldScore ? total : oldScore,
         hoVaTen: capitalizeName(studentName),
         lop: studentClass,
         mon: "Tin học",
@@ -258,7 +258,7 @@ export const handleSubmitQuiz = async ({
         hoVaTen: capitalizeName(studentName),
         lop: studentClass,
         mon: "Tin học",
-        diem: total,
+        lyThuyet: total,
         ngayKiemTra: ngayLam,
         thoiGianLamBai: durationStr,
         soLanLam: 1,

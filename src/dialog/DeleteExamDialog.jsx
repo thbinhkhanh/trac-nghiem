@@ -8,6 +8,7 @@ import {
   Button,
   IconButton,
 } from "@mui/material";
+
 import CloseIcon from "@mui/icons-material/Close";
 import WarningAmberRoundedIcon from "@mui/icons-material/WarningAmberRounded";
 
@@ -16,14 +17,19 @@ export default function DeleteExamDialog({
   onClose,
   onConfirm,
   title = "Xác nhận xóa",
-  content = "⚠️ Bạn có chắc chắn muốn xóa đề thi này?\nHành động này không thể hoàn tác.",
+  content = "Bạn có chắc chắn muốn xóa đề thi này?\nHành động này không thể hoàn tác.",
 }) {
   return (
     <Dialog
       open={open}
       onClose={(event, reason) => {
-        if (reason === "backdropClick" || reason === "escapeKeyDown") return;
-        onClose();
+        if (
+          reason === "backdropClick" ||
+          reason === "escapeKeyDown"
+        ) {
+          return;
+        }
+        onClose?.();
       }}
       disableEscapeKeyDown
       maxWidth="xs"
@@ -33,109 +39,126 @@ export default function DeleteExamDialog({
           borderRadius: "18px",
           overflow: "hidden",
           background: "#f8fafc",
-          boxShadow: "0 20px 60px rgba(0,0,0,0.18)",
         },
       }}
     >
-      {/* HEADER */}
+      {/* ===== HEADER ===== */}
       <Box
         sx={{
           px: 3,
-          py: 1.5,
+          py: 1.6,
+          background: "linear-gradient(135deg, #ef4444, #42a5f5)",
           color: "#fff",
-          background: "linear-gradient(135deg, #1976d2, #42a5f5)",
-          position: "relative",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
         }}
       >
-        <Stack direction="row" alignItems="center" spacing={1}>
-          {/* 🔴 ICON ĐỎ + VÒNG TRÒN TRẮNG */}
+        {/* LEFT */}
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           <Box
             sx={{
-              width: 34,
-              height: 34,
+              width: 32,
+              height: 32,
               borderRadius: "50%",
-              bgcolor: "#ffffff", // nền trắng
+              bgcolor: "#fff", // ✅ chỉ đổi dòng này
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
             }}
           >
             ❓
           </Box>
 
-          <Typography sx={{ fontSize: 16, fontWeight: 700 }}>
+          <Typography sx={{ fontSize: 15.5, fontWeight: 600 }}>
             {title}
           </Typography>
-        </Stack>
+        </Box>
 
+        {/* CLOSE */}
         <IconButton
           onClick={onClose}
           sx={{
-            position: "absolute",
-            right: 10,
-            top: 10,
             color: "#fff",
             bgcolor: "rgba(255,255,255,0.15)",
-            "&:hover": { bgcolor: "rgba(255,255,255,0.25)" },
+            "&:hover": {
+              bgcolor: "rgba(255,255,255,0.25)",
+            },
           }}
         >
           <CloseIcon fontSize="small" />
         </IconButton>
       </Box>
 
-      {/* CONTENT */}
-      <DialogContent sx={{ px: 3, py: 4 }}>
-        <Stack spacing={2.5} alignItems="center">
+      {/* ===== CONTENT ===== */}
+      <DialogContent sx={{ px: 3, py: 3 }}>
+        <Box sx={{ textAlign: "center", py: 1 }}>
           <Typography
             sx={{
-              fontSize: 15,
-              color: "#64748b",
-              maxWidth: 320,
+              fontSize: 14,
+              color: "#334155",
               lineHeight: 1.7,
               whiteSpace: "pre-line",
             }}
           >
             {content}
           </Typography>
-
-          {/* ACTIONS */}
-          <Stack direction="row" spacing={2}>
-            <Button
-              variant="outlined"
-              onClick={onClose}
-              sx={{
-                minWidth: 110,
-                height: 42,
-                borderRadius: "12px",
-                textTransform: "none",
-                fontWeight: 600,
-              }}
-            >
-              Hủy
-            </Button>
-
-            <Button
-              variant="contained"
-              onClick={onConfirm}
-              sx={{
-                minWidth: 140,
-                height: 42,
-                borderRadius: "12px",
-                textTransform: "none",
-                fontWeight: 700,
-                background: "linear-gradient(135deg, #1976d2, #42a5f5)",
-                boxShadow: "0 10px 20px rgba(25,118,210,0.25)",
-                "&:hover": {
-                  background: "linear-gradient(135deg, #1565c0, #1976d2)",
-                },
-              }}
-            >
-              Xóa
-            </Button>
-          </Stack>
-        </Stack>
+        </Box>
       </DialogContent>
+
+      {/* ===== ACTIONS ===== */}
+      <Box
+        sx={{
+          px: 3,
+          pb: 3,
+          display: "flex",
+          justifyContent: "center",
+        }}
+      >
+        <Stack direction="row" spacing={2}>
+          {/* CANCEL */}
+          <Button
+            onClick={onClose}
+            variant="outlined"
+            sx={{
+              minWidth: 110,
+              height: 42,
+              borderRadius: "12px",
+              textTransform: "none",
+              fontWeight: 600,
+              borderColor: "#cbd5e1",
+              color: "#475569",
+              background: "#fff",
+              "&:hover": {
+                borderColor: "#94a3b8",
+                background: "#f1f5f9",
+              },
+            }}
+          >
+            Hủy
+          </Button>
+
+          {/* DELETE */}
+          <Button
+            onClick={onConfirm}
+            variant="contained"
+            sx={{
+              minWidth: 130,
+              height: 42,
+              borderRadius: "12px",
+              textTransform: "none",
+              fontWeight: 700,
+              background: "linear-gradient(135deg, #ef4444, #f97316)",
+              boxShadow: "0 10px 20px rgba(239,68,68,0.25)",
+              "&:hover": {
+                background: "linear-gradient(135deg, #dc2626, #ef4444)",
+              },
+            }}
+          >
+            Xóa
+          </Button>
+        </Stack>
+      </Box>
     </Dialog>
   );
 }

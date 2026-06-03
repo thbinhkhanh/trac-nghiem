@@ -1008,7 +1008,7 @@ const fetchStudentsAndStatus = async (cls) => {
                   sx={{
                     backgroundColor: "#1976d2",
                     color: "white",
-                    width: 70,
+                    width: 80,
                     px: 0.5,
                     whiteSpace: "nowrap"
                   }}

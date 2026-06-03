@@ -66,7 +66,7 @@ export const printKTDK = (students, className, selectedSemester = "Giữa kỳ I
       </style>
     </head>
     <body>
-      <div class="school-name">TRƯỜNG TIỂU HỌC BÌNH KHÁNH</div>
+      <div class="school-name">TRƯỜNG TH LÂM VĂN BỀN</div>
       <div class="title">MÔN ${subjectLabel} - LỚP ${className}</div>
       <div class="subtext" style="font-size:16px; margin-top:10px; margin-bottom:15px;">
         ${hocKy} – NH: ${currentYear}-${nextYear}

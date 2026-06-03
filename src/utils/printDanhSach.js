@@ -119,7 +119,7 @@ export const printDanhSach = async (className) => {
         </style>
       </head>
       <body>
-        <div class="school-name">TRƯỜNG TIỂU HỌC BÌNH KHÁNH</div>
+        <div class="school-name">TRƯỜNG TH LÂM VĂN BỀN</div>
 
         <h1 class="title">DANH SÁCH HỌC SINH LỚP ${className}</h1>
 

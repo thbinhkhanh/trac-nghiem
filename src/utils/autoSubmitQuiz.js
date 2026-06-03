@@ -136,9 +136,7 @@ export const autoSubmitQuiz = async ({
     setSubmitted(true);
 
     // --- Tính thời gian ---
-    const durationSec = startTime
-      ? Math.floor((Date.now() - startTime) / 1000)
-      : 0;
+    const durationSec = (config?.timeLimit ?? configData?.timeLimit ?? 0) * 60;
 
     const durationStr = formatTime(durationSec);
 
@@ -164,7 +162,7 @@ export const autoSubmitQuiz = async ({
     setStudentResult({
       hoVaTen: capitalizeName(studentName),
       lop: studentClass,
-      diem: total,
+      lyThuyet: total,
     });
 
     setOpenResultDialog(true);
@@ -182,31 +180,60 @@ export const autoSubmitQuiz = async ({
         .replace(/\s+/g, "_")
         .replace(/[^a-z0-9_]/g, "");
 
-    const hocKiFinal = configData?.hocKy || "Giữa kỳ I";
+    const namHocKey = (config?.namHoc || "2025-2026").replace(/-/g, "_");
+    const hocKiFinal = configData?.hocKy || "Cuối kỳ I";
 
-    const collectionRoot = "LAMVANBEN";
+    const classKey = (studentClass || "")
+      .replace(/\./g, "_")
+      .replace(/\s+/g, "_");
 
-    const lop = studentClass;
+    const studentDocId = normalizeName(studentName);
 
-    const docId = normalizeName(studentName);
+    const examType = (configData?.examType || config?.examType || "").toLowerCase();
+    const collectionRoot =
+      examType === "ktdk"
+        ? `DATA_KTDK_${namHocKey}`
+        : `DATA_ONTAP_${namHocKey}`;
 
     const docRef = doc(
       db,
-      `${collectionRoot}/${hocKiFinal}/${lop}/${docId}`
+      collectionRoot,
+      hocKiFinal,
+      classKey,
+      studentDocId
     );
 
-    await setDoc(
-      docRef,
-      {
+    const docSnap = await getDoc(docRef);
+
+    const ngayLam = new Date().toLocaleDateString("vi-VN");
+
+    if (docSnap.exists()) {
+      const oldData = docSnap.data();
+
+      const oldScore = oldData?.lyThuyet ?? 0;
+      const soLanLam = (oldData?.soLanLam ?? 0) + 1;
+
+      await updateDoc(docRef, {
+        lyThuyet: total > oldScore ? total : oldScore,
         hoVaTen: capitalizeName(studentName),
         lop: studentClass,
         mon: "Tin học",
-        diem: total,
+        ngayKiemTra: ngayLam,
         thoiGianLamBai: durationStr,
-        ngayKiemTra: new Date().toLocaleDateString("vi-VN"),
-      },
-      { merge: true }
-    );
+        soLanLam: soLanLam,
+      });
+
+    } else {
+      await setDoc(docRef, {
+        hoVaTen: capitalizeName(studentName),
+        lop: studentClass,
+        mon: "Tin học",
+        lyThuyet: total,
+        ngayKiemTra: ngayLam,
+        thoiGianLamBai: durationStr,
+        soLanLam: 1,
+      });
+    }
 
   } catch (err) {
     console.error("❌ Lỗi khi lưu điểm:", err);
@@ -214,3 +241,4 @@ export const autoSubmitQuiz = async ({
     setSaving(false);
   }
 };
+

@@ -95,14 +95,13 @@ export default function HocSinh() {
   useEffect(() => {
     if (!lop) return;
 
-    const key = `gv_recent_${lop}`;
+    const key = `gv_recent_${namHoc}_${lop}`;
     const stored = JSON.parse(localStorage.getItem(key) || "[]");
 
     setRecentStudents(stored);
   }, [lop]);
 
   const convertToId = (name = "") =>
-    "_" +
     name
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
@@ -116,12 +115,15 @@ export default function HocSinh() {
     try {
       const namHocRaw = config?.namHoc || "2025_2026";
       const namHoc = namHocRaw.replaceAll("-", "_");
+
       const hocKy = config?.hocKy || "Cuối năm";
-      const lop = student.lop || "4A";
+      const lop = student.lop || config?.lop || "4A";
 
-      const studentKey = (student.id || "").trim().replace(/_$/, "");
+      const studentKey = convertToId(student.hoTen || student.id);
 
-      const key = `gv_recent_${lop}`;
+      //const key = `gv_recent_${lop}`;
+      const key = `gv_recent_${namHoc}_${lop}`;
+
       const stored = JSON.parse(localStorage.getItem(key) || "[]");
 
       const updated = [
@@ -149,9 +151,12 @@ export default function HocSinh() {
         const data = examSnap.data();
 
         setResultData({
-          ...data,
-          lop,
-          hoVaTen: student.hoTen,
+          hoVaTen: data.hoVaTen || student.hoTen,
+          lop: data.lop || student.lop,
+          lyThuyet: data.lyThuyet ?? data.diem ?? 0, // 🔥 FIX QUAN TRỌNG
+          mon: data.mon,
+          ngayKiemTra: data.ngayKiemTra,
+          thoiGianLamBai: data.thoiGianLamBai,
         });
 
         setHasResult(true);
@@ -599,7 +604,7 @@ export default function HocSinh() {
                       },
                     }}
                   >
-                    Bắt đầu làm bài
+                    Xem kết quả
                   </Box>
                 </Box>
               </Paper>
@@ -732,7 +737,7 @@ export default function HocSinh() {
         dialogMode="success"
         dialogMessage=""
         studentResult={resultData}
-        hasResult={!!resultData?.lyThuyet}   // ✅ FIX ĐÚNG
+        hasResult={true}
         choXemDiem={true}
         configData={config}
         convertPercentToScore={(v) => v}

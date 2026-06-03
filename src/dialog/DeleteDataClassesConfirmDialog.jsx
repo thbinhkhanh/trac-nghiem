@@ -10,6 +10,7 @@ import {
 } from "@mui/material";
 
 import CloseIcon from "@mui/icons-material/Close";
+import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 
 export default function DeleteDataClassesConfirmDialog({
   open,
@@ -22,14 +23,12 @@ export default function DeleteDataClassesConfirmDialog({
     <Dialog
       open={open}
       onClose={(event, reason) => {
-        // chặn đóng bằng backdrop / ESC nếu bạn muốn kiểm soát flow
         if (
           reason === "backdropClick" ||
           reason === "escapeKeyDown"
         ) {
           return;
         }
-
         onClose?.();
       }}
       disableEscapeKeyDown
@@ -40,48 +39,46 @@ export default function DeleteDataClassesConfirmDialog({
           borderRadius: "18px",
           overflow: "hidden",
           background: "#f8fafc",
-          boxShadow: "0 20px 60px rgba(0,0,0,0.18)",
         },
       }}
     >
-      {/* HEADER */}
+      {/* ===== HEADER ===== */}
       <Box
         sx={{
           px: 3,
-          py: 1.5,
+          py: 1.6,
+          background: "linear-gradient(135deg, #ef4444, #42a5f5)",
           color: "#fff",
-          background: "linear-gradient(135deg, #ef4444, #f97316)",
-          position: "relative",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
         }}
       >
-        <Stack direction="row" alignItems="center" spacing={1}>
+        {/* LEFT */}
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           <Box
             sx={{
-              width: 34,
-              height: 34,
+              width: 32,
+              height: 32,
               borderRadius: "50%",
-              bgcolor: "#fff",
+              bgcolor: "#fff", // ✅ chỉ đổi dòng này
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              fontSize: 18,
-              boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
             }}
           >
             ❓
           </Box>
 
-          <Typography sx={{ fontSize: 16, fontWeight: 700 }}>
-            Xác nhận xóa lớp
+          <Typography sx={{ fontSize: 15.5, fontWeight: 600 }}>
+            Xác nhận xóa lớp dữ liệu
           </Typography>
-        </Stack>
+        </Box>
 
+        {/* CLOSE */}
         <IconButton
           onClick={onClose}
           sx={{
-            position: "absolute",
-            right: 10,
-            top: 10,
             color: "#fff",
             bgcolor: "rgba(255,255,255,0.15)",
             "&:hover": {
@@ -93,24 +90,18 @@ export default function DeleteDataClassesConfirmDialog({
         </IconButton>
       </Box>
 
-      {/* CONTENT */}
-      <DialogContent sx={{ px: 4, py: 4 }}>
-        <Stack spacing={3}>
-          <Typography
-            sx={{
-              fontSize: 15,
-              color: "#334155",
-              lineHeight: 1.8,
-            }}
-          >
+      {/* ===== CONTENT ===== */}
+      <DialogContent sx={{ px: 3, py: 3 }}>
+        <Box sx={{ textAlign: "center", py: 1 }}>
+          <Typography sx={{ fontSize: 14, color: "#334155" }}>
             {selectedCount === 1 ? (
               <>
-                Bạn có chắc chắn muốn xóa lớp{" "}
+                Bạn có chắc chắn muốn xóa dữ liệu lớp{" "}
                 <b>{selectedClasses[0]}</b>?
               </>
             ) : (
               <>
-                Bạn có chắc chắn muốn xóa{" "}
+                Bạn có chắc chắn muốn xóa dữ liệu{" "}
                 <b>{selectedCount}</b> lớp đã chọn?
               </>
             )}
@@ -118,53 +109,72 @@ export default function DeleteDataClassesConfirmDialog({
 
           <Typography
             sx={{
-              color: "#dc2626",
+              mt: 2,
               fontSize: 14,
-              lineHeight: 1.8,
-              pl: 1,
+              color: "#ef4444",
+              lineHeight: 1.6,
             }}
           >
             Thao tác này sẽ xóa toàn bộ dữ liệu bài làm của các lớp đã chọn.
             <br />
             Hành động này không thể hoàn tác.
           </Typography>
-
-          <Stack direction="row" spacing={2} justifyContent="center">
-            <Button
-              variant="outlined"
-              onClick={onClose}
-              sx={{
-                minWidth: 110,
-                height: 42,
-                borderRadius: "12px",
-                textTransform: "none",
-                fontWeight: 600,
-              }}
-            >
-              Hủy
-            </Button>
-
-            <Button
-              variant="contained"
-              onClick={onConfirm}
-              sx={{
-                minWidth: 140,
-                height: 42,
-                borderRadius: "12px",
-                textTransform: "none",
-                fontWeight: 700,
-                background: "linear-gradient(135deg, #ef4444, #f97316)",
-                boxShadow: "0 10px 20px rgba(239,68,68,0.25)",
-                "&:hover": {
-                  background: "linear-gradient(135deg, #dc2626, #ef4444)",
-                },
-              }}
-            >
-              Xóa vĩnh viễn
-            </Button>
-          </Stack>
-        </Stack>
+        </Box>
       </DialogContent>
+
+      {/* ===== ACTIONS ===== */}
+      <Box
+        sx={{
+          px: 3,
+          pb: 3,
+          display: "flex",
+          justifyContent: "center",
+        }}
+      >
+        <Stack direction="row" spacing={2}>
+          {/* CANCEL */}
+          <Button
+            onClick={onClose}
+            variant="outlined"
+            sx={{
+              minWidth: 110,
+              height: 42,
+              borderRadius: "12px",
+              textTransform: "none",
+              fontWeight: 600,
+              borderColor: "#cbd5e1",
+              color: "#475569",
+              background: "#fff",
+              "&:hover": {
+                borderColor: "#94a3b8",
+                background: "#f1f5f9",
+              },
+            }}
+          >
+            Hủy
+          </Button>
+
+          {/* DELETE */}
+          <Button
+            onClick={onConfirm}
+            variant="contained"
+            sx={{
+              minWidth: 130,
+              height: 42,
+              borderRadius: "12px",
+              textTransform: "none",
+              fontWeight: 700,
+              background: "linear-gradient(135deg, #ef4444, #f97316)",
+              boxShadow: "0 10px 20px rgba(239,68,68,0.25)",
+              "&:hover": {
+                background: "linear-gradient(135deg, #dc2626, #ef4444)",
+              },
+            }}
+          >
+            Xóa
+          </Button>
+        </Stack>
+      </Box>
     </Dialog>
   );
 }

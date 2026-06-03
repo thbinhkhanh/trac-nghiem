@@ -93,14 +93,13 @@ export default function HocSinh() {
   useEffect(() => {
     if (!lop) return;
 
-    const key = `hs_recent_${lop}`;
+    const key = `hs_recent_${namHoc}_${lop}`;
     const stored = JSON.parse(localStorage.getItem(key) || "[]");
 
     setRecentStudents(stored);
   }, [lop]);
 
   const convertToId = (name = "") =>
-    "_" +
     name
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
@@ -115,16 +114,14 @@ export default function HocSinh() {
       const namHocRaw = config?.namHoc || "2025_2026";
       const namHoc = namHocRaw.replaceAll("-", "_");
       const hocKy = config?.hocKy || "Cuối năm";
-      const lop = student.lop || "4A";
+      const lop = student.lop || config?.lop || "4A";
 
-      const studentKey = (student.id || "")
-        .trim()
-        .replace(/_$/, "");
+      const studentKey = convertToId(student.hoTen || student.id);
 
       // ==========================
       // 🔥 RECENT (MOVE LÊN TRƯỚC)
       // ==========================
-      const key = `hs_recent_${lop}`;
+      const key = `hs_recent_${namHoc}_${lop}`;
       const stored = JSON.parse(localStorage.getItem(key) || "[]");
 
       const updated = [

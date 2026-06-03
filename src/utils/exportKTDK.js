@@ -47,7 +47,7 @@ export const exportKTDK = async (students, className, term = "CKI", subject = "T
     });
 
     // 🔹 Tiêu đề trường
-    const schoolRow = sheet.addRow(["TRƯỜNG TIỂU HỌC BÌNH KHÁNH"]);
+    const schoolRow = sheet.addRow(["TRƯỜNG TH LÂM VĂN BỀN"]);
     schoolRow.font = { bold: true, size: 12 };
     sheet.mergeCells(`A1:H1`);
     schoolRow.alignment = { horizontal: "left" };

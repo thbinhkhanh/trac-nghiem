@@ -33,17 +33,32 @@ const ResultDialog_GV = ({
   const [snackbarSeverity, setSnackbarSeverity] = useState("success");
 
   const getScore = () => {
-    if (configData?.kiemTraDinhKi) {
-      return studentResult?.lyThuyet ?? "";
-    }
-    if (configData?.baiTapTuan) {
-      return convertPercentToScore(studentResult?.diemTN);
-    }
-    if (configData?.onTap) {
-      return studentResult?.lyThuyet ?? "";
-    }
+  console.log("📊 configData:", configData);
+  console.log("📦 studentResult:", studentResult);
+
+  if (configData?.kiemTraDinhKi) {
+    console.log("👉 Mode: kiemTraDinhKi");
+    console.log("👉 lyThuyet:", studentResult?.lyThuyet);
     return studentResult?.lyThuyet ?? "";
-  };
+  }
+
+  if (configData?.baiTapTuan) {
+    console.log("👉 Mode: baiTapTuan");
+    console.log("👉 diemTN:", studentResult?.diemTN);
+    return convertPercentToScore(studentResult?.diemTN);
+  }
+
+  if (configData?.onTap) {
+    console.log("👉 Mode: onTap");
+    console.log("👉 lyThuyet:", studentResult?.lyThuyet);
+    return studentResult?.lyThuyet ?? "";
+  }
+
+  console.log("👉 Mode: default");
+  console.log("👉 lyThuyet:", studentResult?.lyThuyet);
+
+  return studentResult?.lyThuyet ?? "";
+};
 
   const studentName =
     (studentResult?.hoVaTen || "Học sinh").trim().normalize("NFC");
@@ -283,7 +298,11 @@ const ResultDialog_GV = ({
     <Dialog
       open={openConfirmDelete}
       onClose={(event, reason) => {
-        if (reason === "backdropClick" || reason === "escapeKeyDown") return;
+        if (
+          reason === "backdropClick" ||
+          reason === "escapeKeyDown"
+        )
+          return;
         setOpenConfirmDelete(false);
       }}
       disableEscapeKeyDown
@@ -294,100 +313,69 @@ const ResultDialog_GV = ({
           borderRadius: "18px",
           overflow: "hidden",
           background: "#f8fafc",
-          boxShadow: "0 20px 60px rgba(0,0,0,0.18)",
-          fontFamily:
-            '"Segoe UI","Arial","Helvetica","Noto Sans","sans-serif"',
         },
       }}
     >
-      {/* HEADER */}
+      {/* ===== HEADER (GIỮ NGUYÊN STYLE MẪU) ===== */}
       <Box
         sx={{
           px: 3,
-          py: 2,
+          py: 1.6,
+          background: "linear-gradient(135deg, #ef4444, #42a5f5)",
           color: "#fff",
-          background: "linear-gradient(135deg, #1976d2, #42a5f5)", // đồng bộ màu app
-          position: "relative",
-          fontFamily:
-            '"Segoe UI","Arial","Helvetica","Noto Sans","sans-serif"',
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
         }}
       >
-        <Stack direction="row" alignItems="center" spacing={1}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           <Box
             sx={{
-              width: 34,
-              height: 34,
+              width: 32,
+              height: 32,
               borderRadius: "50%",
-              bgcolor: "rgba(255,255,255,0.2)",
+              bgcolor: "#fff", // ✅ chỉ đổi dòng này
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              fontSize: 16,
-              fontWeight: 700,
             }}
           >
-            ⚠️
+            ❓
           </Box>
 
-          <Typography
-            sx={{
-              fontSize: 16,
-              fontWeight: 700,
-              fontFamily:
-                '"Segoe UI","Arial","Helvetica","Noto Sans","sans-serif"',
-            }}
-          >
-            XÁC NHẬN XÓA
+          <Typography sx={{ fontSize: 15.5, fontWeight: 600 }}>
+            Xác nhận xóa kết quả
           </Typography>
-        </Stack>
+        </Box>
 
         <IconButton
           onClick={() => setOpenConfirmDelete(false)}
           sx={{
-            position: "absolute",
-            right: 10,
-            top: 10,
             color: "#fff",
             bgcolor: "rgba(255,255,255,0.15)",
+            "&:hover": {
+              bgcolor: "rgba(255,255,255,0.25)",
+            },
           }}
         >
           <CloseIcon fontSize="small" />
         </IconButton>
       </Box>
 
-      {/* CONTENT */}
-      <DialogContent
-        sx={{
-          px: 3,
-          py: 4,
-          fontFamily:
-            '"Segoe UI","Arial","Helvetica","Noto Sans","sans-serif"',
-          textAlign: "center",
-        }}
-      >
-        <Stack spacing={2.5} alignItems="center">
-          <Typography
-            sx={{
-              fontSize: 15,
-              color: "#64748b",
-              fontFamily:
-                '"Segoe UI","Arial","Helvetica","Noto Sans","sans-serif"',
-              textAlign: "left",
-              width: "100%",
-              pl: 4, // 👈 lùi trái (spacing MUI)
-            }}
-          >
+      {/* ===== CONTENT (CHỈ ĐỔI NỘI DUNG) ===== */}
+      <DialogContent sx={{ px: 3, py: 3 }}>
+        <Box sx={{ textAlign: "center", py: 1 }}>
+          <Typography sx={{ fontSize: 14, color: "#334155" }}>
             Bạn có chắc chắn muốn xóa kết quả của
           </Typography>
 
           <Typography
             sx={{
+              mt: 2,
               fontSize: 18,
               fontWeight: 700,
               color: "#0f172a",
               textTransform: "uppercase",
-              fontFamily:
-                '"Segoe UI","Arial","Helvetica","Noto Sans","sans-serif"',
             }}
           >
             {studentResult?.hoVaTen}
@@ -395,61 +383,74 @@ const ResultDialog_GV = ({
 
           <Typography
             sx={{
-              fontSize: 13,
+              mt: 2,
+              fontSize: 14,
               color: "#ef4444",
+              lineHeight: 1.6,
               fontWeight: 600,
-              fontFamily:
-                '"Segoe UI","Arial","Helvetica","Noto Sans","sans-serif"',
             }}
           >
-            ⚠️ Hành động này không thể hoàn tác
+            Hành động này không thể hoàn tác
           </Typography>
-
-          {/* BUTTONS */}
-          <Stack direction="row" spacing={2} sx={{ mt: 2 }}>
-            <Button
-              variant="outlined"
-              onClick={() => setOpenConfirmDelete(false)}
-              sx={{
-                minWidth: 110,
-                height: 42,
-                borderRadius: "12px",
-                textTransform: "none",
-                fontWeight: 600,
-                fontFamily:
-                  '"Segoe UI","Arial","Helvetica","Noto Sans","sans-serif"',
-              }}
-            >
-              Hủy
-            </Button>
-
-            <Button
-              variant="contained"
-              color="error"
-              onClick={async () => {
-                setOpenConfirmDelete(false);
-                await handleDeleteResult();
-              }}
-              sx={{
-                minWidth: 140,
-                height: 42,
-                borderRadius: "12px",
-                textTransform: "none",
-                fontWeight: 700,
-                background: "linear-gradient(135deg, #1976d2, #42a5f5)",
-                boxShadow: "0 10px 20px rgba(25,118,210,0.25)",
-                fontFamily:
-                  '"Segoe UI","Arial","Helvetica","Noto Sans","sans-serif"',
-                "&:hover": {
-                  background: "linear-gradient(135deg, #1565c0, #1976d2)",
-                },
-              }}
-            >
-              Xóa
-            </Button>
-          </Stack>
-        </Stack>
+        </Box>
       </DialogContent>
+
+      {/* ===== ACTIONS (GIỮ NGUYÊN STYLE MẪU) ===== */}
+      <Box
+        sx={{
+          px: 3,
+          pb: 3,
+          display: "flex",
+          justifyContent: "center",
+        }}
+      >
+        <Stack direction="row" spacing={2}>
+          {/* CANCEL */}
+          <Button
+            onClick={() => setOpenConfirmDelete(false)}
+            variant="outlined"
+            sx={{
+              minWidth: 110,
+              height: 42,
+              borderRadius: "12px",
+              textTransform: "none",
+              fontWeight: 600,
+              borderColor: "#cbd5e1",
+              color: "#475569",
+              background: "#fff",
+              "&:hover": {
+                borderColor: "#94a3b8",
+                background: "#f1f5f9",
+              },
+            }}
+          >
+            Hủy
+          </Button>
+
+          {/* DELETE */}
+          <Button
+            variant="contained"
+            onClick={async () => {
+              setOpenConfirmDelete(false);
+              await handleDeleteResult();
+            }}
+            sx={{
+              minWidth: 130,
+              height: 42,
+              borderRadius: "12px",
+              textTransform: "none",
+              fontWeight: 700,
+              background: "linear-gradient(135deg, #1976d2, #42a5f5)",
+              boxShadow: "0 10px 20px rgba(25,118,210,0.25)",
+              "&:hover": {
+                background: "linear-gradient(135deg, #1565c0, #1976d2)",
+              },
+            }}
+          >
+            Xóa
+          </Button>
+        </Stack>
+      </Box>
     </Dialog>
     
     <Snackbar
