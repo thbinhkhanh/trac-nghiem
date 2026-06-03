@@ -1,5 +1,13 @@
-import { collection, getDocs, doc, setDoc } from "firebase/firestore";
+import {
+  collection,
+  getDocs,
+  doc,
+  writeBatch,
+} from "firebase/firestore";
 
+// =========================
+// GENERATE CLASS LIST
+// =========================
 const generateClassList = () => {
   const result = [];
 
@@ -16,63 +24,100 @@ const generateClassList = () => {
   return result;
 };
 
+// =========================
+// LIMIT CONCURRENCY HELPER
+// =========================
+const runWithLimit = async (items, limit, handler) => {
+  const queue = [...items];
+
+  const workers = new Array(limit).fill(null).map(async () => {
+    while (queue.length) {
+      const item = queue.shift();
+      await handler(item);
+    }
+  });
+
+  await Promise.all(workers);
+};
+
+// =========================
+// CHUNK ARRAY (FOR BATCH 500 LIMIT)
+// =========================
+const chunkArray = (arr, size) => {
+  const result = [];
+  for (let i = 0; i < arr.length; i += size) {
+    result.push(arr.slice(i, i + size));
+  }
+  return result;
+};
+
+// =========================
+// MAIN SYNC FUNCTION
+// =========================
 export const syncMasterHocSinh = async ({ db, namHoc, hocKy }) => {
   try {
-    // =========================
-    // SAFE INPUT
-    // =========================
     const namHocKey = (namHoc || "2025-2026").replace(/-/g, "_");
     const safeHocKy = hocKy || "Cuối năm";
 
     const sourceRoot = `DATA_KTDK_${namHocKey}`;
     const classList = generateClassList();
 
-    // =========================
-    // LOOP CLASS
-    // =========================
-    await Promise.all(
-      classList.map(async (classKey) => {
-        try {
-          const snap = await getDocs(
-            collection(db, sourceRoot, safeHocKy, classKey)
+    console.log("🚀 Start sync:", classList.length, "classes");
+
+    await runWithLimit(classList, 3, async (classKey) => {
+      try {
+        const snap = await getDocs(
+          collection(db, sourceRoot, safeHocKy, classKey)
+        );
+
+        if (snap.empty) return;
+
+        const writes = [];
+
+        snap.docs.forEach((docItem) => {
+          const data = docItem.data();
+
+          const ref = doc(
+            db,
+            "DS_HOCSINH_2025_2026",
+            classKey,
+            "STUDENTS",
+            docItem.id
           );
 
-          if (snap.empty) return;
+          writes.push({
+            ref,
+            data: {
+              hoTen: data.hoVaTen || data.hoTen || "",
+              khoi: classKey.charAt(0),
+              lop: classKey,
+              updatedAt: Date.now(),
+            },
+          });
+        });
 
-          await Promise.all(
-            snap.docs.map((docItem) => {
-              const data = docItem.data();
+        // =========================
+        // BATCH WRITE (MAX 500)
+        // =========================
+        const batches = chunkArray(writes, 500);
 
-              // =========================
-              // MASTER PATH (FIXED)
-              // DS_HOCSINH_MASTER / class / STUDENTS / studentId
-              // =========================
-              const ref = doc(
-                db,
-                "DS_HOCSINH_MASTER",
-                classKey,
-                "STUDENTS",
-                docItem.id
-              );
+        for (const batchItems of batches) {
+          const batch = writeBatch(db);
 
-              return setDoc(
-                ref,
-                {
-                  hoTen: data.hoVaTen || data.hoTen || "",
-                  khoi: classKey.charAt(0),
-                  lop: classKey,
-                  updatedAt: new Date().toLocaleDateString("vi-VN"),
-                },
-                { merge: true }
-              );
-            })
-          );
-        } catch (err) {
-          console.warn("skip class:", classKey, err.message);
+          batchItems.forEach(({ ref, data }) => {
+            batch.set(ref, data, { merge: true });
+          });
+
+          await batch.commit();
         }
-      })
-    );
 
+        console.log(`✅ Done class ${classKey} - ${writes.length} students`);
+      } catch (err) {
+        console.warn("⚠️ skip class:", classKey, err.message);
+      }
+    });
+
+    console.log("🎉 SYNC DONE");
   } catch (err) {
     console.error("❌ SYNC MASTER ERROR:", err);
   }

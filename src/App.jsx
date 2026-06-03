@@ -13,6 +13,8 @@ import { AppBar, Toolbar, Button, Typography, Box } from "@mui/material";
 import Info from "./pages/Info";
 import HocSinh from "./pages/HocSinh";
 import GiaoVien from "./pages/GiaoVien";
+import DanhSach from "./pages/DanhSach";
+import NhapdiemKTDK from "./pages/NhapdiemKTDK";
 import Login from "./pages/Login";
 import TongHopKQ from "./pages/TongHopKQ";
 import TracNghiemGV from "./pages/TracNghiemGV";
@@ -89,8 +91,10 @@ function AppContent() {
     },
     ...(isLoggedIn
       ? [
-        { path: "/giaovien", label: "Giáo viên" }, // 👈 thêm ở đây  
-        { path: "/ketqua", label: "Kết quả" },
+          { path: "/giaovien", label: "Giáo viên" }, 
+          { path: "/danhsach", label: "Danh sách" }, 
+          { path: "/nhapdiem-ktdk", label: "Nhập điểm" },
+          { path: "/ketqua", label: "Kết quả" },
           { path: "/tracnghiem-gv", label: "Soạn đề" },
           { path: "/tracnghiem-test", label: "Test đề" },
           { path: "/de-thi", label: "Đề thi" },
@@ -162,32 +166,22 @@ function AppContent() {
           </Box>
 
           {isLoggedIn && (
-            <Box sx={{ minWidth: 140, mr: 1 }}>
-              <select
-                value={config?.hocKy || "Giữa kỳ I"}
-                onChange={handleHocKyChange}
-                style={{
-                  backgroundColor: "transparent",
-                  color: "white",
-                  borderRadius: "4px",
-                  padding: "6px 12px",
-                  border: "2px solid white",
-                  outline: "none",
-                  fontSize: "0.95rem",
-                  width: "100%",
-                  appearance: "none",
-                  backgroundImage:
-                    "url(\"data:image/svg+xml;utf8,<svg fill='white' height='18' viewBox='0 0 24 24' width='18' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>\")",
-                  backgroundRepeat: "no-repeat",
-                  backgroundPositionX: "calc(100% - 10px)",
-                  backgroundPositionY: "center",
-                }}
-              >
-                <option value="Giữa kỳ I">Giữa kỳ I</option>
-                <option value="Cuối kỳ I">Cuối kỳ I</option>
-                <option value="Giữa kỳ II">Giữa kỳ II</option>
-                <option value="Cuối năm">Cuối năm</option>
-              </select>
+            <Box
+              sx={{
+                minWidth: 100,
+                px: 1.5,
+                py: 0.4,
+                mr: 1,
+                borderRadius: "999px",
+                border: "1px solid rgba(255,255,255,0.4)",
+                color: "white",
+                fontSize: "0.9rem",
+                fontWeight: 600,
+                whiteSpace: "nowrap",
+                textAlign: "center",
+              }}
+            >
+              {config?.namHoc || "2025-2026"}
             </Box>
           )}
         </Toolbar>
@@ -267,6 +261,24 @@ function AppContent() {
                 <GiaoVien />
               ) : (
                 <Navigate to="/login" replace />
+              )
+            }
+          />
+
+          <Route
+            path="/danhsach"
+            element={
+              isLoggedIn ? <DanhSach /> : <Navigate to="/login" />
+            }
+          />
+
+          <Route
+            path="/nhapdiem-ktdk"
+            element={
+              isLoggedIn ? (
+                <NhapdiemKTDK />
+              ) : (
+                <Navigate to="/login" />
               )
             }
           />

@@ -85,7 +85,7 @@ export default function Info() {
       if (!classKey) return;
 
       const snap = await getDocs(
-        collection(db, "DS_HOCSINH_MASTER", classKey, "STUDENTS")
+        collection(db, "DS_HOCSINH", classKey, "STUDENTS")
       );
 
       const list = snap.docs.map((d) => ({

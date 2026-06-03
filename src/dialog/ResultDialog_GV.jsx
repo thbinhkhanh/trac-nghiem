@@ -34,15 +34,15 @@ const ResultDialog_GV = ({
 
   const getScore = () => {
     if (configData?.kiemTraDinhKi) {
-      return studentResult?.diem ?? "";
+      return studentResult?.lyThuyet ?? "";
     }
     if (configData?.baiTapTuan) {
       return convertPercentToScore(studentResult?.diemTN);
     }
     if (configData?.onTap) {
-      return studentResult?.diem ?? "";
+      return studentResult?.lyThuyet ?? "";
     }
-    return studentResult?.diem ?? "";
+    return studentResult?.lyThuyet ?? "";
   };
 
   const studentName =

@@ -1,4 +1,13 @@
 import React, { useState, useEffect, useContext } from "react";
+
+/* =======================
+   React Router
+======================= */
+import { useNavigate } from "react-router-dom";
+
+/* =======================
+   MUI Components
+======================= */
 import {
   Box,
   Typography,
@@ -12,29 +21,58 @@ import {
   MenuItem,
   Autocomplete,
 } from "@mui/material";
+
+/* =======================
+   MUI Icons
+======================= */
 import SchoolIcon from "@mui/icons-material/School";
-import { useNavigate } from "react-router-dom";
+
+/* =======================
+   Context
+======================= */
 import { ConfigContext } from "../context/ConfigContext";
+
+/* =======================
+   Firebase
+======================= */
 import { db } from "../firebase";
 import { collection, getDocs, doc, getDoc } from "firebase/firestore";
+
+/* =======================
+   Components
+======================= */
 import ResultDialog from "../dialog/ResultDialog";
 
 // ✅ Chỉ còn 1 trường
 const SCHOOL_LIST = ["TH Lâm Văn Bền"];
 
 export default function Info() {
-  const [school, setSchool] = useState("TH Lâm Văn Bền"); // mặc định
-  const [fullname, setFullname] = useState("");
-  const [lop, setLop] = useState("");
-  const [classes, setClasses] = useState([]);
-  const [filteredClasses, setFilteredClasses] = useState([]);
-  const [khoi, setKhoi] = useState("Khối 4");
-  const [errorMsg, setErrorMsg] = useState("");
-  const [students, setStudents] = useState([]);
-
   const navigate = useNavigate();
   const { config, setConfig } = useContext(ConfigContext);
 
+  /* =======================
+    FORM / INPUT STATE
+  ======================= */
+  const [school, setSchool] = useState("TH Lâm Văn Bền"); // mặc định
+  const [fullname, setFullname] = useState("");
+  const [lop, setLop] = useState("");
+  const [khoi, setKhoi] = useState("Khối 4");
+
+  /* =======================
+    DATA STATE
+  ======================= */
+  const [classes, setClasses] = useState([]);
+  const [filteredClasses, setFilteredClasses] = useState([]);
+  const [students, setStudents] = useState([]);
+
+  /* =======================
+    ERROR STATE
+  ======================= */
+  const [errorMsg, setErrorMsg] = useState("");
+
+  /* =======================
+    RESULT DIALOG STATE
+  ======================= */
   const [openResultDialog, setOpenResultDialog] = useState(false);
   const [resultData, setResultData] = useState(null);
 
@@ -84,13 +122,21 @@ export default function Info() {
     fetchStudentsByClass(lop);
   }, [lop]);
 
+  const namHocRaw = config?.namHoc || "2025-2026";
+  const namHoc = namHocRaw.replaceAll("-", "_");
+
   const fetchStudentsByClass = async (classKey) => {
     try {
       if (!classKey) return;
 
       const snap = await getDocs(
-        collection(db, "DS_HOCSINH_MASTER", classKey, "STUDENTS")
-      );
+        collection(
+          db,
+          `DS_HOCSINH_${namHoc}`,
+          classKey,
+          "STUDENTS"
+        )
+    );
 
       const list = snap.docs.map((d) => ({
         id: d.id,

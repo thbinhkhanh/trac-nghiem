@@ -25,7 +25,7 @@ const ResultDialog = ({
     if (!choXemDiem) return null;
 
     if (configData?.kiemTraDinhKi) {
-      return studentResult?.diem;
+      return studentResult?.lyThuyet;
     }
 
     if (configData?.baiTapTuan) {
@@ -33,7 +33,7 @@ const ResultDialog = ({
     }
 
     if (configData?.onTap) {
-      return studentResult?.diem;
+      return studentResult?.lyThuyet;
     }
 
     return "";

@@ -1,4 +1,13 @@
 import React, { useState, useEffect, useContext } from "react";
+
+/* =======================
+   React Router
+======================= */
+import { useNavigate } from "react-router-dom";
+
+/* =======================
+   MUI Components
+======================= */
 import {
   Box,
   Typography,
@@ -11,35 +20,65 @@ import {
   Select,
   MenuItem,
   Autocomplete,
-  Paper
+  Paper,
 } from "@mui/material";
+
+/* =======================
+   MUI Icons
+======================= */
 import SchoolIcon from "@mui/icons-material/School";
-import { useNavigate } from "react-router-dom";
-import { ConfigContext } from "../context/ConfigContext";
-import { db } from "../firebase";
-import { collection, getDocs, doc, getDoc } from "firebase/firestore";
 import HistoryIcon from "@mui/icons-material/History";
 import GroupsIcon from "@mui/icons-material/Groups";
-import ResultDialog from "../dialog/ResultDialog";
 
+/* =======================
+   Context
+======================= */
+import { ConfigContext } from "../context/ConfigContext";
+
+/* =======================
+   Firebase
+======================= */
+import { db } from "../firebase";
+import { collection, getDocs, doc, getDoc } from "firebase/firestore";
+
+/* =======================
+   Components
+======================= */
+import ResultDialog from "../dialog/ResultDialog";
 // ✅ Chỉ còn 1 trường
 const SCHOOL_LIST = ["TH Lâm Văn Bền"];
 
 export default function HocSinh() {
-  const [school, setSchool] = useState("TH Lâm Văn Bền"); // mặc định
-  //const [fullname, setFullname] = useState("");
-  const [lop, setLop] = useState("");
-  const [classes, setClasses] = useState([]);
-  const [filteredClasses, setFilteredClasses] = useState([]);
-  const [khoi, setKhoi] = useState("Khối 4");
-  //const [errorMsg, setErrorMsg] = useState("");
-  const [students, setStudents] = useState([]);
-  const [recentStudents, setRecentStudents] = useState([]);
-  const [showAll, setShowAll] = useState(false);
-
   const navigate = useNavigate();
   const { config, setConfig } = useContext(ConfigContext);
+
+  /* =======================
+    FORM / SELECTION STATE
+  ======================= */
+  const [school, setSchool] = useState("TH Lâm Văn Bền"); // mặc định
+  const [lop, setLop] = useState("4A");
+  const [khoi, setKhoi] = useState("Khối 4");
   const [hocKi, setHocKi] = useState("");
+
+  // const [fullname, setFullname] = useState("");
+  // const [errorMsg, setErrorMsg] = useState("")
+
+  /* =======================
+    DATA STATE
+  ======================= */
+  const [classes, setClasses] = useState([]);
+  const [filteredClasses, setFilteredClasses] = useState([]);
+  const [students, setStudents] = useState([]);
+  const [recentStudents, setRecentStudents] = useState([]);
+
+  /* =======================
+    UI STATE
+  ======================= */
+  const [showAll, setShowAll] = useState(false);
+
+  /* =======================
+    RESULT DIALOG STATE
+  ======================= */
   const [openResultDialog, setOpenResultDialog] = useState(false);
   const [resultData, setResultData] = useState(null);
  
@@ -115,7 +154,7 @@ export default function HocSinh() {
         setResultData({
           ...data,
           lop: lop,
-          hoVaTen: student.hoTen,
+          hoTen: student.hoTen,
         });
 
         setOpenResultDialog(true);
@@ -148,27 +187,44 @@ export default function HocSinh() {
     }
   };
 
-  // 🔹 Fetch danh sách lớp (LAMVANBEN)
+  // 🔹 Fetch danh sách lớp 
   useEffect(() => {
-    const fetchClasses = async () => {
-      try {
-        const lopRef = doc(db, "LAMVANBEN", "lop");
-        const lopSnap = await getDoc(lopRef);
+  const fetchClasses = async () => {
+    try {
+      const namHocRaw = config?.namHoc || "2025-2026";
+      const namHocKey = namHocRaw.replaceAll("-", "_");
 
-        const classList = lopSnap.exists()
-          ? lopSnap.data().list ?? []
-          : [];
+      console.log("📘 config.namHoc =", config?.namHoc);
+      console.log("📘 namHocRaw =", namHocRaw);
+      console.log("📘 namHocKey (Firestore doc) =", namHocKey);
 
-        classList.sort((a, b) => a.localeCompare(b));
-        setClasses(classList);
-        setLop(classList[0] || "");
-      } catch (err) {
-        console.error("❌ Lỗi fetch lớp:", err);
-      }
-    };
+      const lopRef = doc(db, "DANHSACH_LOP", namHocKey);
+      const lopSnap = await getDoc(lopRef);
 
-    fetchClasses();
-  }, []);
+      console.log("📦 Firestore exists =", lopSnap.exists());
+      console.log("📦 raw data =", lopSnap.data());
+
+      const classList = lopSnap.exists()
+        ? lopSnap.data().list || []
+        : [];
+
+      console.log("📚 classList trước sort =", classList);
+
+      classList.sort((a, b) => a.localeCompare(b));
+
+      console.log("📚 classList sau sort =", classList);
+
+      setClasses(classList);
+
+      setLop((prev) => prev || classList[0] || "");
+    } catch (err) {
+      console.error("❌ Lỗi fetch lớp theo năm học:", err);
+      setClasses([]);
+    }
+  };
+
+  fetchClasses();
+}, [config?.namHoc]);
 
   useEffect(() => {
     const soKhoi = khoi.replace("Khối ", "");
@@ -177,7 +233,7 @@ export default function HocSinh() {
     setFilteredClasses(filtered);
 
     // chỉ reset lớp, KHÔNG auto chọn lớp đầu
-    setLop("");
+    //setLop("");
     setStudents([]);
   }, [khoi, classes]);
 
@@ -186,12 +242,20 @@ export default function HocSinh() {
     fetchStudentsByClass(lop);
   }, [lop]);
 
+  const namHocRaw = config?.namHoc || "2025-2026";
+  const namHoc = namHocRaw.replaceAll("-", "_");
+
   const fetchStudentsByClass = async (classKey) => {
     try {
       if (!classKey) return;
 
       const snap = await getDocs(
-        collection(db, "DS_HOCSINH_MASTER", classKey, "STUDENTS")
+        collection(
+          db,
+          `DS_HOCSINH_${namHoc}`,
+          classKey,
+          "STUDENTS"
+        )
       );
 
       const list = snap.docs.map((d) => ({
@@ -690,7 +754,7 @@ export default function HocSinh() {
         studentResult={
           config?.choXemDiem
             ? resultData
-            : { ...resultData, diem: undefined }
+            : { ...resultData, lyThuyet: undefined }
         }
         choXemDiem={config?.choXemDiem ?? false}
         configData={config}

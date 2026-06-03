@@ -24,6 +24,7 @@ import {
   RadioGroup,
   FormControlLabel,
   Radio,
+  Grid
 } from "@mui/material";
 
 // =========================
@@ -63,6 +64,7 @@ export default function QuanTri() {
   // =========================
   const { classData, setClassData } = useContext(StudentContext);
   const { config, setConfig } = useContext(ConfigContext);
+  const namHocKey = config.namHoc || "2025-2026";
 
   // =========================
   // STATE - PASSWORD
@@ -125,42 +127,56 @@ export default function QuanTri() {
 
   // ===== Fetch lớp & config =====
   useEffect(() => {
-  const fetchData = async () => {
-    try {
-      // 🔹 Lấy config chung từ CONFIG/config
-      const snapConfig = await getDoc(doc(db, "CONFIG", "config"));
-      if (snapConfig.exists()) {
-        const data = snapConfig.data();
+    const fetchData = async () => {
+      try {
+        // =========================
+        // 🔹 LẤY CONFIG
+        // =========================
+        const snapConfig = await getDoc(doc(db, "CONFIG", "config"));
 
-        // ✅ cập nhật context
-        setConfig({
-          choXemDapAn: data.choXemDapAn ?? false,
-          choXemDiem: data.choXemDiem ?? false,
-          hocKy: data.hocKy ?? "Cuối kỳ I",
-          timeLimit: data.timeLimit ?? 20,
-          xuatFileBaiLam: data.xuatFileBaiLam ?? true,
-          khoaHeThong: data.khoaHeThong ?? false,
-          examType: data.examType ?? "ktdk",
-          giaoDien: data.giaoDien ?? "dang_nhap",
-        });
+        if (snapConfig.exists()) {
+          const data = snapConfig.data();
 
-        setSelectedSemester(data.hocKy ?? "Cuối kỳ I");
-        setExamType(data.examType ?? "ktdk");
-        setTimeInput(data.timeLimit ?? 20);
+          setConfig({
+            choXemDapAn: data.choXemDapAn ?? false,
+            choXemDiem: data.choXemDiem ?? false,
+            hocKy: data.hocKy ?? "Cuối kỳ I",
+            timeLimit: data.timeLimit ?? 20,
+            xuatFileBaiLam: data.xuatFileBaiLam ?? true,
+            khoaHeThong: data.khoaHeThong ?? false,
+            examType: data.examType ?? "ktdk",
+            giaoDien: data.giaoDien ?? "dang_nhap",
+            namHoc: data.namHoc ?? "2025-2026", // 👈 thêm nếu chưa có
+          });
+
+          setSelectedSemester(data.hocKy ?? "Cuối kỳ I");
+          setExamType(data.examType ?? "ktdk");
+          setTimeInput(data.timeLimit ?? 20);
+        }
+
+        // =========================
+        // 🔥 LẤY LỚP THEO NĂM HỌC MỚI
+        // =========================
+        const namHocKey = snapConfig.exists()
+          ? (snapConfig.data()?.namHoc || "2025-2026").replaceAll("-", "_")
+          : "2025_2026";
+
+        const lopRef = doc(db, "DANHSACH_LOP", namHocKey);
+        const lopSnap = await getDoc(lopRef);
+
+        const classList = lopSnap.exists()
+          ? (lopSnap.data().list || []).sort()
+          : [];
+
+        setClasses(classList);
+        setSelectedClass((prev) => prev || classList[0] || "");
+      } catch (err) {
+        console.error("❌ Lỗi fetch lớp hoặc config:", err);
       }
+    };
 
-      // 🔹 Lấy danh sách lớp từ LAMVANBEN/lop
-      const lopSnap = await getDoc(doc(db, "LAMVANBEN", "lop"));
-      const classList = (lopSnap.data()?.list || []).sort();
-      setClasses(classList);
-      setSelectedClass((prev) => prev || classList[0] || "");
-    } catch (err) {
-      console.error("❌ Lỗi fetch lớp hoặc config:", err);
-    }
-  };
-
-  fetchData();
-}, [setConfig]);
+    fetchData();
+  }, [setConfig]);
 
   // ===== Cập nhật config =====
   const updateConfigField = async (field, value) => {
@@ -252,8 +268,14 @@ export default function QuanTri() {
     setSelectedClass(uniqueNew[0]);
     updateConfigField("lop", uniqueNew[0]);
 
+    // =========================
+    // 🔥 CHỈ THAY PHẦN NÀY
+    // =========================
+    const namHocRaw = config?.namHoc || "2025-2026";
+    const namHocKey = namHocRaw.replaceAll("-", "_");
+
     await setDoc(
-      doc(db, "LAMVANBEN", "lop"),
+      doc(db, "DANHSACH_LOP", namHocKey),
       { list: updated },
       { merge: true }
     );
@@ -265,11 +287,24 @@ export default function QuanTri() {
 
   const handleDeleteClass = async () => {
     const updated = classes.filter((c) => c !== selectedClass).sort();
+
     setClasses(updated);
+
     const nextClass = updated[0] || "";
     setSelectedClass(nextClass);
     updateConfigField("lop", nextClass);
-    await setDoc(doc(db, "LAMVANBEN", "lop"), { list: updated }, { merge: true });
+
+    // =========================
+    // 🔥 LƯU THEO NĂM HỌC
+    // =========================
+    const namHocRaw = config?.namHoc || "2025-2026";
+    const namHocKey = namHocRaw.replaceAll("-", "_");
+
+    await setDoc(
+      doc(db, "DANHSACH_LOP", namHocKey),
+      { list: updated },
+      { merge: true }
+    );
   };
 
   const handleTimeLimitChange = (value) => {
@@ -311,14 +346,13 @@ export default function QuanTri() {
       px: 2,
       display: "flex",
       justifyContent: "center",
-      fontFamily:
-        '"Roboto","Inter","Arial",sans-serif',
+      fontFamily: '"Roboto","Inter","Arial",sans-serif',
     }}
   >
     <Box
       sx={{
         width: "100%",
-        maxWidth: 450,
+        maxWidth: 700,
       }}
     >
       {!openBackup && !openRestore && (
@@ -329,790 +363,371 @@ export default function QuanTri() {
             overflow: "hidden",
             background: "#f8fafc",
             border: "1px solid #e2e8f0",
-            boxShadow:
-              "0 10px 35px rgba(0,0,0,0.12)",
+            boxShadow: "0 10px 35px rgba(0,0,0,0.12)",
           }}
         >
-        {/* ===== HEADER ===== */}
-        <Box
-          sx={{
-            px: 3,
-            py: 1.5,
-            background: "#1976d2",
-            color: "#fff",
-          }}
-        >
-          <Stack
-            direction="row"
-            alignItems="center"
-            justifyContent="space-between"
+          {/* ===== HEADER ===== */}
+          <Box
+            sx={{
+              px: 3,
+              py: 1.5,
+              background: "#1976d2",
+              color: "#fff",
+            }}
           >
-            <Box>
-              <Typography
-                sx={{
-                  fontSize: 17,
-                  fontWeight: 700,
-                }}
-              >
-                Cấu hình hệ thống
-              </Typography>
-
-              {/*<Typography
-                sx={{
-                  fontSize: 13,
-                  opacity: 0.92,
-                  mt: 0.3,
-                }}
-              >
-                Quản lý hệ thống kiểm tra
-              </Typography>*/}
-            </Box>
-
-            <Tooltip title="Đổi mật khẩu">
-              <IconButton
-                onClick={() =>
-                  setOpenChangePw(true)
-                }
-                sx={{
-                  color: "#fff",
-                  bgcolor:
-                    "rgba(255,255,255,0.12)",
-
-                  "&:hover": {
-                    bgcolor:
-                      "rgba(255,255,255,0.22)",
-                  },
-                }}
-              >
-                <VpnKeyIcon />
-              </IconButton>
-            </Tooltip>
-          </Stack>
-        </Box>
-
-        {/* ===== CONTENT ===== */}
-        <Box
-          sx={{
-            px: 3,
-            py: 2.5,
-          }}
-        >
-          <Stack spacing={2}>
-            {/* ACCOUNT */}
-            <Box
-              sx={{
-                p: 1.5,
-                borderRadius: "5px",
-                bgcolor: "#fff",
-                border:
-                  "1px solid #e2e8f0",
-              }}
-            >
-              <Typography
-                sx={{
-                  fontSize: 13,
-                  color: "#64748b",
-                  mb: 0.5,
-                }}
-              >
-                Tài khoản đăng nhập
-              </Typography>
-
-              <Typography
-                sx={{
-                  fontWeight: 700,
-                  color: "#1e293b",
-                }}
-              >
-                {account ||
-                  "Chưa đăng nhập"}
-              </Typography>
-            </Box>
-
-            {/* NĂM HỌC */}
-            <FormControl
-              fullWidth
-              size="small"
-            >
-              <InputLabel>
-                Năm học
-              </InputLabel>
-
-              <Select
-                value={
-                  config.namHoc ||
-                  "2025-2026"
-                }
-                label="Năm học"
-                onChange={(e) =>
-                  updateConfigField(
-                    "namHoc",
-                    e.target.value
-                  )
-                }
-                sx={{
-                  bgcolor: "#fff",
-                  borderRadius: "5px",
-
-                  "& .MuiOutlinedInput-notchedOutline":
-                    {
-                      borderColor:
-                        "#dbe2ea",
-                    },
-
-                  "&.Mui-focused .MuiOutlinedInput-notchedOutline":
-                    {
-                      borderColor:
-                        "#1976d2",
-                      borderWidth: 2,
-                    },
-                }}
-              >
-                {Array.from(
-                  { length: 5 },
-                  (_, i) => {
-                    const start =
-                      2025 + i;
-
-                    const end =
-                      start + 1;
-
-                    const value = `${start}-${end}`;
-
-                    return (
-                      <MenuItem
-                        key={value}
-                        value={value}
-                      >
-                        {value}
-                      </MenuItem>
-                    );
-                  }
-                )}
-              </Select>
-            </FormControl>
-
-            {/* HỌC KỲ */}
-            <FormControl
-              fullWidth
-              size="small"
-            >
-              <InputLabel>
-                Học kỳ
-              </InputLabel>
-
-              <Select
-                value={selectedSemester}
-                label="Học kỳ"
-                onChange={(e) =>
-                  updateConfigField(
-                    "hocKy",
-                    e.target.value
-                  )
-                }
-                sx={{
-                  bgcolor: "#fff",
-                  borderRadius: "5px",
-
-                  "& .MuiOutlinedInput-notchedOutline":
-                    {
-                      borderColor:
-                        "#dbe2ea",
-                    },
-
-                  "&.Mui-focused .MuiOutlinedInput-notchedOutline":
-                    {
-                      borderColor:
-                        "#1976d2",
-                      borderWidth: 2,
-                    },
-                }}
-              >
-                <MenuItem value="Giữa kỳ I">
-                  Giữa kỳ I
-                </MenuItem>
-
-                <MenuItem value="Cuối kỳ I">
-                  Cuối kỳ I
-                </MenuItem>
-
-                <MenuItem value="Giữa kỳ II">
-                  Giữa kỳ II
-                </MenuItem>
-
-                <MenuItem value="Cuối năm">
-                  Cuối năm
-                </MenuItem>
-              </Select>
-            </FormControl>
-
-            {/* LỚP */}
-            <Box
-              sx={{
-                p: 1.6,
-                borderRadius: "5px",
-                bgcolor: "#fff",
-                border:
-                  "1px solid #e2e8f0",
-              }}
-            >
-              <Typography
-                sx={{
-                  fontSize: 14,
-                  fontWeight: 700,
-                  mb: 1.5,
-                  color: "#1e293b",
-                }}
-              >
-                Quản lý lớp
-              </Typography>
-
-              <Stack
-                direction="row"
-                spacing={1}
-                alignItems="center"
-              >
-                <FormControl
-                  size="small"
-                  fullWidth
-                >
-                  <InputLabel>
-                    Lớp
-                  </InputLabel>
-
-                  <Select
-                    value={selectedClass}
-                    label="Lớp"
-                    onChange={(e) =>
-                      updateConfigField(
-                        "lop",
-                        e.target.value
-                      )
-                    }
-                    sx={{
-                      bgcolor: "#fff",
-                      borderRadius:
-                        "5px",
-
-                      "& .MuiOutlinedInput-notchedOutline":
-                        {
-                          borderColor:
-                            "#dbe2ea",
-                        },
-
-                      "&.Mui-focused .MuiOutlinedInput-notchedOutline":
-                        {
-                          borderColor:
-                            "#1976d2",
-                          borderWidth: 2,
-                        },
-                    }}
-                  >
-                    {classes.map(
-                      (cls) => (
-                        <MenuItem
-                          key={cls}
-                          value={cls}
-                        >
-                          {cls}
-                        </MenuItem>
-                      )
-                    )}
-                  </Select>
-                </FormControl>
-
-                <Tooltip title="Thêm lớp">
-                  <IconButton
-                    onClick={() =>
-                      setAddingClass(true)
-                    }
-                    sx={{
-                      color: "#fff",
-                      bgcolor: "#22c55e",
-
-                      "&:hover": {
-                        bgcolor:
-                          "#16a34a",
-                      },
-                    }}
-                  >
-                    <Add />
-                  </IconButton>
-                </Tooltip>
-
-                <Tooltip title="Xóa lớp">
-                  <IconButton
-                    onClick={
-                      handleDeleteClass
-                    }
-                    sx={{
-                      color: "#fff",
-                      bgcolor: "#ef4444",
-
-                      "&:hover": {
-                        bgcolor:
-                          "#dc2626",
-                      },
-                    }}
-                  >
-                    <Delete />
-                  </IconButton>
-                </Tooltip>
-              </Stack>
-
-              {addingClass && (
-                <Stack
-                  direction={{
-                    xs: "column",
-                    sm: "row",
-                  }}
-                  spacing={1}
-                  mt={1.5}
-                >
-                  <Tooltip
-                    title="Ví dụ: 4.1->4.6, 5A->5H"
-                    arrow
-                  >
-                    <TextField
-                      size="small"
-                      label="Tên lớp"
-                      placeholder="VD: 3A->3K"
-                      value={newClass}
-                      onChange={(e) =>
-                        setNewClass(
-                          e.target.value
-                        )
-                      }
-                      fullWidth
-                    />
-                  </Tooltip>
-
-                  <Button
-                    variant="contained"
-                    onClick={
-                      handleAddClass
-                    }
-                    sx={{
-                      textTransform:
-                        "none",
-                      borderRadius:
-                        "12px",
-                      fontWeight: 700,
-                      boxShadow:
-                        "none",
-                    }}
-                  >
-                    Lưu
-                  </Button>
-
-                  <Button
-                    onClick={() =>
-                      setAddingClass(
-                        false
-                      )
-                    }
-                    sx={{
-                      textTransform:
-                        "none",
-                    }}
-                  >
-                    Hủy
-                  </Button>
-                </Stack>
-              )}
-            </Box>
-
-            {/* THỜI GIAN */}
-            <Box
-              sx={{
-                p: 1.6,
-                borderRadius: "5px",
-                bgcolor: "#fff",
-                border:
-                  "1px solid #e2e8f0",
-              }}
-            >
-              <Typography
-                sx={{
-                  fontSize: 14,
-                  fontWeight: 700,
-                  mb: 1.5,
-                  color: "#1e293b",
-                }}
-              >
-                Thời gian làm bài
-              </Typography>
-
-              <Stack
-                direction="row"
-                spacing={1.5}
-                alignItems="center"
-              >
-                <TextField
-                  type="number"
-                  size="small"
-                  value={timeInput}
-                  onChange={(e) =>
-                    handleTimeLimitChange(
-                      e.target.value
-                    )
-                  }
-                  inputProps={{
-                    min: 1,
-                    style: {
-                      width: 65,
-                      textAlign:
-                        "center",
-                    },
-                  }}
-                />
-
-                <Typography
-                  sx={{
-                    color: "#64748b",
-                    fontWeight: 500,
-                  }}
-                >
-                  phút
-                </Typography>
-              </Stack>
-            </Box>
-
-            {/* ===== GIAO DIỆN ===== */}
-            <Box
-              sx={{
-                p: 1.6,
-                borderRadius: "5px",
-                bgcolor: "#fff",
-                border: "1px solid #e2e8f0",
-              }}
-            >
-              <Typography
-                sx={{
-                  fontSize: 14,
-                  fontWeight: 700,
-                  mb: 1.5,
-                  color: "#1e293b",
-                }}
-              >
-                Giao diện
-              </Typography>
-
-              <RadioGroup
-                row
-                value={config.giaoDien || "dang_nhap"}
-                onChange={(e) =>
-                  updateConfigField("giaoDien", e.target.value)
-                }
-              >
-                <FormControlLabel
-                  value="dang_nhap"
-                  control={<Radio size="small" />}
-                  label="Đăng nhập"
-                />
-
-                <FormControlLabel
-                  value="the_ten"
-                  control={<Radio size="small" />}
-                  label="Dùng thẻ tên"
-                />
-              </RadioGroup>
-            </Box>
-
-            {/* TÙY CHỌN */}
-            {/* ===== LOẠI ĐỀ ===== */}
-            <Box
-              sx={{
-                p: 1.6,
-                borderRadius: "5px",
-                bgcolor: "#fff",
-                border: "1px solid #e2e8f0",
-              }}
-            >
-              <Typography
-                sx={{
-                  fontSize: 14,
-                  fontWeight: 700,
-                  mb: 1.5,
-                  color: "#1e293b",
-                }}
-              >
-                Loại đề
-              </Typography>
-
-              <RadioGroup
-                row
-                value={config.examType || "ktdk"}
-                onChange={(e) =>
-                  updateConfigField(
-                    "examType",
-                    e.target.value
-                  )
-                }
-              >
-                <FormControlLabel
-                  value="ktdk"
-                  control={<Radio size="small" />}
-                  label="KTĐK"
-                />
-
-                <FormControlLabel
-                  value="on_tap"
-                  control={<Radio size="small" />}
-                  label="Ôn tập"
-                />
-              </RadioGroup>
-            </Box>
-
-            {/* ===== HIỂN THỊ KẾT QUẢ ===== */}
-            <Box
-              sx={{
-                p: 1.6,
-                borderRadius: "5px",
-                bgcolor: "#fff",
-                border: "1px solid #e2e8f0",
-              }}
-            >
-              <Typography
-                sx={{
-                  fontSize: 14,
-                  fontWeight: 700,
-                  mb: 1.5,
-                  color: "#1e293b",
-                }}
-              >
-                Hiển thị kết quả
-              </Typography>
-
-              <Stack spacing={0.5}>
-
-                {/* CHO XEM ĐIỂM */}
-                <Box
-                  onClick={() =>
-                    updateConfigField(
-                      "choXemDiem",
-                      !config.choXemDiem
-                    )
-                  }
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    cursor: "pointer",
-                    userSelect: "none",
-                  }}
-                >
-                  <Checkbox
-                    checked={config.choXemDiem || false}
-                    onChange={(e) =>
-                      updateConfigField(
-                        "choXemDiem",
-                        e.target.checked
-                      )
-                    }
-                    onClick={(e) => e.stopPropagation()}
-                  />
-
-                  <Typography>
-                    Cho xem điểm
-                  </Typography>
-                </Box>
-
-                {/* CHO XEM ĐÁP ÁN */}
-                <Box
-                  onClick={() =>
-                    updateConfigField(
-                      "choXemDapAn",
-                      !config.choXemDapAn
-                    )
-                  }
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    cursor: "pointer",
-                    userSelect: "none",
-                  }}
-                >
-                  <Checkbox
-                    checked={config.choXemDapAn || false}
-                    onChange={(e) =>
-                      updateConfigField(
-                        "choXemDapAn",
-                        e.target.checked
-                      )
-                    }
-                    onClick={(e) => e.stopPropagation()}
-                  />
-
-                  <Typography>
-                    Cho xem đáp án
-                  </Typography>
-                </Box>
-
-                {/* XUẤT FILE BÀI LÀM */}
-                <Box
-                  onClick={() =>
-                    updateConfigField(
-                      "xuatFileBaiLam",
-                      !config.xuatFileBaiLam
-                    )
-                  }
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    cursor: "pointer",
-                    userSelect: "none",
-                  }}
-                >
-                  <Checkbox
-                    checked={config.xuatFileBaiLam || false}
-                    onChange={(e) =>
-                      updateConfigField(
-                        "xuatFileBaiLam",
-                        e.target.checked
-                      )
-                    }
-                    onClick={(e) => e.stopPropagation()}
-                  />
-
-                  <Typography>
-                    Xuất file bài làm
-                  </Typography>
-                </Box>
-
-              </Stack>
-            </Box>
-
-            {/* ===== HỆ THỐNG ===== */}
-            <Box
-              sx={{
-                p: 1.6,
-                borderRadius: "5px",
-                bgcolor: "#fff",
-                border: "1px solid #e2e8f0",
-              }}
-            >
-              <Typography
-                sx={{
-                  fontSize: 14,
-                  fontWeight: 700,
-                  mb: 1.5,
-                  color: "#1e293b",
-                }}
-              >
-                Hệ thống
-              </Typography>
-
-              <Stack spacing={0.5}>
-
-                {/* KHÓA HỆ THỐNG */}
-                <Box
-                  onClick={() =>
-                    updateConfigField(
-                      "khoaHeThong",
-                      !config.khoaHeThong
-                    )
-                  }
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    cursor: "pointer",
-                    userSelect: "none",
-                  }}
-                >
-                  <Checkbox
-                    checked={config.khoaHeThong || false}
-                    onChange={(e) =>
-                      updateConfigField(
-                        "khoaHeThong",
-                        e.target.checked
-                      )
-                    }
-                    onClick={(e) => e.stopPropagation()}
-                    sx={{
-                      color: "#ef4444",
-                      "&.Mui-checked": {
-                        color: "#ef4444",
-                      },
-                    }}
-                  />
-
-                  <Typography
-                    fontWeight={700}
-                    color="#ef4444"
-                  >
-                    Khóa hệ thống
-                  </Typography>
-                </Box>
-
-              </Stack>
-            </Box>
-
-            {/* ACTIONS */}
             <Stack
               direction="row"
-              spacing={1.5}
+              alignItems="center"
+              justifyContent="space-between"
             >
-              <Button
-                fullWidth
-                variant="contained"
-                onClick={() =>
-                  setOpenBackup(true)
-                }
-                sx={{
-                  textTransform:
-                    "none",
-                  borderRadius:
-                    "12px",
-                  py: 1,
-                  fontWeight: 700,
-                  boxShadow: "none",
-                }}
-              >
-                Sao lưu
-              </Button>
+              {/* LEFT: TITLE */}
+              <Box>
+                <Typography sx={{ fontSize: 17, fontWeight: 700 }}>
+                  Cấu hình hệ thống
+                </Typography>
+              </Box>
 
-              <Button
-                fullWidth
-                variant="outlined"
-                color="secondary"
-                onClick={() =>
-                  setOpenRestore(true)
-                }
+              {/* RIGHT: ACCOUNT + ACTIONS */}
+              <Stack direction="row" spacing={1} alignItems="center">
+
+                {/* STATUS LOGIN */}
+                <Box
+                  sx={{
+                    px: 1.2,
+                    py: 0.3,
+                    borderRadius: "999px",
+                    fontSize: 13,
+                    fontWeight: 600,
+                    bgcolor: account ? "rgba(34,197,94,0.2)" : "rgba(239,68,68,0.2)",
+                    color: "#fff",
+                    border: "1px solid rgba(255,255,255,0.25)",
+                  }}
+                >
+                  {account ? account : "Chưa đăng nhập"}
+                </Box>
+
+                {/* CHANGE PASSWORD */}
+                <Tooltip title="Đổi mật khẩu">
+                  <IconButton
+                    onClick={() => setOpenChangePw(true)}
+                    sx={{
+                      color: "#fff",
+                      bgcolor: "rgba(255,255,255,0.12)",
+                      "&:hover": {
+                        bgcolor: "rgba(255,255,255,0.22)",
+                      },
+                    }}
+                  >
+                    <VpnKeyIcon />
+                  </IconButton>
+                </Tooltip>
+              </Stack>
+            </Stack>
+          </Box>
+
+          {/* ===== CONTENT ===== */}
+          <Box sx={{ px: 3, py: 2.5 }}>
+            <Grid container spacing={2}>
+
+              {/* ================= LEFT COLUMN ================= */}
+              <Grid size={{ xs: 12, md: 6 }}>
+                <Stack spacing={2}>
+
+                  {/* NĂM HỌC */}
+                  <FormControl fullWidth size="small">
+                    <InputLabel>Năm học</InputLabel>
+                    <Select
+                      value={config.namHoc || "2025-2026"}
+                      label="Năm học"
+                      onChange={(e) =>
+                        updateConfigField("namHoc", e.target.value)
+                      }
+                    >
+                      {Array.from({ length: 5 }, (_, i) => {
+                        const start = 2025 + i;
+                        const end = start + 1;
+                        const value = `${start}-${end}`;
+
+                        return (
+                          <MenuItem key={value} value={value}>
+                            {value}
+                          </MenuItem>
+                        );
+                      })}
+                    </Select>
+                  </FormControl>
+
+                  {/* HỌC KỲ */}
+                  <FormControl fullWidth size="small">
+                    <InputLabel>Học kỳ</InputLabel>
+                    <Select
+                      value={selectedSemester}
+                      label="Học kỳ"
+                      onChange={(e) =>
+                        updateConfigField("hocKy", e.target.value)
+                      }
+                    >
+                      <MenuItem value="Giữa kỳ I">Giữa kỳ I</MenuItem>
+                      <MenuItem value="Cuối kỳ I">Cuối kỳ I</MenuItem>
+                      <MenuItem value="Giữa kỳ II">Giữa kỳ II</MenuItem>
+                      <MenuItem value="Cuối năm">Cuối năm</MenuItem>
+                    </Select>
+                  </FormControl>
+
+                  {/* LỚP */}
+                  <Box
+                    sx={{
+                      p: 1.6,
+                      borderRadius: "5px",
+                      bgcolor: "#fff",
+                      border: "1px solid #e2e8f0",
+                    }}
+                  >
+                    <Typography
+                      sx={{
+                        fontSize: 14,
+                        fontWeight: 700,
+                        mb: 1.5,
+                        color: "#1e293b",
+                      }}
+                    >
+                      Quản lý lớp
+                    </Typography>
+
+                    <Stack direction="row" spacing={1} alignItems="center">
+                      <FormControl size="small" fullWidth>
+                        <InputLabel>Lớp</InputLabel>
+                        <Select
+                          value={selectedClass}
+                          label="Lớp"
+                          onChange={(e) =>
+                            updateConfigField("lop", e.target.value)
+                          }
+                        >
+                          {classes.map((cls) => (
+                            <MenuItem key={cls} value={cls}>
+                              {cls}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+
+                      <Tooltip title="Thêm lớp">
+                        <IconButton
+                          onClick={() => setAddingClass(true)}
+                          sx={{ color: "#fff", bgcolor: "#22c55e" }}
+                        >
+                          <Add />
+                        </IconButton>
+                      </Tooltip>
+
+                      <Tooltip title="Xóa lớp">
+                        <IconButton
+                          onClick={handleDeleteClass}
+                          sx={{ color: "#fff", bgcolor: "#ef4444" }}
+                        >
+                          <Delete />
+                        </IconButton>
+                      </Tooltip>
+                    </Stack>
+
+                    {addingClass && (
+                      <Stack
+                        direction={{ xs: "column", sm: "row" }}
+                        spacing={1}
+                        mt={1.5}
+                      >
+                        <TextField
+                          size="small"
+                          label="Tên lớp"
+                          value={newClass}
+                          onChange={(e) => setNewClass(e.target.value)}
+                          fullWidth
+                        />
+
+                        <Button variant="contained" onClick={handleAddClass}>
+                          Lưu
+                        </Button>
+
+                        <Button onClick={() => setAddingClass(false)}>
+                          Hủy
+                        </Button>
+                      </Stack>
+                    )}
+                  </Box>
+
+                  {/* GIAO DIỆN */}
+                  <Box sx={{ p: 1.6, bgcolor: "#fff", border: "1px solid #e2e8f0" }}>
+                    <Typography fontWeight={700}>Giao diện</Typography>
+
+                    <RadioGroup
+                      row
+                      value={config.giaoDien || "dang_nhap"}
+                      onChange={(e) =>
+                        updateConfigField("giaoDien", e.target.value)
+                      }
+                    >
+                      <FormControlLabel value="dang_nhap" control={<Radio />} label="Đăng nhập" />
+                      <FormControlLabel value="the_ten" control={<Radio />} label="Thẻ tên" />
+                    </RadioGroup>
+                  </Box>
+
+                  {/* LOẠI ĐỀ */}
+                  <Box sx={{ p: 1.6, bgcolor: "#fff", border: "1px solid #e2e8f0" }}>
+                    <Typography fontWeight={700}>Loại đề</Typography>
+
+                    <RadioGroup
+                      row
+                      value={config.examType || "ktdk"}
+                      onChange={(e) =>
+                        updateConfigField("examType", e.target.value)
+                      }
+                    >
+                      <FormControlLabel value="ktdk" control={<Radio />} label="KTĐK" />
+                      <FormControlLabel value="on_tap" control={<Radio />} label="Ôn tập" />
+                    </RadioGroup>
+                  </Box>
+
+                </Stack>
+              </Grid>
+
+              {/* ================= RIGHT COLUMN ================= */}
+              <Grid size={{ xs: 12, md: 6 }}>
+                <Stack spacing={2}>
+                  {/* ===== THỜI GIAN (ĐÃ DI CHUYỂN XUỐNG CUỐI CỘT TRÁI) ===== */}
+                  <Box sx={{ p: 1.6, bgcolor: "#fff", border: "1px solid #e2e8f0" }}>
+                    <Typography fontWeight={700}>Thời gian làm bài</Typography>
+
+                    <Stack direction="row" spacing={1.5} alignItems="center">
+                      <TextField
+                        type="number"
+                        size="small"
+                        value={timeInput}
+                        onChange={(e) =>
+                          handleTimeLimitChange(e.target.value)
+                        }
+                        inputProps={{
+                          min: 1,
+                          style: { width: 65, textAlign: "center" },
+                        }}
+                      />
+                      <Typography>phút</Typography>
+                    </Stack>
+                  </Box>
+                  
+                  {/* HIỂN THỊ KẾT QUẢ */}
+                  <Box sx={{ p: 1.6, bgcolor: "#fff", border: "1px solid #e2e8f0" }}>
+                    <Typography fontWeight={700}>Hiển thị kết quả</Typography>
+
+                    <Stack spacing={0.5}>
+                      {[
+                        ["choXemDiem", "Cho xem điểm"],
+                        ["choXemDapAn", "Cho xem đáp án"],
+                        ["xuatFileBaiLam", "Xuất file bài làm"],
+                      ].map(([key, label]) => (
+                        <Box
+                          key={key}
+                          onClick={() => updateConfigField(key, !config[key])}
+                          sx={{ display: "flex", alignItems: "center", cursor: "pointer" }}
+                        >
+                          <Checkbox
+                            checked={config[key] || false}
+                            onChange={(e) =>
+                              updateConfigField(key, e.target.checked)
+                            }
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                          <Typography>{label}</Typography>
+                        </Box>
+                      ))}
+                    </Stack>
+                  </Box>
+
+                  {/* HỆ THỐNG */}
+                  <Box sx={{ p: 1.6, bgcolor: "#fff", border: "1px solid #e2e8f0" }}>
+                    <Typography fontWeight={700}>Hệ thống</Typography>
+
+                    <Box
+                      onClick={() =>
+                        updateConfigField("khoaHeThong", !config.khoaHeThong)
+                      }
+                      sx={{ display: "flex", alignItems: "center", cursor: "pointer" }}
+                    >
+                      <Checkbox
+                        checked={config.khoaHeThong || false}
+                        onChange={(e) =>
+                          updateConfigField("khoaHeThong", e.target.checked)
+                        }
+                      />
+                      <Typography fontWeight={700} color="#ef4444">
+                        Khóa hệ thống
+                      </Typography>
+                    </Box>
+                  </Box>              
+                </Stack>
+              </Grid>
+            </Grid>
+            
+            <Box
+              sx={{
+                mt: 3,
+                display: "flex",
+                justifyContent: "center",
+              }}
+            >
+              <Stack
+                direction="row"
+                spacing={2}
                 sx={{
-                  textTransform:
-                    "none",
-                  borderRadius:
-                    "12px",
-                  py: 1,
-                  fontWeight: 700,
+                  width: "100%",
+                  maxWidth: 300, // 👈 giảm chiều rộng tổng thể
                 }}
               >
-                Phục hồi
-              </Button>
-            </Stack>
-          </Stack>
-        </Box>
-      </Card>
-      
+                <Button
+                  variant="contained"
+                  onClick={() => setOpenBackup(true)}
+                  sx={{
+                    flex: 1, // 👈 chia đều nhưng không full quá rộng
+                    textTransform: "none",
+                    borderRadius: "12px",
+                    py: 0.8,
+                    fontWeight: 700,
+                    fontSize: "0.85rem",
+                    boxShadow: "none",
+                  }}
+                >
+                  Sao lưu
+                </Button>
+
+                <Button
+                  variant="outlined"
+                  color="secondary"
+                  onClick={() => setOpenRestore(true)}
+                  sx={{
+                    flex: 1,
+                    textTransform: "none",
+                    borderRadius: "12px",
+                    py: 0.8,
+                    fontWeight: 700,
+                    fontSize: "0.85rem",
+                  }}
+                >
+                  Phục hồi
+                </Button>
+              </Stack>
+            </Box>
+          </Box>
+        </Card>
       )}
+
       {/* Backup */}
       {openBackup && (
-        <BackupPage
-          open={openBackup}
-          onClose={() =>
-            setOpenBackup(false)
-          }
-        />
+        <BackupPage open={openBackup} onClose={() => setOpenBackup(false)} />
       )}
 
       {/* Restore */}
       {openRestore && (
-        <RestorePage
-          open={openRestore}
-          onClose={() =>
-            setOpenRestore(false)
-          }
-        />
+        <RestorePage open={openRestore} onClose={() => setOpenRestore(false)} />
       )}
     </Box>
 
@@ -1120,21 +735,10 @@ export default function QuanTri() {
     <Snackbar
       open={snackbar.open}
       autoHideDuration={4000}
-      onClose={() =>
-        setSnackbar((s) => ({
-          ...s,
-          open: false,
-        }))
-      }
-      anchorOrigin={{
-        vertical: "bottom",
-        horizontal: "right",
-      }}
+      onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
+      anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
     >
-      <Alert
-        severity={snackbar.severity}
-        variant="filled"
-      >
+      <Alert severity={snackbar.severity} variant="filled">
         {snackbar.message}
       </Alert>
     </Snackbar>
@@ -1142,54 +746,16 @@ export default function QuanTri() {
     {/* Dialog đổi mật khẩu */}
     <Dialog
       open={openChangePw}
-      onClose={() =>
-        setOpenChangePw(false)
-      }
+      onClose={() => setOpenChangePw(false)}
       maxWidth="xs"
       fullWidth
-      PaperProps={{
-        sx: {
-          borderRadius: "14px",
-        },
-      }}
+      PaperProps={{ sx: { borderRadius: "14px" } }}
     >
-      <Box
-        sx={{
-          px: 3,
-          py: 1.5,
-          background: "#1976d2",
-          color: "#fff",
-        }}
-      >
-        <Stack
-          direction="row"
-          alignItems="center"
-          justifyContent="space-between"
-        >
-          <Typography
-            sx={{
-              fontSize: 16,
-              fontWeight: 700,
-            }}
-          >
-            Đổi mật khẩu
-          </Typography>
+      <Box sx={{ px: 3, py: 1.5, background: "#1976d2", color: "#fff" }}>
+        <Stack direction="row" justifyContent="space-between">
+          <Typography fontWeight={700}>Đổi mật khẩu</Typography>
 
-          <IconButton
-            onClick={() =>
-              setOpenChangePw(false)
-            }
-            sx={{
-              color: "#fff",
-              bgcolor:
-                "rgba(255,255,255,0.12)",
-
-              "&:hover": {
-                bgcolor:
-                  "rgba(255,255,255,0.22)",
-              },
-            }}
-          >
+          <IconButton onClick={() => setOpenChangePw(false)}>
             <CloseIcon />
           </IconButton>
         </Stack>
@@ -1200,69 +766,29 @@ export default function QuanTri() {
           <TextField
             label="Mật khẩu mới"
             type="password"
-            fullWidth
-            size="small"
             value={newPw}
-            onChange={(e) =>
-              setNewPw(
-                e.target.value
-              )
-            }
+            onChange={(e) => setNewPw(e.target.value)}
+            fullWidth
           />
 
           <TextField
             label="Nhập lại mật khẩu"
             type="password"
-            fullWidth
-            size="small"
             value={confirmPw}
-            onChange={(e) =>
-              setConfirmPw(
-                e.target.value
-              )
-            }
+            onChange={(e) => setConfirmPw(e.target.value)}
+            fullWidth
           />
 
           {pwError && (
-            <Typography
-              color="error"
-              fontWeight={600}
-            >
-              {pwError}
-            </Typography>
+            <Typography color="error">{pwError}</Typography>
           )}
 
-          <Stack
-            direction="row"
-            justifyContent="flex-end"
-            spacing={1}
-          >
-            <Button
-              onClick={() =>
-                setOpenChangePw(false)
-              }
-              sx={{
-                textTransform:
-                  "none",
-              }}
-            >
+          <Stack direction="row" justifyContent="flex-end" spacing={1}>
+            <Button onClick={() => setOpenChangePw(false)}>
               Hủy
             </Button>
 
-            <Button
-              variant="contained"
-              onClick={
-                handleChangePassword
-              }
-              sx={{
-                textTransform:
-                  "none",
-                borderRadius:
-                  "12px",
-                fontWeight: 700,
-                boxShadow: "none",
-              }}
-            >
+            <Button variant="contained" onClick={handleChangePassword}>
               Lưu
             </Button>
           </Stack>

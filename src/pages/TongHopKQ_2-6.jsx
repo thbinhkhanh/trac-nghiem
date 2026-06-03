@@ -1,65 +1,19 @@
 import React, { useState, useEffect } from "react";
-
-/* =======================
-   MUI Components
-======================= */
 import {
-  Box,
-  Paper,
-  Typography,
-  TextField,
-  MenuItem,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  CircularProgress,
-  IconButton,
-  Stack,
-  Tooltip,
-  Snackbar,
-  Alert,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
+  Box, Paper, Typography, TextField, MenuItem,
+  Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
+  CircularProgress, IconButton, Stack, Tooltip, Snackbar, Alert,
+  Dialog, DialogTitle, DialogContent, DialogActions, Button
 } from "@mui/material";
-
-/* =======================
-   Firebase
-======================= */
 import { db } from "../firebase";
-import {
-  collection,
-  getDocs,
-  doc,
-  getDoc,
-  writeBatch,
-  deleteDoc,
-} from "firebase/firestore";
-
-/* =======================
-   Icons
-======================= */
+import { collection, getDocs, doc, getDoc, writeBatch, deleteDoc } from "firebase/firestore";
 import { Delete, DeleteForever, FileDownload } from "@mui/icons-material";
-import CloseIcon from "@mui/icons-material/Close";
-import SyncIcon from "@mui/icons-material/Sync";
-
-/* =======================
-   Utils
-======================= */
 import { exportKetQuaExcel } from "../utils/exportKetQuaExcel";
+import CloseIcon from "@mui/icons-material/Close";
+import ConfirmDialog from "../dialog/ConfirmDialog";
 import { syncLamVanBenToKTDK } from "../utils/syncLamVanBenToKTDK";
 import { syncMasterHocSinh } from "../utils/syncMasterHocSinh";
-
-/* =======================
-   Components
-======================= */
-import ConfirmDialog from "../dialog/ConfirmDialog";
-import DeleteDataClassesDialog from "../dialog/DeleteDataClassesDialog";
+import SyncIcon from "@mui/icons-material/Sync";
 
 export default function TongHopKQ() {
   // =========================
@@ -72,7 +26,7 @@ export default function TongHopKQ() {
   const [config, setConfig] = useState(null);
 
   const [syncing, setSyncing] = useState(false);
-
+  
   // =========================
   // STATE - DATA
   // =========================
@@ -99,8 +53,6 @@ export default function TongHopKQ() {
   const [dialogTitle, setDialogTitle] = useState("");
   const [dialogContent, setDialogContent] = useState("");
   const [dialogAction, setDialogAction] = useState(null);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  
 
   // =========================
   // CONSTANTS
@@ -133,7 +85,7 @@ export default function TongHopKQ() {
     fetchConfig();
   }, []);
 
-  /*const handleSyncHocSinh = async () => {
+  const handleSyncHocSinh = async () => {
     try {
       setSyncing(true);
 
@@ -157,9 +109,9 @@ export default function TongHopKQ() {
     } finally {
       setSyncing(false);
     }
-  };*/
+  };
 
-  /*const handleSyncData = () => {
+  const handleSyncData = () => {
     openConfirmDialog(
       "Đồng bộ dữ liệu",
       "Bạn có chắc muốn đồng bộ LAMVANBEN → DATA KTDK? Dữ liệu có thể bị ghi đè!",
@@ -185,7 +137,7 @@ export default function TongHopKQ() {
         }
       }
     );
-  };*/
+  };
 
   // 🔹 Lấy học kỳ từ CONFIG/config
   useEffect(() => {
@@ -208,31 +160,18 @@ export default function TongHopKQ() {
   useEffect(() => {
     const fetchClasses = async () => {
       try {
-        const yearKey = (config?.namHoc || "2025-2026").replace(/-/g, "_");
+        const lopSnap = await getDoc(doc(db, "LAMVANBEN", "lop"));
 
-        const docRef = doc(db, "DANHSACH_LOP", yearKey);
-        const snap = await getDoc(docRef);
-
-        if (!snap.exists()) {
-          console.warn("⚠️ Không tìm thấy DANHSACH_LOP:", yearKey);
-          setClassesList([]);
-          setSelectedLop("");
-          return;
-        }
-
-        const data = snap.data();
-
-        const classList = data.list || [];
-
-        console.log("📌 CLASS LIST FROM DANHSACH_LOP:", classList);
+        const classList = lopSnap.exists()
+          ? lopSnap.data().list ?? []
+          : [];
 
         classList.sort((a, b) => a.localeCompare(b));
 
         setClassesList(classList);
         setSelectedLop(classList[0] || "");
-
       } catch (err) {
-        console.error("❌ Lỗi load danh sách lớp:", err);
+        console.error("Lỗi load lớp:", err);
       }
     };
 
@@ -246,50 +185,67 @@ export default function TongHopKQ() {
     setLoading(true);
 
     try {
-      const yearKey = (config?.namHoc || "2025-2026").replace(/-/g, "_");
-      const sourceRoot = `DATA_KTDK_${yearKey}`;
-      const classKey = selectedLop.replace(".", "_");
-      const colRef = collection(
-        db,
-        sourceRoot,
-        hocKi,
-        classKey
-      );
-
+      const colRef = collection(db, `${folder}/${hocKi}/${selectedLop}`);
       const snapshot = await getDocs(colRef);
 
       if (snapshot.empty) {
-        console.warn("⚠️ NO DATA FOUND AT THIS PATH!");
         setResults([]);
+        setSnackbarSeverity("warning");
+        setSnackbarMessage(`Không tìm thấy kết quả cho lớp ${selectedLop}`);
+        setSnackbarOpen(true);
         setLoading(false);
         return;
       }
 
-      const data = snapshot.docs.map((docSnap, idx) => {
+      let data = snapshot.docs.map((docSnap) => {
         const d = docSnap.data();
 
+        let ngayHienThi = "";
+        if (d.ngayKiemTra?.seconds) {
+          ngayHienThi = new Date(d.ngayKiemTra.seconds * 1000).toLocaleDateString("vi-VN");
+        } else if (typeof d.ngayKiemTra === "string") {
+          ngayHienThi = d.ngayKiemTra;
+        }
+        
         return {
           docId: docSnap.id,
-          hoVaTen: d.hoVaTen || "",
-          diem: d.lyThuyet ?? "",
-          thoiGianLamBai: d.thoiGianLamBai || "",
-          soLanLam: d.soLanLam ?? "",
-          ngayHienThi: d.ngayKiemTra || "",
+          ...d,
+          soLanLam: d.soLanLam ?? "",   // ⭐ THÊM DÒNG NÀY
+          ngayHienThi,
         };
       });
 
-      setResults(
-        data.map((item, idx) => ({
-          ...item,
-          stt: idx + 1,
-        }))
-      );
+      const compareVietnameseName = (a, b) => {
+        const namePartsA = a.hoVaTen?.trim().split(" ").reverse() || [];
+        const namePartsB = b.hoVaTen?.trim().split(" ").reverse() || [];
+        const len = Math.max(namePartsA.length, namePartsB.length);
 
+        for (let i = 0; i < len; i++) {
+          const partA = (namePartsA[i] || "").toLowerCase();
+          const partB = (namePartsB[i] || "").toLowerCase();
+          const cmp = partA.localeCompare(partB, "vi");
+          if (cmp !== 0) return cmp;
+        }
+        return 0;
+      };
+
+      data.sort(compareVietnameseName);
+
+      const numberedData = data.map((item, idx) => ({
+        stt: idx + 1,
+        ...item,
+      }));
+
+      setResults(numberedData);
     } catch (err) {
-      console.error("❌ LOAD RESULTS ERROR:", err);
-    } finally {
-      setLoading(false);
+      console.error("❌ Lỗi khi load kết quả:", err);
+      setResults([]);
+      setSnackbarSeverity("error");
+      setSnackbarMessage("❌ Lỗi khi load kết quả!");
+      setSnackbarOpen(true);
     }
+
+    setLoading(false);
   };
 
   useEffect(() => {
@@ -297,47 +253,65 @@ export default function TongHopKQ() {
   }, [selectedLop, hocKi, loai]);
 
   // Xóa lớp
-  const handleDeleteClass = async () => {
-    try {
-      const yearKey = (config?.namHoc || "2025-2026").replace(/-/g, "_");
-      const sourceRoot = `DATA_KTDK_${yearKey}`;
-
-      const classKey = selectedLop.replace(".", "_");
-
-      const colRef = collection(
-        db,
-        sourceRoot,
-        hocKi,
-        classKey
-      );
-
-      const snapshot = await getDocs(colRef);
-
-      if (snapshot.empty) {
-        setSnackbarSeverity("warning");
-        setSnackbarMessage("Không có dữ liệu để xóa!");
-        setSnackbarOpen(true);
-        return;
+  const handleDeleteClass = () => {
+    openConfirmDialog(
+      "Xóa kết quả lớp",
+      `⚠️ Bạn có chắc muốn xóa kết quả của lớp ${selectedLop}?\nHành động này không thể hoàn tác!`,
+      async () => {
+        try {
+          const colRef = collection(db, `${folder}/${hocKi}/${selectedLop}`);
+          const snapshot = await getDocs(colRef);
+          if (snapshot.empty) {
+            setSnackbarSeverity("warning");
+            setSnackbarMessage(`Không có dữ liệu để xóa cho lớp ${selectedLop}!`);
+            setSnackbarOpen(true);
+            return;
+          }
+          const batch = writeBatch(db);
+          snapshot.docs.forEach((d) => batch.delete(d.ref));
+          await batch.commit();
+          setResults([]);
+          setSnackbarSeverity("success");
+          setSnackbarMessage("✅ Đã xóa kết quả của lớp thành công!");
+          setSnackbarOpen(true);
+        } catch (err) {
+          console.error("❌ Lỗi khi xóa lớp:", err);
+          setSnackbarSeverity("error");
+          setSnackbarMessage("❌ Xóa lớp thất bại!");
+          setSnackbarOpen(true);
+        }
       }
+    );
+  };
 
-      const batch = writeBatch(db);
-      snapshot.docs.forEach((d) => batch.delete(d.ref));
-
-      await batch.commit();
-
-      setSnackbarSeverity("success");
-      setSnackbarMessage("✅ Đã xóa thành công!");
-      setSnackbarOpen(true);
-
-      setDeleteDialogOpen(false);
-      loadResults();
-
-    } catch (err) {
-      console.error(err);
-      setSnackbarSeverity("error");
-      setSnackbarMessage("❌ Xóa thất bại!");
-      setSnackbarOpen(true);
-    }
+  // Xóa toàn trường
+  const handleDeleteSchoolBySemester = () => {
+    openConfirmDialog(
+      "Xóa toàn trường",
+      `⚠️ Bạn có chắc muốn xóa kết quả của toàn trường?\nHành động này không thể hoàn tác!`,
+      async () => {
+        try {
+          const hocKyRef = doc(db, folder, hocKi);
+          const hocKySnap = await getDoc(hocKyRef);
+          if (!hocKySnap.exists()) {
+            setSnackbarSeverity("warning");
+            setSnackbarMessage(`Không có dữ liệu ${hocKi} để xóa!`);
+            setSnackbarOpen(true);
+            return;
+          }
+          await deleteDoc(hocKyRef);
+          setResults([]);
+          setSnackbarSeverity("success");
+          setSnackbarMessage(`✅ Đã xóa kết quả ${hocKi} của TOÀN TRƯỜNG`);
+          setSnackbarOpen(true);
+        } catch (err) {
+          console.error("❌ Firestore: Xóa toàn trường thất bại:", err);
+          setSnackbarSeverity("error");
+          setSnackbarMessage("❌ Lỗi khi xóa toàn trường!");
+          setSnackbarOpen(true);
+        }
+      }
+    );
   };
 
   // Xuất Excel
@@ -426,7 +400,7 @@ export default function TongHopKQ() {
 
               <Tooltip title="Xóa lớp">
                 <IconButton
-                  onClick={() => setDeleteDialogOpen(true)}
+                  onClick={handleDeleteClass}
                   disabled={deleting}
                   sx={{
                     ...circleIconStyle,
@@ -441,7 +415,24 @@ export default function TongHopKQ() {
                 </IconButton>
               </Tooltip>
 
-              {/*<Tooltip title="Đồng bộ dữ liệu">
+              <Tooltip title="Xóa toàn trường theo học kỳ">
+                <IconButton
+                  onClick={handleDeleteSchoolBySemester}
+                  disabled={deleting}
+                  sx={{
+                    ...circleIconStyle,
+                    color: "#d32f2f",
+                    "&:hover": {
+                      bgcolor: "#d32f2f",
+                      color: "#fff",
+                    },
+                  }}
+                >
+                  <DeleteForever />
+                </IconButton>
+              </Tooltip>
+
+              <Tooltip title="Đồng bộ dữ liệu">
                 <IconButton
                   onClick={handleSyncData}
                   disabled={syncing}
@@ -456,10 +447,10 @@ export default function TongHopKQ() {
                 >
                   <SyncIcon />
                 </IconButton>
-              </Tooltip>*/}
+              </Tooltip>
             </Stack>
 
-            {/*<Tooltip title="Đồng bộ danh sách học sinh">
+            <Tooltip title="Đồng bộ danh sách học sinh">
               <IconButton
                 onClick={handleSyncHocSinh}
                 disabled={syncing}
@@ -474,7 +465,7 @@ export default function TongHopKQ() {
               >
                 <SyncIcon />
               </IconButton>
-            </Tooltip>*/}
+            </Tooltip>
           </Box>
 
           {/* TIÊU ĐỀ – căn giữa như mẫu */}
@@ -574,7 +565,7 @@ export default function TongHopKQ() {
                 <TableBody>
                   {(() => {
                     const filtered = results.filter(
-                      r => r.diem !== undefined && r.diem !== null
+                      r => r.diem !== "" && r.diem !== null && r.diem !== undefined
                     );
 
                     const displayData =
@@ -673,41 +664,6 @@ export default function TongHopKQ() {
         }}
       />
 
-      <DeleteDataClassesDialog
-        open={deleteDialogOpen}
-        onClose={() => setDeleteDialogOpen(false)}
-        classesList={classesList}
-        onConfirmDelete={async (selected) => {
-          try {
-            setDeleting(true);
-
-            const batch = writeBatch(db);
-
-            for (const lop of selected) {
-              const colRef = collection(db, `${folder}/${hocKi}/${lop}`);
-              const snap = await getDocs(colRef);
-
-              snap.docs.forEach((d) => batch.delete(d.ref));
-            }
-
-            await batch.commit();
-
-            setSnackbarSeverity("success");
-            setSnackbarMessage("✅ Đã xóa dữ liệu lớp thành công!");
-            setSnackbarOpen(true);
-
-            setDeleteDialogOpen(false);
-            loadResults();
-          } catch (err) {
-            console.error(err);
-            setSnackbarSeverity("error");
-            setSnackbarMessage("❌ Xóa thất bại!");
-            setSnackbarOpen(true);
-          } finally {
-            setDeleting(false);
-          }
-        }}
-      />
 
     </Box>
 
