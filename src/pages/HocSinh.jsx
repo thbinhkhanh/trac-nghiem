@@ -115,6 +115,7 @@ export default function HocSinh() {
       const namHoc = namHocRaw.replaceAll("-", "_");
       const hocKy = config?.hocKy || "Cuối năm";
       const lop = student.lop || config?.lop || "4A";
+      setLop(lop); // 👈 FIX 1: update dropdown ngay lập tức
 
       const studentKey = convertToId(student.hoTen || student.id);
 
@@ -528,8 +529,13 @@ export default function HocSinh() {
                   boxShadow: "0 8px 28px rgba(15,23,42,.06)",
                   transition: ".25s ease",
 
+                  //"&:hover": {
+                  //  transform: "translateY(-4px)",
+                  //  boxShadow: "0 18px 40px rgba(37,99,235,.16)",
+                  //  borderColor: "#93c5fd",
+                  //},
+
                   "&:hover": {
-                    transform: "translateY(-4px)",
                     boxShadow: "0 18px 40px rgba(37,99,235,.16)",
                     borderColor: "#93c5fd",
                   },
