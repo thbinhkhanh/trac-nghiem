@@ -90,9 +90,23 @@ export default function NhapdiemKTDK() {
     }
   }, [config?.mon]);
 
-  useEffect(() => {
+  /*useEffect(() => {
     if (config?.lop) setSelectedClass(config.lop);
-  }, [config?.lop]);
+  }, [config?.lop]);*/
+
+  useEffect(() => {
+    if (!config?.namHoc) return;
+
+    const yearKey = config.namHoc.replaceAll("-", "_");
+
+    const savedClass = localStorage.getItem(`selectedClass_${yearKey}`);
+
+    if (savedClass) {
+      setSelectedClass(savedClass);
+    } else if (config?.lop) {
+      setSelectedClass(config.lop);
+    }
+  }, [config?.lop, config?.namHoc]);
 
   useEffect(() => {
     const fetchClasses = async () => {
@@ -112,9 +126,14 @@ export default function NhapdiemKTDK() {
         setClassData(classList);
         setClasses(classList);
 
-        if (classList.length > 0) {
-          setSelectedClass((prev) => prev || classList[0]);
-        }
+        // ✅ CHỈ SET MẶC ĐỊNH 1 LẦN
+        setSelectedClass((prev) => {
+          if (prev && classList.includes(prev)) {
+            return prev; // giữ lớp user đang chọn
+          }
+          return classList[0] || "";
+        });
+
       } catch (err) {
         console.error("❌ Lỗi lấy danh sách lớp:", err);
         setClasses([]);
@@ -937,10 +956,22 @@ const fetchStudentsAndStatus = async (cls) => {
               labelId="lop-label"
               value={selectedClass}
               label="Lớp"
+              //onChange={async (e) => {
+              //  const newClass = e.target.value;
+              //  setSelectedClass(newClass);
+              //  setConfig(prev => ({ ...prev, lop: newClass }));
+              //  setStudents([]);
+              //  await fetchStudentsAndStatus(newClass);
+              //</FormControl>}}
               onChange={async (e) => {
                 const newClass = e.target.value;
+
                 setSelectedClass(newClass);
                 setConfig(prev => ({ ...prev, lop: newClass }));
+
+                const yearKey = config.namHoc.replaceAll("-", "_");
+                localStorage.setItem(`selectedClass_${yearKey}`, newClass);
+
                 setStudents([]);
                 await fetchStudentsAndStatus(newClass);
               }}
