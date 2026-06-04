@@ -27,7 +27,6 @@ export default function ChangePasswordDialog({
       onClose={onClose}
       maxWidth="xs"
       fullWidth
-      disableEscapeKeyDown
       PaperProps={{
         sx: {
           borderRadius: "18px",
@@ -76,6 +75,9 @@ export default function ChangePasswordDialog({
             top: 10,
             color: "#fff",
             bgcolor: "rgba(255,255,255,0.15)",
+            "&:hover": {
+              bgcolor: "rgba(255,255,255,0.25)",
+            },
           }}
         >
           <CloseIcon fontSize="small" />
@@ -101,24 +103,54 @@ export default function ChangePasswordDialog({
             fullWidth
           />
 
-          {/* chỉ hiển thị lỗi từ parent */}
           {pwError && (
-            <Typography color="error" sx={{ fontSize: 14 }}>
+            <Typography color="error" sx={{ textAlign: "center" }}>
               {pwError}
             </Typography>
           )}
-
-          <Stack direction="row" spacing={2} justifyContent="flex-end">
-            <Button onClick={onClose} variant="outlined">
-              Hủy
-            </Button>
-
-            <Button variant="contained" onClick={onSave}>
-              Lưu
-            </Button>
-          </Stack>
         </Stack>
       </DialogContent>
+
+      {/* FOOTER (GIỮ GIỐNG BẢN GỐC) */}
+      <Stack
+        direction="row"
+        spacing={2}
+        justifyContent="center"
+        sx={{ pb: 3 }}
+      >
+        <Button
+          variant="outlined"
+          onClick={onClose}
+          sx={{
+            minWidth: 110,
+            height: 42,
+            borderRadius: "12px",
+            textTransform: "none",
+            fontWeight: 600,
+          }}
+        >
+          Hủy
+        </Button>
+
+        <Button
+          variant="contained"
+          onClick={onSave}
+          sx={{
+            minWidth: 130,
+            height: 42,
+            borderRadius: "12px",
+            textTransform: "none",
+            fontWeight: 700,
+            background: "linear-gradient(135deg, #1976d2, #42a5f5)",
+            boxShadow: "0 10px 20px rgba(25,118,210,0.25)",
+            "&:hover": {
+              background: "linear-gradient(135deg, #1565c0, #1976d2)",
+            },
+          }}
+        >
+          Lưu
+        </Button>
+      </Stack>
     </Dialog>
   );
 }

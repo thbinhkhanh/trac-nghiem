@@ -4,10 +4,37 @@ import {
   Route,
   Navigate,
   Link,
-  useLocation,
   useNavigate,
 } from "react-router-dom";
-import { AppBar, Toolbar, Button, Typography, Box } from "@mui/material";
+
+import {
+  AppBar,
+  Toolbar,
+  Button,
+  Typography,
+  Box,
+  IconButton,
+  Menu,
+  Dialog,
+  DialogContent,
+  TextField,
+  Stack,
+  Snackbar, 
+  Alert,
+  Tooltip
+} from "@mui/material";
+
+import { doc, setDoc } from "firebase/firestore";
+import { db } from "./firebase";
+
+import AppsIcon from "@mui/icons-material/Apps";
+import CloseIcon from "@mui/icons-material/Close";
+
+import PersonIcon from "@mui/icons-material/Person";
+import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
+import LoginIcon from "@mui/icons-material/Login";
+import LockResetIcon from "@mui/icons-material/LockReset";
+import LogoutIcon from "@mui/icons-material/Logout";
 
 // 🔹 Pages
 import Info from "./pages/Info";
@@ -36,35 +63,102 @@ import { StudentDataProvider } from "./context/StudentDataContext";
 import { StudentKTDKProvider } from "./context/StudentKTDKContext";
 import { SelectedClassProvider } from "./context/SelectedClassContext";
 
-// 🔥 DASHBOARD THẺ
+// 🔥 DASHBOARD
 function Dashboard({ isLoggedIn }) {
   const navigate = useNavigate();
 
   if (!isLoggedIn) return <Navigate to="/login" replace />;
 
   const cards = [
-    { label: "Học sinh", path: "/hocsinh", icon: "🎓", color: "#1976d2" },
-    { label: "Giáo viên", path: "/giaovien", icon: "👨‍🏫", color: "#2e7d32" },
-    { label: "Kết quả KTĐK", path: "/ketqua", icon: "📊", color: "#9c27b0" },
-    { label: "Nhập điểm, đánh giá", path: "/nhapdiem-ktdk", icon: "✏️", color: "#ed6c02" },
-    { label: "Xuất đánh giá ra C1", path: "/xuat-danh-gia", icon: "📄", color: "#0288d1" },
-    { label: "Danh sách học sinh", path: "/danhsach", icon: "📋", color: "#00796b" },
-    { label: "Soạn đề", path: "/tracnghiem-gv", icon: "🧠", color: "#c2185b" },
-    { label: "Test đề", path: "/tracnghiem-test", icon: "🧪", color: "#6a1b9a" },
-    { label: "Đề thi", path: "/de-thi", icon: "📝", color: "#ef6c00" },
-    { label: "Cài đặt hệ thống", path: "/quan-tri", icon: "⚙️", color: "#455a64" },
+    {
+      label: "Phòng thi trực tuyến",
+      description: "Làm bài kiểm tra và thi trực tuyến",
+      path: "/hocsinh",
+      icon: "🎓",
+      color: "#1976d2",
+    },
+    {
+      label: "Theo dõi, quản lí KTĐK",
+      description: "Tra cứu kết quả kiểm tra và ôn tập của học sinh theo lớp",
+      path: "/giaovien",
+      icon: "👨‍🏫",
+      color: "#2e7d32",
+    },
+    {
+      label: "Kết quả KTĐK",
+      description: "Tra cứu và tổng hợp kết quả kiểm tra định kỳ, ôn tập",
+      path: "/ketqua",
+      icon: "📊",
+      color: "#9c27b0",
+    },
+    {
+      label: "Nhập điểm, đánh giá",
+      description: "Nhập điểm KTĐK, đánh giá mức đạt và nhận xét học sinh",
+      path: "/nhapdiem-ktdk",
+      icon: "✏️",
+      color: "#ed6c02",
+    },
+    {
+      label: "Xuất đánh giá ra C1",
+      description: "Xuất dữ liệu đánh giá sang biểu mẫu C1",
+      path: "/xuat-danh-gia",
+      icon: "📄",
+      color: "#0288d1",
+    },
+    {
+      label: "Danh sách học sinh",
+      description: "Thêm, sửa, xóa học sinh và quản lý dữ liệu lớp học",
+      path: "/danhsach",
+      icon: "📋",
+      color: "#00796b",
+    },
+    {
+      label: "Soạn đề",
+      description: "Tạo đề thi và quản lý ngân hàng câu hỏi",
+      path: "/tracnghiem-gv",
+      icon: "🧠",
+      color: "#c2185b",
+    },
+    {
+      label: "Test đề",
+      description: "Kiểm tra thử đề thi trước khi sử dụng",
+      path: "/tracnghiem-test",
+      icon: "🧪",
+      color: "#6a1b9a",
+    },
+    {
+      label: "Đề thi",
+      description: "Chọn đề thi và đề ôn tập từ ngân hàng đề",
+      path: "/de-thi",
+      icon: "📝",
+      color: "#ef6c00",
+    },
+    {
+      label: "Cài đặt hệ thống",
+      description: "Quản trị và cấu hình hệ thống",
+      path: "/quan-tri",
+      icon: "⚙️",
+      color: "#455a64",
+    },
   ];
 
   return (
     <Box sx={{ minHeight: "100vh", p: 5, bgcolor: "#f4f6f8" }}>
-      <Typography variant="h4" fontWeight={800} mb={5}>
-        Dashboard
+      <Typography
+        variant="h5"
+        fontWeight={700}
+        mb={5}
+        sx={{
+          fontFamily: '"Segoe UI","Arial","Helvetica","Noto Sans","sans-serif"',
+        }}
+      >
+        CHỨC NĂNG CHÍNH
       </Typography>
 
       <Box
         sx={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+          gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
           gap: 4,
         }}
       >
@@ -76,17 +170,18 @@ function Dashboard({ isLoggedIn }) {
               bgcolor: "white",
               borderRadius: 4,
               p: 4,
+              minHeight: 220,
               cursor: "pointer",
               transition: "0.25s",
               boxShadow: "0 4px 14px rgba(0,0,0,0.08)",
-
+              display: "flex",
+              flexDirection: "column",
               "&:hover": {
                 transform: "translateY(-8px)",
                 boxShadow: "0 14px 28px rgba(0,0,0,0.18)",
               },
             }}
           >
-            {/* ICON */}
             <Box
               sx={{
                 width: 64,
@@ -104,13 +199,22 @@ function Dashboard({ isLoggedIn }) {
               {item.icon}
             </Box>
 
-            {/* LABEL */}
-            <Typography fontWeight={700} fontSize={18}>
+            <Typography
+              fontWeight={700}
+              fontSize={18}
+              sx={{ mb: 1 }}
+            >
               {item.label}
             </Typography>
 
-            <Typography variant="body2" color="text.secondary" mt={0.5}>
-              Nhấn để mở chức năng
+            <Typography
+              variant="body2"
+              sx={{
+                color: "#64748b",
+                lineHeight: 1.6,
+              }}
+            >
+              {item.description}
             </Typography>
           </Box>
         ))}
@@ -119,8 +223,8 @@ function Dashboard({ isLoggedIn }) {
   );
 }
 
+// 🔥 APP CONTENT
 function AppContent() {
-  const location = useLocation();
   const navigate = useNavigate();
   const { config, setConfig } = useContext(ConfigContext);
 
@@ -128,154 +232,484 @@ function AppContent() {
     localStorage.getItem("loggedIn") === "true"
   );
 
-  const [loading, setLoading] = useState(true);
-  const [openLockedDialog, setOpenLockedDialog] = useState(false);
   const [openLogo, setOpenLogo] = useState(false);
 
+  const [anchorEl, setAnchorEl] = useState(null);
+  const openMenu = Boolean(anchorEl);
+
+  const [openChangePw, setOpenChangePw] = useState(false);
+  const [newPw, setNewPw] = useState("");
+  const [confirmPw, setConfirmPw] = useState("");
+  const [pwError, setPwError] = useState("");
+
   useEffect(() => {
-    setLoading(false);
+    setIsLoggedIn(localStorage.getItem("loggedIn") === "true");
   }, []);
 
+  const handleMenuOpen = (e) => setAnchorEl(e.currentTarget);
+  const handleMenuClose = () => setAnchorEl(null);
+
   const handleLogout = () => {
-    localStorage.clear();
+    localStorage.removeItem("loggedIn");
+    localStorage.removeItem("account");
+
     setIsLoggedIn(false);
     setConfig((prev) => ({ ...prev, login: false }));
-    navigate("/login", { replace: true });
+
+    navigate("/hocsinh", { replace: true });
   };
 
-  if (loading) return null;
+  const account = localStorage.getItem("account") || "";
+
+  const handleChangePassword = async () => {
+    if (!newPw.trim()) {
+      setPwError("❌ Mật khẩu mới không được để trống!");
+      return;
+    }
+
+    if (newPw !== confirmPw) {
+      setPwError("❌ Mật khẩu nhập lại không khớp!");
+      return;
+    }
+
+    // ✅ PASS VALID → đóng dialog + báo thành công ngay
+    setPwError("");
+    setOpenChangePw(false);
+
+    setSnackbar({
+      open: true,
+      message: "✅ Đổi mật khẩu thành công!",
+      severity: "success",
+    });
+
+    const docId = account === "TH Lâm Văn Bền" ? "lvb" : "admin";
+
+    // 🔥 Firestore chạy nền (không chặn UI)
+    setDoc(
+      doc(db, "MATKHAU", docId),
+      { pass: newPw },
+      { merge: true }
+    ).catch((err) => {
+      console.error("Lỗi lưu mật khẩu:", err);
+
+      setSnackbar({
+        open: true,
+        message: "❌ Lưu mật khẩu thất bại!",
+        severity: "error",
+      });
+    });
+
+    // reset input
+    setNewPw("");
+    setConfirmPw("");
+  };
+
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: "",
+    severity: "success",
+  });
+
+  const showSnackbar = (message, severity = "success") => {
+    setSnackbar({
+      open: true,
+      message,
+      severity,
+    });
+  };
 
   return (
     <>
-      {/* ===== APP BAR ===== */}
+      {/* APP BAR */}
       <AppBar position="fixed" sx={{ background: "#1976d2" }}>
-        <Toolbar sx={{ display: "flex", gap: 1 }}>
+        <Toolbar
+          variant="dense"
+          sx={{
+            minHeight: "50px !important",
+            px: 1.5,
+            gap: 1,
+          }}
+        >
           <Box
             component="img"
             src="/Logo.png"
-            onClick={() => setOpenLogo(true)}
             sx={{ height: 34, cursor: "pointer" }}
+            onClick={() => setOpenLogo(true)}
           />
 
-          <Button component={Link} to="/hocsinh" sx={{ color: "white" }}>
-            Học sinh
-          </Button>
-
-          {/* 🔥 CHỈ HIỆN DASHBOARD KHI ĐÃ ĐĂNG NHẬP */}
-          {isLoggedIn && (
-            <Button component={Link} to="/dashboard" sx={{ color: "white" }}>
-              Dashboard
+          {!isLoggedIn ? (
+            <Button
+              component={Link}
+              to="/login"
+              sx={{
+                color: "#fff",
+                ml: "auto",
+                textDecoration: "none",
+                "&:hover": {
+                  color: "#fff",
+                  textDecoration: "none",
+                },
+                "&:visited": {
+                  color: "#fff",
+                },
+                display: "flex",
+                alignItems: "center",
+                gap: 1,
+              }}
+            >
+              <LoginIcon sx={{ fontSize: 20 }} />
+              Đăng nhập
             </Button>
-          )}
-
-          <Box sx={{ ml: "auto", display: "flex", alignItems: "center", gap: 1 }}>
-
-            {/* 👤 ACCOUNT */}
-            {isLoggedIn && (
-              <Box
-                sx={{
-                  px: 1.3,
-                  py: 0.4,
-                  borderRadius: "999px",
-                  fontSize: 13,
-                  fontWeight: 600,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 0.5,
-                  bgcolor: "rgba(34,197,94,0.25)",
-                  color: "#fff",
-                  border: "1px solid rgba(255,255,255,0.3)",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                <span>👤</span>
-                <span>{localStorage.getItem("account") || "Admin"}</span>
-              </Box>
-            )}
-
-            {/* 📅 NĂM HỌC */}
-            {isLoggedIn && (
-              <Box
-                sx={{
-                  px: 1.3,
-                  py: 0.4,
-                  borderRadius: "999px",
-                  fontSize: 13,
-                  fontWeight: 600,
-                  bgcolor: "rgba(255,255,255,0.12)",
-                  color: "#fff",
-                  border: "1px solid rgba(255,255,255,0.3)",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                📅 {config?.namHoc || "2025-2026"}
-              </Box>
-            )}
-
-            {/* 🔘 LOGIN / LOGOUT */}
-            {isLoggedIn ? (
-              <Button
-                onClick={handleLogout}
-                sx={{
-                  color: "white",
-                  borderRadius: "999px",
-                  px: 2,
-                  py: 0.4,
-                  fontSize: 13,
-                  fontWeight: 600,
-                  textTransform: "none",
-                  bgcolor: "rgba(239,68,68,0.25)",
-                  border: "1px solid rgba(255,255,255,0.3)",
-                  "&:hover": {
-                    bgcolor: "rgba(239,68,68,0.4)",
-                  },
-                }}
-              >
-                Đăng xuất
-              </Button>
-            ) : (
+          ) : (
+            <>
               <Button
                 component={Link}
-                to="/login"
+                to="/dashboard"
                 sx={{
-                  color: "white",
-                  borderRadius: "999px",
-                  px: 2,
-                  py: 0.4,
-                  fontSize: 13,
-                  fontWeight: 600,
-                  textTransform: "none",
-                  bgcolor: "rgba(59,130,246,0.25)",
-                  border: "1px solid rgba(255,255,255,0.3)",
+                  color: "#fff",
                   "&:hover": {
-                    bgcolor: "rgba(59,130,246,0.4)",
+                    color: "#fff",
                   },
                 }}
               >
-                Đăng nhập
+                Dashboard
               </Button>
-            )}
-          </Box>
+
+              <Box
+                sx={{
+                  ml: "auto",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1,
+                }}
+              >
+                <Box
+                  sx={{
+                    minWidth: 130,
+                    px: 1.3,
+                    py: 0.4,
+                    borderRadius: 999,
+                    fontSize: 14,
+                    bgcolor: "rgba(255,255,255,0.12)",
+                    color: "#fff",
+                    textAlign: "center",
+                  }}
+                >
+                  Năm học: {config?.namHoc || "2025-2026"}
+                </Box>
+
+                {account === "Admin" ? (
+                  <Tooltip title="Quản trị viên" arrow>
+                    <Box
+                      sx={{
+                        width: 24,
+                        height: 24,
+                        borderRadius: "50%",
+                        bgcolor: "#FFD700",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        cursor: "pointer",
+                        boxShadow: "0 2px 8px rgba(255,215,0,0.4)",
+                      }}
+                    >
+                      <AdminPanelSettingsIcon
+                        sx={{
+                          color: "#5D4037",
+                          fontSize: 22,
+                        }}
+                      />
+                    </Box>
+                  </Tooltip>
+                ) : (
+                  <Tooltip title="Lâm Văn Bền" arrow>
+                    <Box
+                      sx={{
+                        width: 24,
+                        height: 24,
+                        borderRadius: "50%",
+                        bgcolor: "#fff",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        cursor: "pointer",
+                        boxShadow: "0 2px 8px rgba(255,255,255,0.25)",
+                      }}
+                    >
+                      <PersonIcon
+                        sx={{
+                          color: "#1976d2",
+                          fontSize: 22,
+                        }}
+                      />
+                    </Box>
+                  </Tooltip>
+                )}
+
+                <IconButton onClick={handleMenuOpen} sx={{ color: "white" }}>
+                  <AppsIcon sx={{ fontSize: 32 }} />
+                </IconButton>
+              </Box>
+            </>
+          )}
         </Toolbar>
       </AppBar>
 
-      {/* ===== ROUTES ===== */}
-      <Box sx={{ pt: 8 }}>
+      {/* MENU */}
+      <Menu
+        anchorEl={anchorEl}
+        open={openMenu}
+        onClose={handleMenuClose}
+        PaperProps={{
+          sx: {
+            width: 180,
+            //borderRadius: "14px",
+            overflow: "hidden",
+            boxShadow: "0 12px 35px rgba(0,0,0,0.18)",
+            p: 0,
+          },
+        }}
+      >
+        {/* HEADER */}
+        <Box
+          sx={{
+            px: 2,
+            py: 1.5,
+            bgcolor: "#fff",
+            fontWeight: 600,
+            fontSize: 14,
+            borderBottom: "1px solid #eee",
+            color: "#d32f2f", // 🔴 màu đỏ
+          }}
+        >
+          THÔNG TIN
+        </Box>
+
+        {/* ITEM 1 */}
+        <Box
+          onClick={() => {
+            handleMenuClose();
+            setOpenChangePw(true);
+          }}
+          sx={{
+            px: 2,
+            py: 1.5,
+            cursor: "pointer",
+            bgcolor: "#f5f7fa",
+            transition: "0.2s",
+            display: "flex",
+            alignItems: "center",
+            gap: 1,
+            "&:hover": { bgcolor: "#e9eef5" },
+          }}
+        >
+          <LockResetIcon sx={{ fontSize: 18, color: "#1976d2" }} />
+          Đổi mật khẩu
+        </Box>
+
+        {/* 🔥 LINE NGĂN CÁCH */}
+        <Box
+          sx={{
+            height: "1px",
+            bgcolor: "#e5e7eb",
+            mx: 1,
+          }}
+        />
+
+        {/* ITEM 2 */}
+        <Box
+          onClick={() => {
+            handleMenuClose();
+            handleLogout();
+          }}
+          sx={{
+            px: 2,
+            py: 1.5,
+            cursor: "pointer",
+            bgcolor: "#f5f7fa",
+            transition: "0.2s",
+            display: "flex",
+            alignItems: "center",
+            gap: 1,
+            "&:hover": { bgcolor: "#e9eef5" },
+          }}
+        >
+          <LogoutIcon sx={{ fontSize: 18, color: "#d32f2f" }} />
+          Đăng xuất
+        </Box>
+      </Menu>
+      
+      {/* DIALOG ĐỔI MẬT KHẨU */}
+      <Dialog
+        open={openChangePw}
+        onClose={() => setOpenChangePw(false)}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: "18px",
+            overflow: "hidden",
+            background: "#f8fafc",
+            boxShadow: "0 20px 60px rgba(0,0,0,0.18)",
+          },
+        }}
+      >
+        {/* HEADER */}
+        <Box
+          sx={{
+            px: 3,
+            py: 1.5,
+            color: "#fff",
+            background: "linear-gradient(135deg, #1976d2, #42a5f5)",
+            position: "relative",
+          }}
+        >
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <Box
+              sx={{
+                width: 34,
+                height: 34,
+                borderRadius: "50%",
+                bgcolor: "#fff",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
+                fontSize: 16,
+              }}
+            >
+              🔐
+            </Box>
+
+            <Typography sx={{ fontSize: 16, fontWeight: 700 }}>
+              Đổi mật khẩu
+            </Typography>
+          </Stack>
+
+          <IconButton
+            onClick={() => setOpenChangePw(false)}
+            sx={{
+              position: "absolute",
+              right: 10,
+              top: 10,
+              color: "#fff",
+              bgcolor: "rgba(255,255,255,0.15)",
+              "&:hover": {
+                bgcolor: "rgba(255,255,255,0.25)",
+              },
+            }}
+          >
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </Box>
+
+        {/* CONTENT */}
+        <DialogContent sx={{ px: 3, py: 4 }}>
+          <Stack spacing={2.5}>
+            <TextField
+              label="Mật khẩu mới"
+              type="password"
+              value={newPw}
+              onChange={(e) => setNewPw(e.target.value)}
+              fullWidth
+            />
+
+            <TextField
+              label="Nhập lại mật khẩu"
+              type="password"
+              value={confirmPw}
+              onChange={(e) => setConfirmPw(e.target.value)}
+              fullWidth
+            />
+
+            {pwError && (
+              <Typography color="error" sx={{ textAlign: "center" }}>
+                {pwError}
+              </Typography>
+            )}
+          </Stack>
+        </DialogContent>
+
+        {/* FOOTER */}
+        <Stack
+          direction="row"
+          spacing={2}
+          justifyContent="center"
+          sx={{ pb: 3 }}
+        >
+          <Button
+            variant="outlined"
+            onClick={() => setOpenChangePw(false)}
+            sx={{
+              minWidth: 110,
+              height: 42,
+              borderRadius: "12px",
+              textTransform: "none",
+              fontWeight: 600,
+            }}
+          >
+            Hủy
+          </Button>
+
+          <Button
+            variant="contained"
+            onClick={handleChangePassword}
+            sx={{
+              minWidth: 130,
+              height: 42,
+              borderRadius: "12px",
+              textTransform: "none",
+              fontWeight: 700,
+              background: "linear-gradient(135deg, #1976d2, #42a5f5)",
+              boxShadow: "0 10px 20px rgba(25,118,210,0.25)",
+              "&:hover": {
+                background: "linear-gradient(135deg, #1565c0, #1976d2)",
+              },
+            }}
+          >
+            Lưu
+          </Button>
+        </Stack>
+      </Dialog>
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={3000}
+        onClose={() =>
+          setSnackbar((prev) => ({ ...prev, open: false }))
+        }
+        anchorOrigin={{
+          vertical: "bottom",
+          horizontal: "right",
+        }}
+      >
+        <Alert
+          severity={snackbar.severity}
+          variant="filled"
+          sx={{ width: "100%" }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+
+      <Toolbar variant="dense" />   
+
+      {/* ROUTES */}
+      <Box>
         <Routes>
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-
+          <Route path="/" element={<Navigate to="/dashboard" />} />
+          <Route path="/login" element={<Login setIsLoggedIn={setIsLoggedIn} />} />
+          <Route path="/dashboard" element={<Dashboard isLoggedIn={isLoggedIn} />} />
           <Route
-            path="/login"
-            element={<Login setIsLoggedIn={setIsLoggedIn} />}
+            path="/hocsinh"
+            element={
+              config?.giaoDien === "the_ten" ? (
+                <HocSinh />
+              ) : (
+                <Info />
+              )
+            }
           />
-
-          {/* 🔥 DASHBOARD */}
-          <Route
-            path="/dashboard"
-            element={<Dashboard isLoggedIn={isLoggedIn} />}
-          />
-
-          <Route path="/hocsinh" element={<HocSinh />} />
           <Route path="/giaovien" element={<GiaoVien />} />
           <Route path="/danhsach" element={<DanhSach />} />
           <Route path="/nhapdiem-ktdk" element={<NhapdiemKTDK />} />
@@ -289,18 +723,49 @@ function AppContent() {
         </Routes>
       </Box>
 
-      {/* LOGO POPUP */}
+      {/* LOGO POPUP (ZOOM FULL VERSION) */}
       {openLogo && (
-        <Box onClick={() => setOpenLogo(false)} sx={{
-          position: "fixed",
-          inset: 0,
-          bgcolor: "rgba(0,0,0,0.6)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center"
-        }}>
-          <Box sx={{ bgcolor: "white", p: 3, borderRadius: 2 }}>
-            <img src="/Logo.png" width={200} />
+        <Box
+          onClick={() => setOpenLogo(false)}
+          sx={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            bgcolor: "rgba(0,0,0,0.6)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 2000,
+            cursor: "pointer",
+          }}
+        >
+          {/* Khung trắng */}
+          <Box
+            onClick={(e) => e.stopPropagation()}
+            sx={{
+              width: "clamp(160px, 42vw, 260px)",
+              height: "clamp(160px, 42vw, 260px)",
+              bgcolor: "white",
+              borderRadius: "16px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              boxShadow: "0 10px 40px rgba(0,0,0,0.5)",
+              animation: "zoomIn 0.25s ease",
+            }}
+          >
+            <Box
+              component="img"
+              src="/Logo.png"
+              alt="Logo lớn"
+              sx={{
+                maxWidth: "85%",
+                maxHeight: "85%",
+                objectFit: "contain",
+              }}
+            />
           </Box>
         </Box>
       )}
@@ -308,7 +773,7 @@ function AppContent() {
   );
 }
 
-// ===== PROVIDERS GIỮ NGUYÊN =====
+// PROVIDER
 export default function App() {
   return (
     <TeacherQuizProvider>
