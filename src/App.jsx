@@ -4,7 +4,6 @@ import {
   Route,
   Navigate,
   Link,
-  useLocation,
   useNavigate,
 } from "react-router-dom";
 
@@ -16,14 +15,25 @@ import {
   Box,
   IconButton,
   Menu,
-  MenuItem,
-  Divider,
+  Dialog,
+  DialogContent,
+  TextField,
+  Stack,
+  Snackbar, 
+  Alert,
+  Tooltip
 } from "@mui/material";
 
+import { doc, setDoc } from "firebase/firestore";
+import { db } from "./firebase";
+
 import AppsIcon from "@mui/icons-material/Apps";
+import CloseIcon from "@mui/icons-material/Close";
+
+import PersonIcon from "@mui/icons-material/Person";
+import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
 
 // 🔹 Pages
-import Info from "./pages/Info";
 import HocSinh from "./pages/HocSinh";
 import GiaoVien from "./pages/GiaoVien";
 import DanhSach from "./pages/DanhSach";
@@ -74,13 +84,7 @@ function Dashboard({ isLoggedIn }) {
         Dashboard
       </Typography>
 
-      <Box
-        sx={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-          gap: 4,
-        }}
-      >
+      <Box sx={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 4 }}>
         {cards.map((item) => (
           <Box
             key={item.path}
@@ -118,10 +122,6 @@ function Dashboard({ isLoggedIn }) {
             <Typography fontWeight={700} fontSize={18}>
               {item.label}
             </Typography>
-
-            <Typography variant="body2" color="text.secondary" mt={0.5}>
-              Nhấn để mở chức năng
-            </Typography>
           </Box>
         ))}
       </Box>
@@ -140,16 +140,20 @@ function AppContent() {
 
   const [openLogo, setOpenLogo] = useState(false);
 
-  // MENU STATE
   const [anchorEl, setAnchorEl] = useState(null);
   const openMenu = Boolean(anchorEl);
 
-  const handleMenuOpen = (e) => setAnchorEl(e.currentTarget);
-  const handleMenuClose = () => setAnchorEl(null);
+  const [openChangePw, setOpenChangePw] = useState(false);
+  const [newPw, setNewPw] = useState("");
+  const [confirmPw, setConfirmPw] = useState("");
+  const [pwError, setPwError] = useState("");
 
   useEffect(() => {
     setIsLoggedIn(localStorage.getItem("loggedIn") === "true");
   }, []);
+
+  const handleMenuOpen = (e) => setAnchorEl(e.currentTarget);
+  const handleMenuClose = () => setAnchorEl(null);
 
   const handleLogout = () => {
     localStorage.removeItem("loggedIn");
@@ -161,168 +165,399 @@ function AppContent() {
     navigate("/hocsinh", { replace: true });
   };
 
+  const account = localStorage.getItem("account") || "";
+
+  const handleChangePassword = async () => {
+    if (!newPw || !confirmPw) {
+      setPwError("Vui lòng nhập đầy đủ");
+      return;
+    }
+
+    if (newPw !== confirmPw) {
+      setPwError("Mật khẩu không khớp");
+      return;
+    }
+
+    const account = localStorage.getItem("account") || "";
+    const role = account === "Admin" ? "admin" : "lvb";
+
+    try {
+      await setDoc(doc(db, "MATKHAU", role), {
+        pass: newPw,
+      });
+
+      showSnackbar("Đổi mật khẩu thành công 🎉", "success");
+
+      setOpenChangePw(false);
+      setNewPw("");
+      setConfirmPw("");
+      setPwError("");
+    } catch (err) {
+      console.error(err);
+      showSnackbar("Lỗi khi cập nhật mật khẩu", "error");
+    }
+  };
+
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: "",
+    severity: "success",
+  });
+
+  const showSnackbar = (message, severity = "success") => {
+    setSnackbar({
+      open: true,
+      message,
+      severity,
+    });
+  };
+
   return (
     <>
-      {/* ===== APP BAR ===== */}
+      {/* APP BAR */}
       <AppBar position="fixed" sx={{ background: "#1976d2" }}>
-        <Toolbar sx={{ display: "flex", gap: 1, position: "relative" }}>
+        <Toolbar
+          variant="dense"
+          sx={{
+            minHeight: "50px !important",
+            px: 1.5,
+            gap: 1,
+          }}
+        >
+          <Box component="img" src="/Logo.png" sx={{ height: 34 }} />
 
-          {/* LOGO */}
-          <Box
-            component="img"
-            src="/Logo.png"
-            onClick={() => setOpenLogo(true)}
-            sx={{ height: 34, cursor: "pointer" }}
-          />
-
-          {/* MENU TRÁI */}
-          {!isLoggedIn && (
-            <Button component={Link} to="/hocsinh" sx={{ color: "white" }}>
-              Học sinh
-            </Button>
-          )}
-
-          {isLoggedIn && (
-            <Button component={Link} to="/dashboard" sx={{ color: "white" }}>
-              Dashboard
-            </Button>
-          )}
-
-          {/* 🔥 NĂM HỌC CĂN GIỮA */}
-          {isLoggedIn && (
-            <Box
+          {!isLoggedIn ? (
+            <Button
+              component={Link}
+              to="/login"
               sx={{
-                position: "absolute",
-                left: "50%",
-                transform: "translateX(-50%)",
-                px: 1.3,
-                py: 0.4,
-                borderRadius: "999px",
-                fontSize: 13,
-                fontWeight: 600,
-                bgcolor: "rgba(255,255,255,0.12)",
-                color: "#fff",
-                border: "1px solid rgba(255,255,255,0.3)",
+                color: "white",
+                ml: "auto",
               }}
             >
-              📅 {config?.namHoc || "2025-2026"}
-            </Box>
-          )}
+              Đăng nhập
+            </Button>
+          ) : (
+            <>
+              <Button component={Link} to="/dashboard" sx={{ color: "white" }}>
+                Dashboard
+              </Button>
 
-          {/* RIGHT MENU ICON */}
-          <Box sx={{ ml: "auto" }}>
-            {isLoggedIn ? (
-              <>
-                <IconButton onClick={handleMenuOpen} sx={{ color: "white" }}>
-                  <AppsIcon />
-                </IconButton>
-
-                <Menu
-                  anchorEl={anchorEl}
-                  open={openMenu}
-                  onClose={handleMenuClose}
-                  PaperProps={{
-                    sx: {
-                      width: 140,
-                      borderRadius: 1,
-                      overflow: "hidden",
-                      boxShadow: "0 8px 20px rgba(0,0,0,0.15)",
-                    },
-                  }}
-                  anchorOrigin={{
-                    vertical: "bottom",
-                    horizontal: "right",
-                  }}
-                  transformOrigin={{
-                    vertical: "top",
-                    horizontal: "right",
+              <Box
+                sx={{
+                  ml: "auto",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1,
+                }}
+              >
+                <Box
+                  sx={{
+                    minWidth: 150,
+                    px: 1.3,
+                    py: 0.4,
+                    borderRadius: 999,
+                    fontSize: 13,
+                    bgcolor: "rgba(255,255,255,0.12)",
+                    color: "#fff",
+                    textAlign: "center",
                   }}
                 >
-                  {/* ===== TITLE ===== */}
-                  <Box
-                    sx={{
-                      px: 2,
-                      py: 1.5,
-                      bgcolor: "#ffffff",
-                      fontWeight: 700,
-                      fontSize: 14,
-                      borderBottom: "1px solid #eee",
-                      color: "red", // 👈 đổi màu tiêu đề
-                    }}
-                  >
-                    THÔNG TIN
-                  </Box>
+                  Năm học: {config?.namHoc || "2025-2026"}
+                </Box>
 
-                  {/* ===== ĐỔI MẬT KHẨU ===== */}
-                  <Box
-                    onClick={() => {
-                      handleMenuClose();
-                      navigate("/doi-mat-khau");
-                    }}
-                    sx={{
-                      px: 2,
-                      py: 1.2,
-                      bgcolor: "#f5f5f5",
-                      cursor: "pointer",
-                      color: "#000", // 👈 chữ đen
-                      "&:hover": { bgcolor: "#eeeeee" },
-                    }}
-                  >
-                    Đổi mật khẩu
-                  </Box>
+                {account === "Admin" ? (
+                  <Tooltip title="Quản trị viên" arrow>
+                    <Box
+                      sx={{
+                        width: 24,
+                        height: 24,
+                        borderRadius: "50%",
+                        bgcolor: "#FFD700",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        cursor: "pointer",
+                        boxShadow: "0 2px 8px rgba(255,215,0,0.4)",
+                      }}
+                    >
+                      <AdminPanelSettingsIcon
+                        sx={{
+                          color: "#5D4037",
+                          fontSize: 22,
+                        }}
+                      />
+                    </Box>
+                  </Tooltip>
+                ) : (
+                  <Tooltip title="Lâm Văn Bền" arrow>
+                    <Box
+                      sx={{
+                        width: 24,
+                        height: 24,
+                        borderRadius: "50%",
+                        bgcolor: "#fff",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        cursor: "pointer",
+                        boxShadow: "0 2px 8px rgba(255,255,255,0.25)",
+                      }}
+                    >
+                      <PersonIcon
+                        sx={{
+                          color: "#1976d2",
+                          fontSize: 22,
+                        }}
+                      />
+                    </Box>
+                  </Tooltip>
+                )}
 
-                  {/* ===== DIVIDER ===== */}
-                  <Box
-                    sx={{
-                      height: "1px",
-                      bgcolor: "#e0e0e0",
-                    }}
-                  />
-
-                  {/* ===== ĐĂNG XUẤT ===== */}
-                  <Box
-                    onClick={() => {
-                      handleMenuClose();
-                      handleLogout();
-                    }}
-                    sx={{
-                      px: 2,
-                      py: 1.2,
-                      bgcolor: "#f5f5f5",
-                      cursor: "pointer",
-                      color: "#000", // 👈 chữ đen
-                      fontWeight: 400,
-                      "&:hover": { bgcolor: "#eeeeee" },
-                    }}
-                  >
-                    Đăng xuất
-                  </Box>
-                </Menu>
-              </>
-            ) : (
-              <Button component={Link} to="/login" sx={{ color: "white" }}>
-                Đăng nhập
-              </Button>
-            )}
-          </Box>
+                <IconButton onClick={handleMenuOpen} sx={{ color: "white" }}>
+                  <AppsIcon sx={{ fontSize: 32 }} />
+                </IconButton>
+              </Box>
+            </>
+          )}
         </Toolbar>
       </AppBar>
 
-      {/* ===== ROUTES ===== */}
+      {/* MENU */}
+      <Menu
+        anchorEl={anchorEl}
+        open={openMenu}
+        onClose={handleMenuClose}
+        PaperProps={{
+          sx: {
+            width: 200,
+            //borderRadius: "14px",
+            overflow: "hidden",
+            boxShadow: "0 12px 35px rgba(0,0,0,0.18)",
+            p: 0,
+          },
+        }}
+      >
+        {/* HEADER */}
+        <Box
+          sx={{
+            px: 2,
+            py: 1.5,
+            bgcolor: "#fff",
+            fontWeight: 600,
+            fontSize: 14,
+            borderBottom: "1px solid #eee",
+            color: "#d32f2f", // 🔴 màu đỏ
+          }}
+        >
+          THÔNG TIN
+        </Box>
+
+        {/* ITEM 1 */}
+        <Box
+          onClick={() => {
+            handleMenuClose();
+            setOpenChangePw(true);
+          }}
+          sx={{
+            px: 2,
+            py: 1.5,
+            cursor: "pointer",
+            bgcolor: "#f5f7fa",
+            transition: "0.2s",
+            "&:hover": { bgcolor: "#e9eef5" },
+          }}
+        >
+          Đổi mật khẩu
+        </Box>
+
+        {/* 🔥 LINE NGĂN CÁCH */}
+        <Box
+          sx={{
+            height: "1px",
+            bgcolor: "#e5e7eb",
+            mx: 1,
+          }}
+        />
+
+        {/* ITEM 2 */}
+        <Box
+          onClick={() => {
+            handleMenuClose();
+            handleLogout();
+          }}
+          sx={{
+            px: 2,
+            py: 1.5,
+            cursor: "pointer",
+            bgcolor: "#f5f7fa",
+            transition: "0.2s",
+            "&:hover": { bgcolor: "#e9eef5" },
+          }}
+        >
+          Đăng xuất
+        </Box>
+      </Menu>
+      
+      {/* DIALOG ĐỔI MẬT KHẨU */}
+      <Dialog
+        open={openChangePw}
+        onClose={() => setOpenChangePw(false)}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: "18px",
+            overflow: "hidden",
+            background: "#f8fafc",
+            boxShadow: "0 20px 60px rgba(0,0,0,0.18)",
+          },
+        }}
+      >
+        {/* HEADER */}
+        <Box
+          sx={{
+            px: 3,
+            py: 1.5,
+            color: "#fff",
+            background: "linear-gradient(135deg, #1976d2, #42a5f5)",
+            position: "relative",
+          }}
+        >
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <Box
+              sx={{
+                width: 34,
+                height: 34,
+                borderRadius: "50%",
+                bgcolor: "#fff",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
+                fontSize: 16,
+              }}
+            >
+              🔐
+            </Box>
+
+            <Typography sx={{ fontSize: 16, fontWeight: 700 }}>
+              Đổi mật khẩu
+            </Typography>
+          </Stack>
+
+          <IconButton
+            onClick={() => setOpenChangePw(false)}
+            sx={{
+              position: "absolute",
+              right: 10,
+              top: 10,
+              color: "#fff",
+              bgcolor: "rgba(255,255,255,0.15)",
+              "&:hover": {
+                bgcolor: "rgba(255,255,255,0.25)",
+              },
+            }}
+          >
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </Box>
+
+        {/* CONTENT */}
+        <DialogContent sx={{ px: 3, py: 4 }}>
+          <Stack spacing={2.5}>
+            <TextField
+              label="Mật khẩu mới"
+              type="password"
+              value={newPw}
+              onChange={(e) => setNewPw(e.target.value)}
+              fullWidth
+            />
+
+            <TextField
+              label="Nhập lại mật khẩu"
+              type="password"
+              value={confirmPw}
+              onChange={(e) => setConfirmPw(e.target.value)}
+              fullWidth
+            />
+
+            {pwError && (
+              <Typography color="error" sx={{ textAlign: "center" }}>
+                {pwError}
+              </Typography>
+            )}
+          </Stack>
+        </DialogContent>
+
+        {/* FOOTER */}
+        <Stack
+          direction="row"
+          spacing={2}
+          justifyContent="center"
+          sx={{ pb: 3 }}
+        >
+          <Button
+            variant="outlined"
+            onClick={() => setOpenChangePw(false)}
+            sx={{
+              minWidth: 110,
+              height: 42,
+              borderRadius: "12px",
+              textTransform: "none",
+              fontWeight: 600,
+            }}
+          >
+            Hủy
+          </Button>
+
+          <Button
+            variant="contained"
+            onClick={handleChangePassword}
+            sx={{
+              minWidth: 130,
+              height: 42,
+              borderRadius: "12px",
+              textTransform: "none",
+              fontWeight: 700,
+              background: "linear-gradient(135deg, #1976d2, #42a5f5)",
+              boxShadow: "0 10px 20px rgba(25,118,210,0.25)",
+              "&:hover": {
+                background: "linear-gradient(135deg, #1565c0, #1976d2)",
+              },
+            }}
+          >
+            Lưu
+          </Button>
+        </Stack>
+      </Dialog>
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={3000}
+        onClose={() =>
+          setSnackbar((prev) => ({ ...prev, open: false }))
+        }
+        anchorOrigin={{
+          vertical: "bottom",
+          horizontal: "right",
+        }}
+      >
+        <Alert
+          severity={snackbar.severity}
+          variant="filled"
+          sx={{ width: "100%" }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+
+      {/* ROUTES */}
       <Box sx={{ pt: 8 }}>
         <Routes>
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-
-          <Route
-            path="/login"
-            element={<Login setIsLoggedIn={setIsLoggedIn} />}
-          />
-
-          <Route
-            path="/dashboard"
-            element={<Dashboard isLoggedIn={isLoggedIn} />}
-          />
-
+          <Route path="/" element={<Navigate to="/dashboard" />} />
+          <Route path="/login" element={<Login setIsLoggedIn={setIsLoggedIn} />} />
+          <Route path="/dashboard" element={<Dashboard isLoggedIn={isLoggedIn} />} />
           <Route path="/hocsinh" element={<HocSinh />} />
           <Route path="/giaovien" element={<GiaoVien />} />
           <Route path="/danhsach" element={<DanhSach />} />
@@ -339,18 +574,9 @@ function AppContent() {
 
       {/* LOGO POPUP */}
       {openLogo && (
-        <Box
-          onClick={() => setOpenLogo(false)}
-          sx={{
-            position: "fixed",
-            inset: 0,
-            bgcolor: "rgba(0,0,0,0.6)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <Box sx={{ bgcolor: "white", p: 3, borderRadius: 2 }}>
+        <Box onClick={() => setOpenLogo(false)}
+          sx={{ position: "fixed", inset: 0, bgcolor: "rgba(0,0,0,0.6)" }}>
+          <Box sx={{ bgcolor: "#fff", p: 3 }}>
             <img src="/Logo.png" width={200} />
           </Box>
         </Box>
@@ -359,7 +585,7 @@ function AppContent() {
   );
 }
 
-// ===== PROVIDERS =====
+// PROVIDER
 export default function App() {
   return (
     <TeacherQuizProvider>
