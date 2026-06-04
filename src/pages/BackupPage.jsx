@@ -425,53 +425,40 @@ export default function BackupPage({ open, onClose }) {
       <Box
         sx={{
           px: 3,
-          py: 1.5,
+          py: 1.6, // 👈 giống Dialog mẫu
           background: "#1976d2",
           color: "#fff",
         }}
       >
-        <Stack
-          direction="row"
-          alignItems="center"
-          justifyContent="space-between"
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
         >
-          <Box>
-            <Typography
-              sx={{
-                fontSize: 17,
-                fontWeight: 700,
-              }}
-            >
-              Sao lưu dữ liệu
-            </Typography>
-
-            {/*<Typography
-              sx={{
-                fontSize: 13,
-                opacity: 0.9,
-                mt: 0.3,
-              }}
-            >
-              Xuất dữ liệu hệ thống ra file JSON
-            </Typography>*/}
-          </Box>
+          <Typography
+            sx={{
+              fontSize: 16,   // 👈 giảm về giống Dialog
+              fontWeight: 700,
+              display: "flex",
+              alignItems: "center",
+              gap: 1,
+            }}
+          >
+            💾 Sao lưu dữ liệu
+          </Typography>
 
           <IconButton
             onClick={onClose}
             sx={{
               color: "#fff",
-              bgcolor:
-                "rgba(255,255,255,0.12)",
-
-              "&:hover": {
-                bgcolor:
-                  "rgba(255,255,255,0.22)",
-              },
+              p: 0.5, // 👈 giống Dialog
             }}
           >
             <CloseIcon />
           </IconButton>
-        </Stack>
+        </Box>
       </Box>
 
       {/* ===== CONTENT ===== */}

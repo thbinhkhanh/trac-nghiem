@@ -370,7 +370,7 @@ export default function QuanTri() {
           <Box
             sx={{
               px: 3,
-              py: 1,
+              py: 2,
               background: "#1976d2",
               color: "#fff",
             }}
@@ -388,9 +388,7 @@ export default function QuanTri() {
               </Box>
 
               {/* RIGHT: ACCOUNT + ACTIONS */}
-              <Stack direction="row" spacing={1} alignItems="center">
-
-                {/* STATUS LOGIN */}
+              {/*<Stack direction="row" spacing={1} alignItems="center">
                 <Box
                   sx={{
                     px: 1.2,
@@ -406,7 +404,6 @@ export default function QuanTri() {
                   {account ? account : "Chưa đăng nhập"}
                 </Box>
 
-                {/* CHANGE PASSWORD */}
                 <Tooltip title="Đổi mật khẩu">
                   <IconButton
                     onClick={() => setOpenChangePw(true)}
@@ -421,7 +418,7 @@ export default function QuanTri() {
                     <VpnKeyIcon />
                   </IconButton>
                 </Tooltip>
-              </Stack>
+              </Stack>*/}
             </Stack>
           </Box>
 

@@ -624,53 +624,40 @@ export default function RestorePage({
       <Box
         sx={{
           px: 3,
-          py: 1.5,
-          background: "#1976d2",
+          py: 1.6,
+          bgcolor: "#1976d2",
           color: "#fff",
         }}
       >
-        <Stack
-          direction="row"
-          alignItems="center"
-          justifyContent="space-between"
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
         >
-          <Box>
-            <Typography
-              sx={{
-                fontSize: 17,
-                fontWeight: 700,
-              }}
-            >
-              Phục hồi dữ liệu
-            </Typography>
-
-            {/*<Typography
-              sx={{
-                fontSize: 13,
-                opacity: 0.9,
-                mt: 0.3,
-              }}
-            >
-              Khôi phục dữ liệu từ file JSON
-            </Typography>*/}
-          </Box>
+          <Typography
+            sx={{
+              fontSize: 16,
+              fontWeight: 700,
+              display: "flex",
+              alignItems: "center",
+              gap: 1,
+            }}
+          >
+            ♻️ Phục hồi dữ liệu
+          </Typography>
 
           <IconButton
             onClick={onClose}
             sx={{
               color: "#fff",
-              bgcolor:
-                "rgba(255,255,255,0.12)",
-
-              "&:hover": {
-                bgcolor:
-                  "rgba(255,255,255,0.22)",
-              },
+              p: 0.5,
             }}
           >
             <CloseIcon />
           </IconButton>
-        </Stack>
+        </Box>
       </Box>
 
       {/* ===== CONTENT ===== */}

@@ -56,7 +56,8 @@ export default function Login({ setIsLoggedIn }) {
 
         setIsLoggedIn(true); // ⭐ CỰC KỲ QUAN TRỌNG
 
-        navigate("/tracnghiem-gv", { replace: true });
+        //navigate("/tracnghiem-gv", { replace: true });
+        navigate("/dashboard", { replace: true });
       } else {
         setSnackbar({ open: true, message: "❌ Mật khẩu sai!", severity: "error" });
       }
