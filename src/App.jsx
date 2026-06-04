@@ -243,7 +243,7 @@ function AppContent() {
               >
                 <Box
                   sx={{
-                    minWidth: 130,
+                    minWidth: { xs: 70, sm: 130 },
                     px: 1.3,
                     py: 0.4,
                     borderRadius: 999,
@@ -253,7 +253,11 @@ function AppContent() {
                     textAlign: "center",
                   }}
                 >
-                  Năm học: {config?.namHoc || "2025-2026"}
+                  <Box component="span" sx={{ display: { xs: "none", sm: "inline" } }}>
+                    Năm học:{" "}
+                  </Box>
+
+                  {config?.namHoc || "2025-2026"}
                 </Box>
 
                 {account === "Admin" ? (

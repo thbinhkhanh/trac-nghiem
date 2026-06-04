@@ -584,269 +584,74 @@ export default function RestorePage({
 
   return (
   <>
-    <Card
-      elevation={0}
+    <Box
       sx={{
-        width: "100%",
-        borderRadius: "14px",
-        overflow: "hidden",
-        background: "#f8fafc",
-        border: "1px solid #e2e8f0",
-        boxShadow:
-          "0 10px 35px rgba(0,0,0,0.12)",
+        display: "flex",
+        justifyContent: "center",
       }}
     >
-      {/* ===== HEADER ===== */}
-      <Box
+      <Card
+        elevation={0}
         sx={{
-          px: 3,
-          py: 1.5,
-          background: "#1976d2",
-          color: "#fff",
+          width: "60%",
+          borderRadius: "14px",
+          overflow: "hidden",
+          background: "#f8fafc",
+          border: "1px solid #e2e8f0",
+          boxShadow:
+            "0 10px 35px rgba(0,0,0,0.12)",
         }}
       >
-        <Stack
-          direction="row"
-          alignItems="center"
-          justifyContent="space-between"
+        {/* ===== HEADER ===== */}
+        <Box
+          sx={{
+            px: 3,
+            py: 1.5,
+            background: "#1976d2",
+            color: "#fff",
+          }}
         >
-          <Box>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
             <Typography
               sx={{
-                fontSize: 17,
+                fontSize: 16,
                 fontWeight: 700,
+                display: "flex",
+                alignItems: "center",
+                gap: 1,
               }}
             >
               Phục hồi dữ liệu
             </Typography>
 
-            {/*<Typography
+            <IconButton
+              onClick={onClose}
               sx={{
-                fontSize: 13,
-                opacity: 0.9,
-                mt: 0.3,
+                color: "#fff",
+                p: 0.5,
               }}
             >
-              Khôi phục dữ liệu từ file JSON
-            </Typography>*/}
+              <CloseIcon />
+            </IconButton>
           </Box>
+        </Box>
 
-          <IconButton
-            onClick={onClose}
-            sx={{
-              color: "#fff",
-              bgcolor:
-                "rgba(255,255,255,0.12)",
-
-              "&:hover": {
-                bgcolor:
-                  "rgba(255,255,255,0.22)",
-              },
-            }}
-          >
-            <CloseIcon />
-          </IconButton>
-        </Stack>
-      </Box>
-
-      {/* ===== CONTENT ===== */}
-      <Box
-        sx={{
-          px: 3,
-          py: 2.5,
-          bgcolor: "#f8fafc",
-        }}
-      >
-        <Stack spacing={2}>
-          {/* CHỌN FILE */}
-          <Box
-            sx={{
-              p: 2,
-              borderRadius: "5px",
-              bgcolor: "#fff",
-              border:
-                "1px solid #e2e8f0",
-            }}
-          >
-            <Typography
-              sx={{
-                fontSize: 14,
-                fontWeight: 700,
-                mb: 1.5,
-                color: "#1e293b",
-              }}
-            >
-              File phục hồi
-            </Typography>
-
-            <Button
-              variant="outlined"
-              startIcon={
-                <UploadFileIcon />
-              }
-              onClick={() =>
-                fileInputRef.current.click()
-              }
-              sx={{
-                textTransform:
-                  "none",
-                borderRadius:
-                  "10px",
-                fontWeight: 600,
-              }}
-            >
-              Chọn file JSON
-            </Button>
-
-            <input
-              hidden
-              type="file"
-              accept=".json"
-              ref={fileInputRef}
-              onChange={
-                handleFileChange
-              }
-            />
-
-            {selectedFile && (
-              <Typography
-                sx={{
-                  mt: 1.5,
-                  fontSize: 13,
-                  color: "#1976d2",
-                  fontWeight: 600,
-                  wordBreak:
-                    "break-all",
-                }}
-              >
-                📄{" "}
-                {
-                  selectedFile.name
-                }
-              </Typography>
-            )}
-          </Box>
-
-          {/* HỌC SINH */}
-          <Box
-            sx={{
-              p: 1.8,
-              borderRadius: "5px",
-              bgcolor: "#fff",
-              border:
-                "1px solid #e2e8f0",
-            }}
-          >
-            <Typography
-              sx={{
-                fontSize: 14,
-                fontWeight: 700,
-                mb: 1,
-                color: "#1e293b",
-              }}
-            >
-              Học sinh
-            </Typography>
-
-            <Stack spacing={0.5}>
-              {[
-                "LOP",
-                "KETQUA",
-              ].map((key) => (
-                <FormControlLabel
-                  key={key}
-                  control={
-                    <Checkbox
-                      checked={
-                        restoreOptions[
-                          key
-                        ] || false
-                      }
-                      disabled={
-                        disabledOptions[
-                          key
-                        ]
-                      }
-                      onChange={() =>
-                        toggleOption(
-                          key
-                        )
-                      }
-                    />
-                  }
-                  label={
-                    BACKUP_KEYS.find(
-                      (b) =>
-                        b.key ===
-                        key
-                    )?.label
-                  }
-                />
-              ))}
-            </Stack>
-          </Box>
-
-          {/* NGÂN HÀNG ĐỀ */}
-          <Box
-            sx={{
-              p: 1.8,
-              borderRadius: "5px",
-              bgcolor: "#fff",
-              border:
-                "1px solid #e2e8f0",
-            }}
-          >
-            <Typography
-              sx={{
-                fontSize: 14,
-                fontWeight: 700,
-                mb: 1,
-                color: "#1e293b",
-              }}
-            >
-              Ngân hàng đề
-            </Typography>
-
-            <Stack spacing={0.5}>
-              {[
-                "NGANHANG_DE",
-                "DETHI",
-              ].map((key) => (
-                <FormControlLabel
-                  key={key}
-                  control={
-                    <Checkbox
-                      checked={
-                        restoreOptions[
-                          key
-                        ] || false
-                      }
-                      disabled={
-                        disabledOptions[
-                          key
-                        ]
-                      }
-                      onChange={() =>
-                        toggleOption(
-                          key
-                        )
-                      }
-                    />
-                  }
-                  label={
-                    BACKUP_KEYS.find(
-                      (b) =>
-                        b.key ===
-                        key
-                    )?.label
-                  }
-                />
-              ))}
-            </Stack>
-          </Box>
-
-          {/* PROGRESS */}
-          {loading && (
+        {/* ===== CONTENT ===== */}
+        <Box
+          sx={{
+            px: 3,
+            py: 2.5,
+            bgcolor: "#f8fafc",
+          }}
+        >
+          <Stack spacing={2}>
+            {/* CHỌN FILE */}
             <Box
               sx={{
                 p: 2,
@@ -859,96 +664,268 @@ export default function RestorePage({
               <Typography
                 sx={{
                   fontSize: 14,
+                  fontWeight: 700,
+                  mb: 1.5,
+                  color: "#1e293b",
+                }}
+              >
+                File phục hồi
+              </Typography>
+
+              <Button
+                variant="outlined"
+                startIcon={
+                  <UploadFileIcon />
+                }
+                onClick={() =>
+                  fileInputRef.current.click()
+                }
+                sx={{
+                  textTransform:
+                    "none",
+                  borderRadius:
+                    "10px",
                   fontWeight: 600,
+                }}
+              >
+                Chọn file JSON
+              </Button>
+
+              <input
+                hidden
+                type="file"
+                accept=".json"
+                ref={fileInputRef}
+                onChange={
+                  handleFileChange
+                }
+              />
+
+              {selectedFile && (
+                <Typography
+                  sx={{
+                    mt: 1.5,
+                    fontSize: 13,
+                    color: "#1976d2",
+                    fontWeight: 600,
+                    wordBreak:
+                      "break-all",
+                  }}
+                >
+                  📄{" "}
+                  {
+                    selectedFile.name
+                  }
+                </Typography>
+              )}
+            </Box>
+
+            {/* HỌC SINH */}
+            <Box
+              sx={{
+                p: 1.8,
+                borderRadius: "5px",
+                bgcolor: "#fff",
+                border:
+                  "1px solid #e2e8f0",
+              }}
+            >
+              <Typography
+                sx={{
+                  fontSize: 14,
+                  fontWeight: 700,
                   mb: 1,
                   color: "#1e293b",
                 }}
               >
-                Đang phục hồi dữ
-                liệu...
+                Học sinh
               </Typography>
 
-              <LinearProgress
-                variant="determinate"
-                value={progress}
-                sx={{
-                  height: 8,
-                  borderRadius: 999,
-                }}
-              />
+              <Stack spacing={0.5}>
+                {[
+                  "LOP",
+                  "KETQUA",
+                ].map((key) => (
+                  <FormControlLabel
+                    key={key}
+                    control={
+                      <Checkbox
+                        checked={
+                          restoreOptions[
+                            key
+                          ] || false
+                        }
+                        disabled={
+                          disabledOptions[
+                            key
+                          ]
+                        }
+                        onChange={() =>
+                          toggleOption(
+                            key
+                          )
+                        }
+                      />
+                    }
+                    label={
+                      BACKUP_KEYS.find(
+                        (b) =>
+                          b.key ===
+                          key
+                      )?.label
+                    }
+                  />
+                ))}
+              </Stack>
+            </Box>
 
+            {/* NGÂN HÀNG ĐỀ */}
+            <Box
+              sx={{
+                p: 1.8,
+                borderRadius: "5px",
+                bgcolor: "#fff",
+                border:
+                  "1px solid #e2e8f0",
+              }}
+            >
               <Typography
                 sx={{
-                  mt: 1,
-                  fontSize: 13,
-                  color: "#64748b",
-                  textAlign:
-                    "center",
+                  fontSize: 14,
+                  fontWeight: 700,
+                  mb: 1,
+                  color: "#1e293b",
                 }}
               >
-                {Math.round(
-                  progress
-                )}
-                %
+                Ngân hàng đề
               </Typography>
+
+              <Stack spacing={0.5}>
+                {[
+                  "NGANHANG_DE",
+                  "DETHI",
+                ].map((key) => (
+                  <FormControlLabel
+                    key={key}
+                    control={
+                      <Checkbox
+                        checked={
+                          restoreOptions[
+                            key
+                          ] || false
+                        }
+                        disabled={
+                          disabledOptions[
+                            key
+                          ]
+                        }
+                        onChange={() =>
+                          toggleOption(
+                            key
+                          )
+                        }
+                      />
+                    }
+                    label={
+                      BACKUP_KEYS.find(
+                        (b) =>
+                          b.key ===
+                          key
+                      )?.label
+                    }
+                  />
+                ))}
+              </Stack>
             </Box>
-          )}
-        </Stack>
-      </Box>
 
-      {/* ===== ACTIONS ===== */}
-      <Box
-        sx={{
-          px: 3,
-          py: 2,
-          borderTop:
-            "1px solid #e2e8f0",
-          bgcolor: "#fff",
-        }}
-      >
-        <Stack
-          direction="row"
-          spacing={1.5}
-          justifyContent="flex-end"
+            {/* PROGRESS */}
+            {loading && (
+              <Box
+                sx={{
+                  p: 2,
+                  borderRadius: "5px",
+                  bgcolor: "#fff",
+                  border: "1px solid #e2e8f0",
+                }}
+              >
+                <Typography
+                  sx={{
+                    fontSize: 14,
+                    fontWeight: 600,
+                    mb: 1,
+                    color: "#1e293b",
+                  }}
+                >
+                  Đang phục hồi dữ liệu...
+                </Typography>
+
+                <LinearProgress
+                  variant="indeterminate"
+                  sx={{
+                    height: 5,
+                    borderRadius: 999,
+                  }}
+                />
+              </Box>
+            )}
+
+          </Stack>
+        </Box>
+
+        {/* ===== ACTIONS ===== */}
+        <Box
+          sx={{
+            px: 3,
+            py: 2,
+            borderTop:
+              "1px solid #e2e8f0",
+            bgcolor: "#fff",
+          }}
         >
-          <Button
-            onClick={onClose}
-            sx={{
-              textTransform:
-                "none",
-            }}
+          <Stack
+            direction="row"
+            spacing={1.5}
+            justifyContent="flex-end"
           >
-            Hủy
-          </Button>
+            <Button
+              onClick={onClose}
+              sx={{
+                textTransform:
+                  "none",
+              }}
+            >
+              Hủy
+            </Button>
 
-          <Button
-            variant="contained"
-            startIcon={
-              <RestoreIcon />
-            }
-            onClick={handleRestore}
-            disabled={
-              loading ||
-              !hasAnyChecked
-            }
-            sx={{
-              textTransform:
-                "none",
-              borderRadius:
-                "12px",
-              fontWeight: 700,
-              boxShadow: "none",
-
-              "&:hover": {
+            <Button
+              variant="contained"
+              startIcon={
+                <RestoreIcon />
+              }
+              onClick={handleRestore}
+              disabled={
+                loading ||
+                !hasAnyChecked
+              }
+              sx={{
+                textTransform:
+                  "none",
+                borderRadius:
+                  "12px",
+                fontWeight: 700,
                 boxShadow: "none",
-              },
-            }}
-          >
-            Phục hồi
-          </Button>
-        </Stack>
-      </Box>
-    </Card>
+
+                "&:hover": {
+                  boxShadow: "none",
+                },
+              }}
+            >
+              Phục hồi
+            </Button>
+          </Stack>
+        </Box>
+      </Card>
+    </Box>
 
     {/* ===== Snackbar ===== */}
     <Snackbar
