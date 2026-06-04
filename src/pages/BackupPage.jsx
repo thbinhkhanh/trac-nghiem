@@ -410,7 +410,7 @@ export default function BackupPage({ open, onClose, config }) {
       <Card
         elevation={0}
         sx={{
-          width: "60%",
+          width: { xs: "90%", sm: "60%" },
           borderRadius: "14px",
           overflow: "hidden",
           background: "#f8fafc",
