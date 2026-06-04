@@ -101,6 +101,15 @@ function AppContent() {
     navigate("/hocsinh", { replace: true });
   };
 
+  useEffect(() => {
+    const logged = localStorage.getItem("loggedIn") === "true";
+    setIsLoggedIn(logged);
+
+    if (!logged) {
+      navigate("/hocsinh", { replace: true });
+    }
+  }, []);
+
   const account = localStorage.getItem("account") || "";
 
   const handleChangePassword = async () => {
@@ -159,6 +168,13 @@ function AppContent() {
       severity,
     });
   };
+
+  function RequireAuth({ isLoggedIn, children }) {
+    if (!isLoggedIn) {
+      return <Navigate to="/hocsinh" replace />;
+    }
+    return children;
+  }
 
   return (
     <>
@@ -420,7 +436,14 @@ function AppContent() {
         <Routes>
           <Route path="/" element={<Navigate to="/dashboard" />} />
           <Route path="/login" element={<Login setIsLoggedIn={setIsLoggedIn} />} />
-          <Route path="/dashboard" element={<Dashboard isLoggedIn={isLoggedIn} />} />
+          <Route
+            path="/dashboard"
+            element={
+              <RequireAuth isLoggedIn={isLoggedIn}>
+                <Dashboard isLoggedIn={isLoggedIn} />
+              </RequireAuth>
+            }
+          />
           <Route
             path="/hocsinh"
             element={
