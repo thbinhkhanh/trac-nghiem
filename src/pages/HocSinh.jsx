@@ -29,6 +29,8 @@ import {
 import SchoolIcon from "@mui/icons-material/School";
 import HistoryIcon from "@mui/icons-material/History";
 import GroupsIcon from "@mui/icons-material/Groups";
+import IconButton from "@mui/material/IconButton";
+import CloseIcon from "@mui/icons-material/Close";
 
 /* =======================
    Context
@@ -352,8 +354,26 @@ export default function HocSinh() {
         maxWidth: 1420,
         bgcolor: "#fff",
         minHeight: 650,
+        position: "relative", // 👈 thêm dòng này
       }}
     >
+      <IconButton
+        onClick={() => navigate("/dashboard")}
+        sx={{
+          position: "absolute",
+          top: 12,
+          right: 12,
+          color: "#64748b",
+          backgroundColor: "#f1f5f9",
+          "&:hover": {
+            backgroundColor: "#e2e8f0",
+            color: "#ef4444",
+          },
+          boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+        }}
+      >
+        <CloseIcon />
+      </IconButton>
       {/* TIÊU ĐỀ */}
       <Box
         sx={{

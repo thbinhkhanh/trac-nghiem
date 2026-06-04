@@ -2,12 +2,18 @@ import React, { useState, useEffect } from "react";
 import { Box, Card, Typography, Stack, CircularProgress, Button } from "@mui/material";
 import { db } from "../firebase";
 import { doc, getDoc, deleteDoc } from "firebase/firestore";
+import { useNavigate } from "react-router-dom";
+
+import IconButton from "@mui/material/IconButton";
+import CloseIcon from "@mui/icons-material/Close";
+
 
 export default function KetQua() {
   const [choXemDiem, setChoXemDiem] = useState(false);
   const [studentResult, setStudentResult] = useState(null);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false); // trạng thái xóa
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -114,8 +120,26 @@ export default function KetQua() {
             display: "flex",
             flexDirection: "column",
             justifyContent: "center",
+            position: "relative", // 👈 thêm dòng này
           }}
         >
+          <IconButton
+            onClick={() => navigate("/dashboard")}
+            sx={{
+              position: "absolute",
+              top: 10,
+              right: 10,
+              color: "#64748b",
+              backgroundColor: "#f1f5f9",
+              "&:hover": {
+                backgroundColor: "#e2e8f0",
+                color: "#ef4444",
+              },
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+
           <Stack spacing={2} alignItems="center">
             <Typography variant="h5" fontWeight="bold" color="primary" textAlign="center" sx={{ mb: 3 }}>
               KẾT QUẢ KIỂM TRA

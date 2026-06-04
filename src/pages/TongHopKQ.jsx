@@ -41,6 +41,8 @@ import {
   deleteDoc,
 } from "firebase/firestore";
 
+import { useNavigate } from "react-router-dom";
+
 /* =======================
    Icons
 ======================= */
@@ -64,6 +66,7 @@ import DeleteDataClassesDialog from "../dialog/DeleteDataClassesDialog";
 import DeleteStudentConfirmDialog from "../dialog/DeleteStudentConfirmDialog";
 
 export default function TongHopKQ() {
+  const navigate = useNavigate();
   // =========================
   // STATE - FILTER / SELECTION
   // =========================
@@ -464,7 +467,34 @@ export default function TongHopKQ() {
         justifyContent: "center",
       }}
     >
-      <Paper sx={{ p: 4, borderRadius: 3, width: "100%", maxWidth: 800, bgcolor: "white" }} elevation={6}>
+      <Paper
+        elevation={6}
+        sx={{
+          p: 4,
+          borderRadius: 3,
+          width: "100%",
+          maxWidth: 800,
+          bgcolor: "white",
+          position: "relative", // 👈 thêm dòng này
+        }}
+      >
+        <IconButton
+          onClick={() => navigate("/dashboard")}
+          sx={{
+            position: "absolute",
+            top: 12,
+            right: 12,
+            color: "#64748b",
+            backgroundColor: "#f1f5f9",
+            "&:hover": {
+              backgroundColor: "#e2e8f0",
+              color: "#ef4444",
+            },
+            boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+          }}
+        >
+          <CloseIcon />
+        </IconButton>
         <Box
           sx={{
             position: "relative",

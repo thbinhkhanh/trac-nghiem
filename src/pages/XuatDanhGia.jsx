@@ -7,6 +7,7 @@ import {
   Stack,
   LinearProgress,
   Alert,
+  IconButton 
 } from "@mui/material";
 
 import ExcelJS from "exceljs";
@@ -17,7 +18,13 @@ import { getDatabase } from "firebase/database";
 import { db } from "../firebase";
 import { useConfig } from "../context/ConfigContext";
 
+import { useNavigate } from "react-router-dom";
+import CloseIcon from "@mui/icons-material/Close";
+
+
 export default function XuatDanhGia() {
+  const navigate = useNavigate();
+
   const { config } = useConfig();
   const namHocKey = (config?.namHoc || "2025-2026").replace(/-/g, "_");
 
@@ -212,9 +219,26 @@ export default function XuatDanhGia() {
           overflow: "hidden",
           border: "1px solid #e2e8f0",
           bgcolor: "#fff",
+          position: "relative" 
         }}
       >
-
+        <IconButton
+          onClick={() => navigate("/dashboard")}
+          sx={{
+            position: "absolute",
+            top: 6,
+            right: 12,
+            color: "#f1f5f9",
+            //backgroundColor: "#f1f5f9",
+            "&:hover": {
+              backgroundColor: "#e2e8f0",
+              color: "#ef4444",
+            },
+            boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+          }}
+        >
+          <CloseIcon />
+        </IconButton>
         {/* ===== HEADER ===== */}
         <Box
           sx={{

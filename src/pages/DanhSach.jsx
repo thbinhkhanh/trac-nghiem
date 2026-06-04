@@ -24,6 +24,8 @@ import {
   Alert,
 } from "@mui/material";
 
+import { useNavigate } from "react-router-dom";
+
 /* =======================
    MUI Icons
 ======================= */
@@ -36,6 +38,8 @@ import DownloadIcon from "@mui/icons-material/Download";
 import PrintIcon from "@mui/icons-material/Print";
 import FolderOpenIcon from "@mui/icons-material/FolderOpen";
 import DeleteSweepIcon from "@mui/icons-material/DeleteSweep";
+import CloseIcon from "@mui/icons-material/Close";
+
 
 /* =======================
    Firebase Firestore
@@ -75,6 +79,7 @@ import CreateDataConfirmDialog from "../dialog/CreateDataConfirmDialog";
 import DeleteClassesDialog from "../dialog/DeleteClassesDialog";
 
 export default function DanhSach() {
+  const navigate = useNavigate();
   /* =======================
    Context
   ======================= */
@@ -698,7 +703,24 @@ export default function DanhSach() {
           position: "relative",
         }}
       >
-
+        <IconButton
+          onClick={() => navigate("/dashboard")}
+          sx={{
+            position: "absolute",
+            top: 12,
+            right: 12,
+            zIndex: 2000, // ✅ thêm cái này
+            color: "#64748b",
+            backgroundColor: "#f1f5f9",
+            "&:hover": {
+              backgroundColor: "#e2e8f0",
+              color: "#ef4444",
+            },
+            boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+          }}
+        >
+          <CloseIcon />
+        </IconButton>
         {/* ICON */}
         <Box
           sx={{

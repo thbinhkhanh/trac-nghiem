@@ -35,10 +35,15 @@ import { ConfigContext } from "../context/ConfigContext";
 import DeleteExamDialog from "../dialog/DeleteExamDialog";
 import OverwriteConfirmDialog from "../dialog/OverwriteConfirmDialog";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import CloseIcon from "@mui/icons-material/Close";
+import { useNavigate } from "react-router-dom";
+
 import { createOnTapExam, normalizeOnTapId, checkDuplicateOnTap } from "../utils/createOnTapExam";
 import { exportQuestionsToWord } from "../utils/exportQuizWORD";
 
 export default function DeThi() {
+  const navigate = useNavigate();
+
   // ================= IMPORT CONTEXT =================
   const { config } = useContext(ConfigContext);
 
@@ -574,8 +579,28 @@ const confirmDeleteOnTap = async () => {
           overflow: "hidden",
           boxShadow: "0 10px 35px rgba(0,0,0,0.08)",
           background: "#fff",
+          position: "relative",
         }}
       >
+      <IconButton
+        onClick={() => navigate("/dashboard")}
+        sx={{
+          position: "absolute",
+          top: 10,
+          right: 10,
+          color: "#f1f5f9",
+          transition: "all 0.2s ease",
+          boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+
+          "&:hover": {
+            backgroundColor: "#fff",
+            color: "#ef4444",
+            transform: "scale(1.05)",
+          },
+        }}
+      >
+        <CloseIcon />
+      </IconButton>
 
       {/* HEADER */}
       <Box sx={{ px: 3, py: 2, background: "#1976d2", color: "#fff" }}>

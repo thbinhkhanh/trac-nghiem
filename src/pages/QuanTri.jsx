@@ -27,6 +27,8 @@ import {
   Grid
 } from "@mui/material";
 
+import { useNavigate } from "react-router-dom";
+
 // =========================
 // ICONS
 // =========================
@@ -53,6 +55,7 @@ import BackupPage from "./BackupPage";
 import RestorePage from "./RestorePage";
 
 export default function QuanTri() {
+  const navigate = useNavigate();
   // =========================
   // ACCOUNT
   // =========================
@@ -370,7 +373,7 @@ export default function QuanTri() {
           <Box
             sx={{
               px: 3,
-              py: 2,
+              py: 1,
               background: "#1976d2",
               color: "#fff",
             }}
@@ -386,6 +389,20 @@ export default function QuanTri() {
                   Cấu hình hệ thống
                 </Typography>
               </Box>
+
+              <IconButton
+                onClick={() => navigate("/dashboard")}
+                sx={{
+                  color: "#f1f5f9",
+                  "&:hover": {
+                    backgroundColor: "#fff",
+                    color: "#ef4444",
+                  },
+                  transition: "all 0.2s ease",
+                }}
+              >
+                <CloseIcon />
+              </IconButton>
 
               {/* RIGHT: ACCOUNT + ACTIONS */}
               {/*<Stack direction="row" spacing={1} alignItems="center">
