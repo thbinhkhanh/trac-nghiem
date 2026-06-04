@@ -719,12 +719,21 @@ export default function QuanTri() {
 
       {/* Backup */}
       {openBackup && (
-        <BackupPage open={openBackup} onClose={() => setOpenBackup(false)} />
+        <BackupPage
+          open={openBackup}
+          onClose={() => setOpenBackup(false)}
+          config={config}
+        />
       )}
 
       {/* Restore */}
       {openRestore && (
-        <RestorePage open={openRestore} onClose={() => setOpenRestore(false)} />
+        <RestorePage
+          open={openRestore}
+          onClose={() => setOpenRestore(false)}
+          config={config}
+          showSnackbar={setSnackbar}
+        />
       )}
     </Box>
 

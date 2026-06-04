@@ -37,7 +37,7 @@ const BACKUP_KEYS = [
   { key: "DETHI", label: "Đề thi" },
 ];
 
-export default function BackupPage({ open, onClose }) {
+export default function BackupPage({ open, onClose, config }) {
   const [backupOptions, setBackupOptions] = useState(
     BACKUP_KEYS.reduce((acc, { key }) => ({
       ...acc,
@@ -47,6 +47,7 @@ export default function BackupPage({ open, onClose }) {
 
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
+  
 
   const [snackbar, setSnackbar] = useState({
     open: false,
@@ -199,160 +200,151 @@ export default function BackupPage({ open, onClose }) {
     return data;
   };
 
-  const fetchAllBackup = async (
-    onProgress,
-    selectedCollections
-  ) => {
-    try {
-      const backupData = {};
+  const fetchAllBackup = async (onProgress, selectedCollections) => {
+    const backupData = {};
 
-      if (
-        !selectedCollections ||
-        selectedCollections.length === 0
-      ) {
-        return {};
-      }
+    const namHocRaw = config?.namHoc || "2025-2026";
+    const namHocKey = namHocRaw.replaceAll("-", "_");
 
-      let progressCount = 0;
-      const step = 100 / selectedCollections.length;
+    let progress = 0;
+    const step = 100 / selectedCollections.length;
 
-      for (const colName of selectedCollections) {
+    const getClassList = async () => {
+      const snap = await getDoc(
+        doc(db, "DANHSACH_LOP", namHocKey)
+      );
+      return snap.exists() ? snap.data().list || [] : [];
+    };
 
-        // =========================
-        // 📦 DANH SÁCH LỚP
-        // =========================
-        if (colName === "LOP") {
+    const classList = await getClassList();
 
-          if (!backupData.LAMVANBEN) {
-            backupData.LAMVANBEN = {};
-          }
+    for (const col of selectedCollections) {
 
-          const lopSnap = await getDoc(
-            doc(db, "LAMVANBEN", "lop")
-          );
+      // =========================
+      // 📦 DANH SÁCH LỚP + HỌC SINH
+      // =========================
+      if (col === "LOP") {
 
-          if (lopSnap.exists()) {
-            backupData.LAMVANBEN.lop =
-              lopSnap.data();
-          }
-        }
+        // 1. lớp
+        const lopSnap = await getDoc(
+          doc(db, "DANHSACH_LOP", namHocKey)
+        );
 
-        // =========================
-        // 📚 KẾT QUẢ ĐÁNH GIÁ
-        // =========================
-        else if (colName === "KETQUA") {
+        backupData.DANHSACH_LOP = {
+          [namHocKey]: lopSnap.exists()
+            ? lopSnap.data()
+            : { list: [] }
+        };
 
-          if (!backupData.LAMVANBEN) {
-            backupData.LAMVANBEN = {};
-          }
+        // 2. học sinh theo lớp
+        backupData.DS_HOCSINH = {
+          [namHocKey]: {}
+        };
 
-          const lopSnap = await getDoc(
-            doc(db, "LAMVANBEN", "lop")
-          );
-
-          const classCollections =
-            lopSnap.exists() &&
-            Array.isArray(lopSnap.data().list)
-              ? lopSnap.data().list
-              : [];
-
-          const examDocs = [
-            {
-              firestoreName: "Cuối kỳ I",
-              backupKey: "Cuoi_ky_I",
-            },
-            {
-              firestoreName: "Cuối năm",
-              backupKey: "Ca_nam",
-            },
-          ];
-
-          for (const exam of examDocs) {
-
-            backupData.LAMVANBEN[
-              exam.backupKey
-            ] = {};
-
-            await Promise.all(
-
-              classCollections.map(
-                async (className) => {
-
-                  const studentsSnap =
-                    await getDocs(
-                      collection(
-                        db,
-                        "LAMVANBEN",
-                        exam.firestoreName,
-                        className
-                      )
-                    );
-
-                  if (!studentsSnap.empty) {
-
-                    const classData = {};
-
-                    studentsSnap.forEach(
-                      (studentDoc) => {
-
-                        classData[
-                          studentDoc.id
-                        ] = studentDoc.data();
-                      }
-                    );
-
-                    backupData.LAMVANBEN[
-                      exam.backupKey
-                    ][className] = classData;
-                  }
-                }
+        await Promise.all(
+          classList.map(async (lop) => {
+            const snap = await getDocs(
+              collection(
+                db,
+                `DS_HOCSINH_${namHocKey}`,
+                lop,
+                "STUDENTS"
               )
             );
-          }
-        }
 
-        // =========================
-        // 📚 NGANHANG_DE
-        // =========================
-        else if (colName === "NGANHANG_DE") {
+            const data = {};
+            snap.forEach(d => {
+              data[d.id] = d.data();
+            });
 
-          backupData.NGANHANG_DE =
-            await backupSimpleCollection(
-              "NGANHANG_DE"
-            );
-        }
-
-        // =========================
-        // 📝 DETHI
-        // =========================
-        else if (colName === "DETHI") {
-
-          backupData.DETHI =
-            await backupSimpleCollection(
-              "DETHI"
-            );
-        }
-
-        progressCount += step;
-
-        if (onProgress) {
-          onProgress(
-            Math.min(
-              Math.round(progressCount),
-              99
-            )
-          );
-        }
+            backupData.DS_HOCSINH[namHocKey][lop] = data;
+          })
+        );
       }
 
-      if (onProgress) onProgress(100);
+      // =========================
+      // 📊 KẾT QUẢ ĐÁNH GIÁ
+      // =========================
+      else if (col === "KETQUA") {
 
-      return backupData;
+        backupData.DATA_KTDK = {
+          [namHocKey]: {}
+        };
 
-    } catch (err) {
-      console.error("❌ Lỗi khi backup:", err);
-      return {};
+        backupData.DATA_ONTAP = {
+          [namHocKey]: {}
+        };
+
+        const hocKyList = ["Cuối kỳ I", "Cuối năm"];
+
+        await Promise.all(
+          hocKyList.map(async (hocKy) => {
+
+            backupData.DATA_KTDK[namHocKey][hocKy] = {};
+            backupData.DATA_ONTAP[namHocKey][hocKy] = {};
+
+            await Promise.all(
+              classList.map(async (lop) => {
+
+                const ktdkSnap = await getDocs(
+                  collection(
+                    db,
+                    `DATA_KTDK_${namHocKey}`,
+                    hocKy,
+                    lop
+                  )
+                );
+
+                const ontapSnap = await getDocs(
+                  collection(
+                    db,
+                    `DATA_ONTAP_${namHocKey}`,
+                    hocKy,
+                    lop
+                  )
+                );
+
+                const ktdkData = {};
+                ktdkSnap.forEach(d => {
+                  ktdkData[d.id] = d.data();
+                });
+
+                const ontapData = {};
+                ontapSnap.forEach(d => {
+                  ontapData[d.id] = d.data();
+                });
+
+                backupData.DATA_KTDK[namHocKey][hocKy][lop] = ktdkData;
+                backupData.DATA_ONTAP[namHocKey][hocKy][lop] = ontapData;
+              })
+            );
+          })
+        );
+      }
+
+      // =========================
+      // 🧪 NGÂN HÀNG ĐỀ
+      // =========================
+      else if (col === "NGANHANG_DE") {
+        backupData.NGANHANG_DE =
+          await backupSimpleCollection("NGANHANG_DE");
+      }
+
+      // =========================
+      // 📝 ĐỀ THI
+      // =========================
+      else if (col === "DETHI") {
+
+        backupData.DETHI =
+          await backupSimpleCollection("DETHI");
+      }
+
+      progress += step;
+      onProgress?.(Math.min(progress, 99));
     }
+
+    onProgress?.(100);
+    return backupData;
   };
 
   const handleBackup = async () => {
