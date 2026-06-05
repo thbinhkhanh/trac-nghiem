@@ -46,6 +46,8 @@ import { collection, getDocs, doc, getDoc } from "firebase/firestore";
 /* =======================
    Components
 ======================= */
+const getLastClassKey = (namHoc) => `gv_last_class_${namHoc}`;
+
 import ResultDialog_GV from "../dialog/ResultDialog_GV";
 
 // ✅ Chỉ còn 1 trường
@@ -63,8 +65,8 @@ export default function HocSinh() {
   const [khoi, setKhoi] = useState("Khối 4");
   const [hocKi, setHocKi] = useState("");
 
-  // const [fullname, setFullname] = useState("");
-  // const [errorMsg, setErrorMsg] = useState("");
+  const namHocRaw = config?.namHoc || "2025-2026";
+  const namHoc = namHocRaw.replaceAll("-", "_");
 
   /* =======================
     DATA STATE
@@ -87,12 +89,12 @@ export default function HocSinh() {
   const [resultData, setResultData] = useState(null);
   
   // 🔹 Lọc lớp theo khối
-  useEffect(() => {
+  /*useEffect(() => {
     const soKhoi = khoi.replace("Khối ", "");
     const filtered = classes.filter(cl => cl.startsWith(soKhoi));
     setFilteredClasses(filtered);
     setLop("");
-  }, [khoi, classes]);
+  }, [khoi, classes]);*/
 
   useEffect(() => {
     if (!lop) return;
@@ -121,6 +123,7 @@ export default function HocSinh() {
       const hocKy = config?.hocKy || "Cuối năm";
       const lop = student.lop || config?.lop || "4A";
       setLop(lop); // 👈 FIX 1: update dropdown ngay lập tức
+      localStorage.setItem(getLastClassKey(namHoc), lop);
 
       const studentKey = convertToId(student.hoTen || student.id);
 
@@ -189,10 +192,10 @@ export default function HocSinh() {
   useEffect(() => {
     const fetchClasses = async () => {
       try {
-        const namHocRaw = config?.namHoc || "2025-2026";
-        const namHocKey = namHocRaw.replaceAll("-", "_");
+        //const namHocRaw = config?.namHoc || "2025-2026";
+        //const namHoc = namHocRaw.replaceAll("-", "_");
 
-        const lopRef = doc(db, "DANHSACH_LOP", namHocKey);
+        const lopRef = doc(db, "DANHSACH_LOP", namHoc);
         const lopSnap = await getDoc(lopRef);
 
         const classList = lopSnap.exists()
@@ -203,8 +206,14 @@ export default function HocSinh() {
 
         setClasses(classList);
 
-        // ❗ chỉ set mặc định nếu chưa có lớp
-        setLop((prev) => prev || classList[0] || "");
+        // set mặc định lớp truy cậ gần nhất
+        const lastClass = localStorage.getItem(getLastClassKey(namHoc));
+
+        if (lastClass && classList.includes(lastClass)) {
+          setLop(lastClass);
+        } else {
+          setLop(classList[0] || "");
+        }
       } catch (err) {
         console.error("❌ Lỗi fetch lớp theo năm học:", err);
         setClasses([]);
@@ -214,7 +223,7 @@ export default function HocSinh() {
     fetchClasses();
   }, [config?.namHoc]);
 
-  useEffect(() => {
+  /*useEffect(() => {
     const soKhoi = khoi.replace("Khối ", "");
     const filtered = classes.filter(cl => cl.startsWith(soKhoi));
 
@@ -223,6 +232,23 @@ export default function HocSinh() {
     // chỉ reset lớp, KHÔNG auto chọn lớp đầu
     setLop("");
     setStudents([]);
+  }, [khoi, classes]);*/
+
+  useEffect(() => {
+    const soKhoi = khoi.replace("Khối ", "");
+    const filtered = classes.filter(cl => cl.startsWith(soKhoi));
+
+    setFilteredClasses(filtered);
+
+    const lastClass = localStorage.getItem(getLastClassKey(namHoc));
+
+    if (lastClass && filtered.includes(lastClass)) {
+      setLop(lastClass);
+    } else {
+      setLop(filtered[0] || "");
+    }
+
+    setStudents([]);
   }, [khoi, classes]);
 
   useEffect(() => {
@@ -230,8 +256,8 @@ export default function HocSinh() {
     fetchStudentsByClass(lop);
   }, [lop]);
 
-  const namHocRaw = config?.namHoc || "2025-2026";
-  const namHoc = namHocRaw.replaceAll("-", "_");
+  //const namHocRaw = config?.namHoc || "2025-2026";
+  //const namHoc = namHocRaw.replaceAll("-", "_");
 
   const fetchStudentsByClass = async (classKey) => {
     try {
@@ -435,14 +461,12 @@ export default function HocSinh() {
             value={lop}
             label="Lớp"
             onChange={(e) => {
-              const newClass =
-                e.target.value;
+              const newClass = e.target.value;
 
               setLop(newClass);
+              localStorage.setItem(getLastClassKey(namHoc), newClass);
 
-              fetchStudentsByClass(
-                newClass
-              );
+              fetchStudentsByClass(newClass);
             }}
           >
             {filteredClasses.map(

@@ -46,9 +46,8 @@ import { collection, getDocs, doc, getDoc } from "firebase/firestore";
 /* =======================
    Components
 ======================= */
-const getLastClassKey = (namHoc) => `hs_last_class_${namHoc}`;
+import ResultDialog_GV from "../dialog/ResultDialog_GV";
 
-import ResultDialog from "../dialog/ResultDialog";
 // ✅ Chỉ còn 1 trường
 const SCHOOL_LIST = ["TH Lâm Văn Bền"];
 
@@ -65,7 +64,7 @@ export default function HocSinh() {
   const [hocKi, setHocKi] = useState("");
 
   // const [fullname, setFullname] = useState("");
-  // const [errorMsg, setErrorMsg] = useState("")
+  // const [errorMsg, setErrorMsg] = useState("");
 
   /* =======================
     DATA STATE
@@ -79,42 +78,26 @@ export default function HocSinh() {
     UI STATE
   ======================= */
   const [showAll, setShowAll] = useState(false);
+  const [hasResult, setHasResult] = useState(false);
 
   /* =======================
     RESULT DIALOG STATE
   ======================= */
   const [openResultDialog, setOpenResultDialog] = useState(false);
   const [resultData, setResultData] = useState(null);
- 
+  
   // 🔹 Lọc lớp theo khối
-  /*useEffect(() => {
+  useEffect(() => {
     const soKhoi = khoi.replace("Khối ", "");
     const filtered = classes.filter(cl => cl.startsWith(soKhoi));
     setFilteredClasses(filtered);
     setLop("");
-  }, [khoi, classes]);*/
-
-  useEffect(() => {
-    const soKhoi = khoi.replace("Khối ", "");
-    const filtered = classes.filter(cl => cl.startsWith(soKhoi));
-
-    setFilteredClasses(filtered);
-
-    const lastClass = localStorage.getItem(getLastClassKey(namHoc));
-
-    if (lastClass && filtered.includes(lastClass)) {
-      setLop(lastClass);
-    } else {
-      setLop(filtered[0] || "");
-    }
-
-    setStudents([]);
   }, [khoi, classes]);
 
   useEffect(() => {
     if (!lop) return;
 
-    const key = `hs_recent_${namHoc}_${lop}`;
+    const key = `gv_recent_${namHoc}_${lop}`;
     const stored = JSON.parse(localStorage.getItem(key) || "[]");
 
     setRecentStudents(stored);
@@ -134,16 +117,16 @@ export default function HocSinh() {
     try {
       const namHocRaw = config?.namHoc || "2025_2026";
       const namHoc = namHocRaw.replaceAll("-", "_");
+
       const hocKy = config?.hocKy || "Cuối năm";
       const lop = student.lop || config?.lop || "4A";
       setLop(lop); // 👈 FIX 1: update dropdown ngay lập tức
 
       const studentKey = convertToId(student.hoTen || student.id);
 
-      // ==========================
-      // 🔥 RECENT (MOVE LÊN TRƯỚC)
-      // ==========================
-      const key = `hs_recent_${namHoc}_${lop}`;
+      //const key = `gv_recent_${lop}`;
+      const key = `gv_recent_${namHoc}_${lop}`;
+
       const stored = JSON.parse(localStorage.getItem(key) || "[]");
 
       const updated = [
@@ -154,9 +137,6 @@ export default function HocSinh() {
       localStorage.setItem(key, JSON.stringify(updated));
       setRecentStudents(updated);
 
-      // ==========================
-      // FIRESTORE CHECK
-      // ==========================
       const examRef = doc(
         db,
         `DATA_KTDK_${namHoc}`,
@@ -167,80 +147,74 @@ export default function HocSinh() {
 
       const examSnap = await getDoc(examRef);
 
+      // ======================
+      // CÓ ĐIỂM
+      // ======================
       if (examSnap.exists()) {
         const data = examSnap.data();
 
         setResultData({
-          ...data,
-          lop: lop,
-          hoTen: student.hoTen,
+          hoVaTen: data.hoVaTen || student.hoTen,
+          lop: data.lop || student.lop,
+          lyThuyet: data.lyThuyet ?? data.diem ?? 0, // 🔥 FIX QUAN TRỌNG
+          mon: data.mon,
+          ngayKiemTra: data.ngayKiemTra,
+          thoiGianLamBai: data.thoiGianLamBai,
         });
 
+        setHasResult(true);
         setOpenResultDialog(true);
         return;
       }
 
-      // ==========================
-      // UPDATE CONFIG
-      // ==========================
-      setConfig((prev) => ({
-        ...prev,
+      // ======================
+      // KHÔNG CÓ ĐIỂM
+      // ======================
+      setResultData({
         lop,
-        mon: prev?.mon || "Tin học",
-      }));
-
-      // ==========================
-      // NAVIGATE
-      // ==========================
-      navigate("/tracnghiem", {
-        state: {
-          school,
-          fullname: student.hoTen,
-          lop,
-        },
+        hoVaTen: student.hoTen,
       });
 
+      setHasResult(false);
+      setOpenResultDialog(true);
+      return;
+
     } catch (err) {
-      console.error("🔥 ERROR FULL:", err);
-      alert("Không kiểm tra được trạng thái bài làm.");
+      console.error(err);
+      alert("Lỗi kiểm tra dữ liệu");
     }
   };
 
   // 🔹 Fetch danh sách lớp 
   useEffect(() => {
-  const fetchClasses = async () => {
-    try {
-      //const namHocRaw = config?.namHoc || "2025-2026";
-      //const namHoc = namHocRaw.replaceAll("-", "_");
+    const fetchClasses = async () => {
+      try {
+        const namHocRaw = config?.namHoc || "2025-2026";
+        const namHocKey = namHocRaw.replaceAll("-", "_");
 
-      const lopRef = doc(db, "DANHSACH_LOP", namHoc);
-      const lopSnap = await getDoc(lopRef);
+        const lopRef = doc(db, "DANHSACH_LOP", namHocKey);
+        const lopSnap = await getDoc(lopRef);
 
-      const classList = lopSnap.exists()
-        ? lopSnap.data().list || []
-        : [];
+        const classList = lopSnap.exists()
+          ? lopSnap.data().list || []
+          : [];
 
-      classList.sort((a, b) => a.localeCompare(b));
+        classList.sort((a, b) => a.localeCompare(b));
 
-      setClasses(classList);
+        setClasses(classList);
 
-      const lastClass = localStorage.getItem(getLastClassKey(namHoc));
-
-      if (lastClass && classList.includes(lastClass)) {
-        setLop(lastClass);
-      } else {
-        setLop(classList[0] || "");
+        // ❗ chỉ set mặc định nếu chưa có lớp
+        setLop((prev) => prev || classList[0] || "");
+      } catch (err) {
+        console.error("❌ Lỗi fetch lớp theo năm học:", err);
+        setClasses([]);
       }
-    } catch (err) {
-      console.error("❌ Lỗi fetch lớp theo năm học:", err);
-      setClasses([]);
-    }
-  };
+    };
 
-  fetchClasses();
-}, [config?.namHoc]);
+    fetchClasses();
+  }, [config?.namHoc]);
 
-  /*useEffect(() => {
+  useEffect(() => {
     const soKhoi = khoi.replace("Khối ", "");
     const filtered = classes.filter(cl => cl.startsWith(soKhoi));
 
@@ -249,7 +223,7 @@ export default function HocSinh() {
     // chỉ reset lớp, KHÔNG auto chọn lớp đầu
     setLop("");
     setStudents([]);
-  }, [khoi, classes]);*/
+  }, [khoi, classes]);
 
   useEffect(() => {
     if (!lop) return;
@@ -368,7 +342,7 @@ export default function HocSinh() {
         maxWidth: 1420,
         bgcolor: "#fff",
         minHeight: 650,
-        position: "relative", // 👈 thêm dòng này
+        position: "relative",
       }}
     >
       <IconButton
@@ -404,8 +378,8 @@ export default function HocSinh() {
           }}
         >
           {config?.examType === "on_tap"
-            ? `ÔN TẬP - ${(config?.hocKy || "").toUpperCase()}`
-            : `KTĐK - ${(config?.hocKy || "").toUpperCase()}`}
+            ? `KÉT QUẢ ÔN TẬP - ${(config?.hocKy || "").toUpperCase()}`
+            : `KẾT QUẢ KTĐK - ${(config?.hocKy || "").toUpperCase()}`}
         </Typography>
       </Box>
 
@@ -461,13 +435,14 @@ export default function HocSinh() {
             value={lop}
             label="Lớp"
             onChange={(e) => {
-              const newClass = e.target.value;
+              const newClass =
+                e.target.value;
 
               setLop(newClass);
 
-              localStorage.setItem(getLastClassKey(namHoc), newClass);
-
-              fetchStudentsByClass(newClass);
+              fetchStudentsByClass(
+                newClass
+              );
             }}
           >
             {filteredClasses.map(
@@ -655,7 +630,7 @@ export default function HocSinh() {
                       },
                     }}
                   >
-                    Bắt đầu làm bài
+                    Xem kết quả
                   </Box>
                 </Box>
               </Paper>
@@ -782,17 +757,14 @@ export default function HocSinh() {
         </>
       )}
 
-      <ResultDialog
+      <ResultDialog_GV
         open={openResultDialog}
         onClose={() => setOpenResultDialog(false)}
         dialogMode="success"
         dialogMessage=""
-        studentResult={
-          config?.choXemDiem
-            ? resultData
-            : { ...resultData, lyThuyet: undefined }
-        }
-        choXemDiem={config?.choXemDiem ?? false}
+        studentResult={resultData}
+        hasResult={true}
+        choXemDiem={true}
         configData={config}
         convertPercentToScore={(v) => v}
       />

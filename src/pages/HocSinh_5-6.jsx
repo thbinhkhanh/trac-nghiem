@@ -46,8 +46,6 @@ import { collection, getDocs, doc, getDoc } from "firebase/firestore";
 /* =======================
    Components
 ======================= */
-const getLastClassKey = (namHoc) => `hs_last_class_${namHoc}`;
-
 import ResultDialog from "../dialog/ResultDialog";
 // ✅ Chỉ còn 1 trường
 const SCHOOL_LIST = ["TH Lâm Văn Bền"];
@@ -87,28 +85,11 @@ export default function HocSinh() {
   const [resultData, setResultData] = useState(null);
  
   // 🔹 Lọc lớp theo khối
-  /*useEffect(() => {
+  useEffect(() => {
     const soKhoi = khoi.replace("Khối ", "");
     const filtered = classes.filter(cl => cl.startsWith(soKhoi));
     setFilteredClasses(filtered);
     setLop("");
-  }, [khoi, classes]);*/
-
-  useEffect(() => {
-    const soKhoi = khoi.replace("Khối ", "");
-    const filtered = classes.filter(cl => cl.startsWith(soKhoi));
-
-    setFilteredClasses(filtered);
-
-    const lastClass = localStorage.getItem(getLastClassKey(namHoc));
-
-    if (lastClass && filtered.includes(lastClass)) {
-      setLop(lastClass);
-    } else {
-      setLop(filtered[0] || "");
-    }
-
-    setStudents([]);
   }, [khoi, classes]);
 
   useEffect(() => {
@@ -210,27 +191,32 @@ export default function HocSinh() {
   useEffect(() => {
   const fetchClasses = async () => {
     try {
-      //const namHocRaw = config?.namHoc || "2025-2026";
-      //const namHoc = namHocRaw.replaceAll("-", "_");
+      const namHocRaw = config?.namHoc || "2025-2026";
+      const namHocKey = namHocRaw.replaceAll("-", "_");
 
-      const lopRef = doc(db, "DANHSACH_LOP", namHoc);
+      console.log("📘 config.namHoc =", config?.namHoc);
+      console.log("📘 namHocRaw =", namHocRaw);
+      console.log("📘 namHocKey (Firestore doc) =", namHocKey);
+
+      const lopRef = doc(db, "DANHSACH_LOP", namHocKey);
       const lopSnap = await getDoc(lopRef);
+
+      console.log("📦 Firestore exists =", lopSnap.exists());
+      console.log("📦 raw data =", lopSnap.data());
 
       const classList = lopSnap.exists()
         ? lopSnap.data().list || []
         : [];
 
+      console.log("📚 classList trước sort =", classList);
+
       classList.sort((a, b) => a.localeCompare(b));
+
+      console.log("📚 classList sau sort =", classList);
 
       setClasses(classList);
 
-      const lastClass = localStorage.getItem(getLastClassKey(namHoc));
-
-      if (lastClass && classList.includes(lastClass)) {
-        setLop(lastClass);
-      } else {
-        setLop(classList[0] || "");
-      }
+      setLop((prev) => prev || classList[0] || "");
     } catch (err) {
       console.error("❌ Lỗi fetch lớp theo năm học:", err);
       setClasses([]);
@@ -240,7 +226,7 @@ export default function HocSinh() {
   fetchClasses();
 }, [config?.namHoc]);
 
-  /*useEffect(() => {
+  useEffect(() => {
     const soKhoi = khoi.replace("Khối ", "");
     const filtered = classes.filter(cl => cl.startsWith(soKhoi));
 
@@ -249,7 +235,7 @@ export default function HocSinh() {
     // chỉ reset lớp, KHÔNG auto chọn lớp đầu
     setLop("");
     setStudents([]);
-  }, [khoi, classes]);*/
+  }, [khoi, classes]);
 
   useEffect(() => {
     if (!lop) return;
@@ -461,13 +447,14 @@ export default function HocSinh() {
             value={lop}
             label="Lớp"
             onChange={(e) => {
-              const newClass = e.target.value;
+              const newClass =
+                e.target.value;
 
               setLop(newClass);
 
-              localStorage.setItem(getLastClassKey(namHoc), newClass);
-
-              fetchStudentsByClass(newClass);
+              fetchStudentsByClass(
+                newClass
+              );
             }}
           >
             {filteredClasses.map(
