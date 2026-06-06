@@ -877,21 +877,15 @@ export default function RestorePage({
           sx={{
             px: 3,
             py: 2,
-            borderTop:
-              "1px solid #e2e8f0",
+            borderTop: "1px solid #e2e8f0",
             bgcolor: "#fff",
           }}
         >
-          <Stack
-            direction="row"
-            spacing={1.5}
-            justifyContent="flex-end"
-          >
+          <Stack direction="row" spacing={1.5} justifyContent="flex-end">
             <Button
               onClick={onClose}
               sx={{
-                textTransform:
-                  "none",
+                textTransform: "none",
               }}
             >
               Hủy
@@ -899,21 +893,16 @@ export default function RestorePage({
 
             <Button
               variant="contained"
-              startIcon={
-                <RestoreIcon />
-              }
+              startIcon={<RestoreIcon />}
               onClick={handleRestore}
-              disabled={
-                loading ||
-                !hasAnyChecked
-              }
+              disabled={loading || !hasAnyChecked}
               sx={{
-                textTransform:
-                  "none",
-                borderRadius:
-                  "12px",
+                textTransform: "none",
+                borderRadius: "12px",
                 fontWeight: 700,
                 boxShadow: "none",
+                px: 2.5,
+                py: 1,
 
                 "&:hover": {
                   boxShadow: "none",

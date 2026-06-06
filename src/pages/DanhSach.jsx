@@ -310,10 +310,19 @@ export default function DanhSach() {
     }
   };
  
-  const handleClassChange = (e) => {
+  const handleClassChange = async (e) => {
     const newClass = e.target.value;
-    setSelectedClass(newClass); // chỉ cập nhật state local
-    };
+
+    try {
+      await setDoc(
+        doc(db, "CONFIG", "config"),
+        { lop: newClass },
+        { merge: true }
+      );
+    } catch (err) {
+      console.error("❌ Lỗi cập nhật lớp:", err);
+    }
+  };
 
   const reloadClasses = async () => {
     const snap = await getDocs(collection(db, `DS_HOCSINH_${namHocKey}`));
