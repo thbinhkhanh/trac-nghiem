@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useContext } from "react";
+import React, { useEffect, useState } from "react";
 
 import {
   Dialog,
@@ -20,6 +20,7 @@ import {
   Switch,
 } from "@mui/material";
 
+import { useContext } from "react";
 import { ConfigContext } from "../context/ConfigContext";
 import CloseIcon from "@mui/icons-material/Close";
 import { Add, Delete, Edit, Lock } from "@mui/icons-material";
@@ -44,6 +45,7 @@ export default function AssignClassDialog({
   const [lockedBy, setLockedBy] = useState({});
   const [confirmOpen, setConfirmOpen] = useState(false);
   const { config } = useContext(ConfigContext);
+
   
   // Trạng thái bật/tắt chế độ chỉnh sửa lớp
   const [editMode, setEditMode] = useState(false);
@@ -94,51 +96,40 @@ export default function AssignClassDialog({
     onClose();
   };
 
-  // ADD CLASS - CẬP NHẬT GIAO DIỆN NGAY, FIRESTORE CHẠY NỀN
-  const handleAddClass = () => {
-  const value = newClass.trim().toUpperCase();
-  if (!value) return;
+  // ADD CLASS - ĐÃ SỬA LỖI GHI FIRESTORE
+  const handleAddClass = async () => {
+    const value = newClass.trim().toUpperCase();
+    if (!value) return;
 
-  if (classList.includes(value)) {
-    alert("Lớp đã tồn tại!");
-    return;
-  }
+    if (classList.includes(value)) {
+      alert("Lớp đã tồn tại!");
+      return;
+    }
 
-  // 1. UI update ngay
-  const updated = [...classList, value].sort();
-  setClassList(updated);
-  setNewClass("");
+    const updated = [...classList, value].sort();
 
-  // 2. Firestore chạy nền
-  (async () => {
     try {
+      // Lấy trực tiếp thông tin cấu hình năm học mới nhất từ database nhằm tránh lỗi bất đồng bộ state
       const snap = await getDoc(doc(db, "CONFIG", "config"));
       const data = snap.exists() ? snap.data() : {};
+      const currentYear = (data.namHoc || "2025-2026").replaceAll("-", "_");
 
-      // ⚠️ chuẩn hóa YEAR KEY giống toàn hệ thống
-      const currentYear = (data.namHoc || "2025-2026").replace(/-/g, "_");
-
-      const ref = doc(db, "DANHSACH_LOP", currentYear);
-
-      // 🔥 QUAN TRỌNG: đảm bảo list luôn overwrite đúng
+      // Thực hiện ghi trực tiếp lên Firestore document tương ứng với năm học
       await setDoc(
-        ref,
-        {
-          list: updated,
-        },
+        doc(db, "DANHSACH_LOP", currentYear),
+        { list: updated },
         { merge: true }
       );
 
-      console.log("✔ Đã lưu lớp vào DANHSACH_LOP:", currentYear, updated);
+      // Cập nhật lại giao diện hiển thị tại chỗ
+      setClassList(updated);
+      setNewClass("");
+      console.log("Ghi Firestore thành công cho năm học:", currentYear);
     } catch (error) {
-      console.error("Lỗi chạy nền khi thêm lớp: ", error);
-
-      // rollback UI
-      setClassList(classList);
-      alert("Lỗi mạng! Không thể lưu lớp mới vào database.");
+      console.error("Lỗi khi thêm lớp: ", error);
+      alert("Không thể lưu lớp mới vào hệ thống dữ liệu!");
     }
-  })();
-};
+  };
 
   // GROUP CLASS
   const groups = classList.reduce((acc, lop) => {
@@ -183,8 +174,8 @@ export default function AssignClassDialog({
     });
   };
 
-  // DELETE CLASS - CẬP NHẬT GIAO DIỆN NGAY, FIRESTORE CHẠY NỀN
-  const handleDeleteClasses = () => {
+  // DELETE CLASS
+  const handleDeleteClasses = async () => {
     const toDelete = Object.keys(selected).filter((lop) => selected[lop]);
 
     if (toDelete.length === 0) {
@@ -192,59 +183,44 @@ export default function AssignClassDialog({
       return;
     }
 
-    // 1. Cập nhật giao diện lập tức
     const updated = classList.filter((l) => !toDelete.includes(l));
+
+    const snap = await getDoc(doc(db, "CONFIG", "config"));
+    const data = snap.exists() ? snap.data() : {};
+
+    const perm = data.class_permissions || {};
+    const yearPerm = perm[namHoc] || {};
+
+    // Xóa lớp khỏi phân quyền của tất cả giáo viên
+    Object.keys(yearPerm).forEach((u) => {
+      toDelete.forEach((l) => {
+        if (yearPerm[u]) delete yearPerm[u][l];
+      });
+    });
+
+    perm[namHoc] = yearPerm;
+
+    await setDoc(
+      doc(db, "CONFIG", "config"),
+      { class_permissions: perm },
+      { merge: true }
+    );
+
+    await setDoc(
+      doc(db, "DANHSACH_LOP", namHoc),
+      { list: updated },
+      { merge: true }
+    );
+
     setClassList(updated);
     setSelected({});
-
-    // 2. Xử lý lưu Firebase bất đồng bộ chạy ngầm
-    (async () => {
-      try {
-        const snap = await getDoc(doc(db, "CONFIG", "config"));
-        const data = snap.exists() ? snap.data() : {};
-        const currentYear = (data.namHoc || "2025-2026").replaceAll("-", "_");
-
-        const perm = data.class_permissions || {};
-        const yearPerm = perm[currentYear] || {};
-
-        // Xóa lớp khỏi phân quyền của tất cả giáo viên
-        Object.keys(yearPerm).forEach((u) => {
-          toDelete.forEach((l) => {
-            if (yearPerm[u]) delete yearPerm[u][l];
-          });
-        });
-
-        perm[currentYear] = yearPerm;
-
-        // Lưu đồng thời cả hai document lên Firestore để tối ưu tốc độ ngầm
-        await Promise.all([
-          setDoc(doc(db, "CONFIG", "config"), { class_permissions: perm }, { merge: true }),
-          setDoc(doc(db, "DANHSACH_LOP", currentYear), { list: updated }, { merge: true })
-        ]);
-
-        // Tải lại bản đồ khóa mới dưới nền
-        const lockMap = {};
-        Object.entries(yearPerm).forEach(([u, classes]) => {
-          Object.keys(classes || {}).forEach((lop) => {
-            if (classes[lop]) lockMap[lop] = u;
-          });
-        });
-        setLockedBy(lockMap);
-
-        console.log("Chạy ngầm: Xóa lớp thành công trên Firestore ->", currentYear);
-      } catch (error) {
-        console.error("Lỗi chạy nền khi xóa lớp: ", error);
-        // Khôi phục lại dữ liệu trên giao diện nếu thao tác ngầm thất bại
-        setClassList(classList);
-        alert("Lỗi mạng! Thao tác xóa lớp chưa được ghi nhận vào database.");
-      }
-    })();
+    await loadData(); // Tải lại bản đồ khóa mới
   };
 
   // SAVE PERMISSION
   const save = async () => {
     if (editMode) {
-      setEditMode(false);
+      handleCloseDialog();
       return;
     }
 
@@ -301,59 +277,46 @@ export default function AssignClassDialog({
           },
         }}
       >
-        {/* ===== HEADER ===== */}
+        {/* HEADER */}
         <Box
           sx={{
             px: 3,
-            py: 2,                 // Tăng padding dọc lên 2 chuẩn theo mẫu đồng bộ
+            py: 1.5,
             background: "#1976d2",
             color: "#fff",
-            position: "relative",  // Làm gốc tọa độ để căn tuyệt đối nút X
-            display: "flex",
-            alignItems: "center",
           }}
         >
-          {/* TITLE - Sử dụng Typography phẳng với font size 17 */}
-          <Typography
+          <Box
             sx={{
-              fontSize: 17,        // Đồng bộ kích thước chữ 17 giống các component trên
-              fontWeight: 700,
               display: "flex",
+              justifyContent: "space-between",
               alignItems: "center",
-              gap: 1,
             }}
           >
-            🔐 Quản lý phân quyền ({config?.namHoc || "2025-2026"})
-          </Typography>
+            <Typography
+              fontSize={16}
+              fontWeight={700}
+              display="flex"
+              alignItems="center"
+              gap={1}
+            >
+              🔐 Quản lý phân quyền ({config?.namHoc || "2025-2026"})
+            </Typography>
 
-          {/* CLOSE BUTTON - Căn phải sát mép và tăng kích thước vùng bấm */}
-          <IconButton 
-            onClick={handleCloseDialog} 
-            sx={{ 
-              position: "absolute",
-              right: 12,           // Căn phải sát viền
-              color: "#f1f5f9",
-              p: 1,                // Tăng padding lên 1 để vòng tròn hover to, dễ bấm
-              "&:hover": {
-                backgroundColor: "#fff",
-                color: "#ef4444",
-              },
-              transition: "all 0.2s ease",
-            }}
-          >
-            {/* Sử dụng fontSize="medium" để dấu X to rõ ràng hơn */}
-            <CloseIcon fontSize="medium" />
-          </IconButton>
+            <IconButton onClick={handleCloseDialog} sx={{ color: "#fff" }}>
+              <CloseIcon />
+            </IconButton>
+          </Box>
         </Box>
 
         {/* CONTENT */}
         <DialogContent sx={{ flex: 1, px: 3, py: 2 }}>
           
-          {/* THANH CHUYỂN CHẾ ĐỘ */}
+          {/* THANH CHUYỂN CHẾ ĐỘ CHỈNH SỬA / PHÂN QUYỀN - ĐÃ THAY THẾ STRONG ĐỂ FIX PHÔNG CHỮ */}
           <Box sx={{ mb: 2, display: "flex", justifyContent: "space-between", alignItems: "center", bgcolor: "#fff", p: 1, borderRadius: 2, border: "1px dashed #ccc" }}>
             <Typography variant="body2" sx={{ fontWeight: 600, color: "#1976d2", fontFamily: "inherit" }}>
               Chế độ hiện tại:{" "}
-              <Box component="span" sx={{ fontWeight: 600, color: editMode ? "#ed6c02" : "#ed6c02", ml: 0.5 }}>
+              <Box component="span" sx={{ fontWeight: 800, color: editMode ? "#ed6c02" : "#1976d2", ml: 0.5 }}>
                 {editMode ? "CHỈNH SỬA LỚP" : "PHÂN QUYỀN"}
               </Box>
             </Typography>
@@ -369,7 +332,7 @@ export default function AssignClassDialog({
             />
           </Box>
 
-          {/* CHỌN GIÁO VIÊN */}
+          {/* CHỌN GIÁO VIÊN (Ẩn đi khi ở chế độ chỉnh sửa lớp) */}
           {!editMode && (
             <FormControl fullWidth size="small" sx={{ mb: 2 }}>
               <InputLabel>Giáo viên</InputLabel>
@@ -387,7 +350,7 @@ export default function AssignClassDialog({
             </FormControl>
           )}
 
-          {/* Ô THÊM LỚP & NÚT XÓA */}
+          {/* Ô THÊM LỚP & NÚT XÓA - GIỮ MÀU GỐC CỦA BẠN */}
           {editMode && (
             <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
               <TextField
@@ -527,13 +490,7 @@ export default function AssignClassDialog({
         >
           <Button
             variant="outlined"
-            onClick={() => {
-              if (editMode) {
-                setEditMode(false); // 👈 quay về PHÂN QUYỀN
-                return;
-              }
-              handleCloseDialog(); // 👈 nếu không phải edit thì đóng dialog
-            }}
+            onClick={handleCloseDialog}
             sx={{
               minWidth: 110,
               height: 42,
@@ -571,9 +528,9 @@ export default function AssignClassDialog({
         selectedCount={Object.keys(selected).filter((lop) => selected[lop]).length}
         selectedClasses={Object.keys(selected).filter((lop) => selected[lop])}
         onClose={() => setConfirmOpen(false)}
-        onConfirm={() => {
+        onConfirm={async () => {
           setConfirmOpen(false);
-          handleDeleteClasses(); // Đã bỏ await để chạy ngầm từ bên trong hàm
+          await handleDeleteClasses();
         }}
       />
     </>

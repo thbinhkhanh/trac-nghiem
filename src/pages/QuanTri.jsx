@@ -374,74 +374,42 @@ export default function QuanTri() {
           }}
         >
           {/* ===== HEADER ===== */}
-          <Box
-            sx={{
-              px: 3,
-              py: 1,
-              background: "#1976d2",
-              color: "#fff",
-            }}
-          >
-            <Stack
-              direction="row"
-              alignItems="center"
-              justifyContent="space-between"
-            >
-              {/* LEFT: TITLE */}
-              <Box>
-                <Typography sx={{ fontSize: 17, fontWeight: 700 }}>
-                  Cấu hình hệ thống
-                </Typography>
-              </Box>
+          {/* ===== HEADER ===== */}
+<Box 
+  sx={{ 
+    px: 3, 
+    py: 2,                 // Tăng padding dọc lên 2 cho thoáng rộng và đồng bộ
+    background: "#1976d2", 
+    color: "#fff",
+    position: "relative",  // Làm gốc tọa độ để căn tuyệt đối nút X
+    display: "flex",
+    alignItems: "center"
+  }}
+>
+  {/* TITLE - Chỉ dùng duy nhất một thẻ Typography phẳng */}
+  <Typography sx={{ fontSize: 17, fontWeight: 700 }}>
+    Cấu hình hệ thống
+  </Typography>
 
-              <IconButton
-                onClick={() => navigate("/dashboard")}
-                sx={{
-                  color: "#f1f5f9",
-                  "&:hover": {
-                    backgroundColor: "#fff",
-                    color: "#ef4444",
-                  },
-                  transition: "all 0.2s ease",
-                }}
-              >
-                <CloseIcon />
-              </IconButton>
-
-              {/* RIGHT: ACCOUNT + ACTIONS */}
-              {/*<Stack direction="row" spacing={1} alignItems="center">
-                <Box
-                  sx={{
-                    px: 1.2,
-                    py: 0.3,
-                    borderRadius: "999px",
-                    fontSize: 13,
-                    fontWeight: 600,
-                    bgcolor: account ? "rgba(34,197,94,0.2)" : "rgba(239,68,68,0.2)",
-                    color: "#fff",
-                    border: "1px solid rgba(255,255,255,0.25)",
-                  }}
-                >
-                  {account ? account : "Chưa đăng nhập"}
-                </Box>
-
-                <Tooltip title="Đổi mật khẩu">
-                  <IconButton
-                    onClick={() => setOpenChangePw(true)}
-                    sx={{
-                      color: "#fff",
-                      bgcolor: "rgba(255,255,255,0.12)",
-                      "&:hover": {
-                        bgcolor: "rgba(255,255,255,0.22)",
-                      },
-                    }}
-                  >
-                    <VpnKeyIcon />
-                  </IconButton>
-                </Tooltip>
-              </Stack>*/}
-            </Stack>
-          </Box>
+  {/* CLOSE BUTTON - Căn phải sát mép và tăng kích thước vùng bấm */}
+  <IconButton
+    onClick={() => navigate("/dashboard")}
+    sx={{
+      position: "absolute",
+      right: 12,           // Căn phải sát viền giống các component trước
+      color: "#f1f5f9",
+      p: 1,                // Tăng padding lên 1 để vòng tròn hover to, dễ bấm
+      "&:hover": {
+        backgroundColor: "#fff",
+        color: "#ef4444",
+      },
+      transition: "all 0.2s ease",
+    }}
+  >
+    {/* Sử dụng fontSize="medium" để dấu X to rõ ràng hơn */}
+    <CloseIcon fontSize="medium" /> 
+  </IconButton>
+</Box>
 
           {/* ===== CONTENT ===== */}
           <Box sx={{ px: 3, py: 2.5 }}>
@@ -523,7 +491,26 @@ export default function QuanTri() {
                         <Button
                           variant="contained"
                           size="small"
-                          onClick={() => setOpenAssign(true)}
+                          onClick={async () => {
+                            try {
+                              const namHocKey =
+                                (config?.namHoc || "2025-2026").replaceAll("-", "_");
+
+                              const lopRef = doc(db, "DANHSACH_LOP", namHocKey);
+                              const lopSnap = await getDoc(lopRef);
+
+                              const classList = lopSnap.exists()
+                                ? (lopSnap.data().list || []).sort()
+                                : [];
+
+                              setClasses(classList); // 🔥 update mới nhất
+                              setSelectedClass(classList[0] || "");
+                            } catch (err) {
+                              console.error("❌ Reload classes lỗi:", err);
+                            }
+
+                            setOpenAssign(true);
+                          }}
                           sx={{
                             textTransform: "none",
                             borderRadius: "4px",

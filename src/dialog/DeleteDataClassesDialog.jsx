@@ -10,7 +10,8 @@ import {
   Box,
   IconButton,
   TextField,
-  MenuItem
+  MenuItem,
+  Stack
 } from "@mui/material";
 
 import CloseIcon from "@mui/icons-material/Close";
@@ -130,41 +131,42 @@ export default function DeleteDataClassesDialog({
       }}
     >
       {/* HEADER */}
-      <Box
-        sx={{
-          px: 3,
-          py: 1.5,
-          bgcolor: "#1976d2",
-          color: "#fff",
-        }}
-      >
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <Typography
-            sx={{
-              fontSize: 16,
-              fontWeight: 700,
-            }}
-          >
-            🎯 Xóa kết quả kiểm tra
-          </Typography>
+      {/* ===== HEADER ===== */}
+      <Box 
+  sx={{ 
+    px: 3, 
+    py: 2, 
+    background: "#1976d2", 
+    color: "#fff",
+    position: "relative", 
+    display: "flex",
+    alignItems: "center"
+  }}
+>
+  {/* TITLE */}
+  <Typography sx={{ fontSize: 17, fontWeight: 700 }}>
+    🎯 Xóa kết quả kiểm tra
+  </Typography>
 
-          <IconButton
-            onClick={onClose}
-            sx={{
-              color: "#fff",
-              p: 0.5,
-            }}
-          >
-            <CloseIcon />
-          </IconButton>
-        </Box>
-      </Box>
+  {/* CLOSE BUTTON - Đã tăng kích thước */}
+  <IconButton
+    onClick={onClose}
+    sx={{
+      position: "absolute",
+      right: 12,           // Dịch ra một chút để cân đối với nút lớn hơn
+      color: "#f1f5f9",
+      p: 1,                // Tăng padding từ 0.5 lên 1 để vùng bấm (vòng tròn hover) rộng hơn
+      "&:hover": {
+        backgroundColor: "#fff",
+        color: "#ef4444",
+      },
+      transition: "all 0.2s ease",
+    }}
+  >
+    {/* Đổi từ fontSize="small" sang "medium" để dấu X to rõ ràng hơn */}
+    <CloseIcon fontSize="medium" /> 
+  </IconButton>
+</Box>
 
       {/* CONTENT */}
       <DialogContent

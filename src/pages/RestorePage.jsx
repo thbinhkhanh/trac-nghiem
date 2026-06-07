@@ -606,40 +606,45 @@ export default function RestorePage({
         <Box
           sx={{
             px: 3,
-            py: 1.5,
+            py: 2,                 // Đồng bộ py: 2 cho không gian thoáng rộng
             background: "#1976d2",
             color: "#fff",
+            position: "relative",  // Làm gốc tọa độ để căn tuyệt đối nút X
+            display: "flex",
+            alignItems: "center",
           }}
         >
-          <Box
+          {/* TITLE - Chỉ dùng duy nhất một thẻ Typography phẳng */}
+          <Typography
             sx={{
+              fontSize: 17,        // Đồng bộ fontSize: 17 chuẩn theo hệ thống mới
+              fontWeight: 700,
               display: "flex",
-              justifyContent: "space-between",
               alignItems: "center",
+              gap: 1,
             }}
           >
-            <Typography
-              sx={{
-                fontSize: 16,
-                fontWeight: 700,
-                display: "flex",
-                alignItems: "center",
-                gap: 1,
-              }}
-            >
-              Phục hồi dữ liệu
-            </Typography>
+            Phục hồi dữ liệu
+          </Typography>
 
-            <IconButton
-              onClick={onClose}
-              sx={{
-                color: "#fff",
-                p: 0.5,
-              }}
-            >
-              <CloseIcon />
-            </IconButton>
-          </Box>
+          {/* CLOSE BUTTON - Căn phải sát viền và tăng vùng bấm chuột */}
+          <IconButton
+            onClick={onClose}
+            sx={{
+              position: "absolute",
+              right: 12,           // Căn phải sát mép viền
+              color: "#f1f5f9",
+              p: 1,                // Tăng padding lên 1 để vòng tròn hover to, dễ bấm
+              "&:hover": {
+                backgroundColor: "#fff",
+                color: "#ef4444",
+              },
+              transition: "all 0.2s ease",
+            }}
+          >
+            {/* Sử dụng fontSize="medium" để dấu X to rõ ràng hơn */}
+            <CloseIcon fontSize="medium" />
+          </IconButton>
         </Box>
 
         {/* ===== CONTENT ===== */}

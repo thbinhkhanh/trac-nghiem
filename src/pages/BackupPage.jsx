@@ -423,40 +423,45 @@ export default function BackupPage({ open, onClose, config }) {
         <Box
           sx={{
             px: 3,
-            py: 1.5, // 👈 giống Dialog mẫu
+            py: 2,                 // Đồng bộ lên py: 2 cho thoáng rộng
             background: "#1976d2",
             color: "#fff",
+            position: "relative",  // Làm gốc tọa độ để căn tuyệt đối nút X
+            display: "flex",
+            alignItems: "center",
           }}
         >
-          <Box
+          {/* TITLE - Sử dụng duy nhất thẻ Typography phẳng */}
+          <Typography
             sx={{
+              fontSize: 17,        // Đồng bộ fontSize: 17 như các mẫu trước
+              fontWeight: 700,
               display: "flex",
-              justifyContent: "space-between",
               alignItems: "center",
+              gap: 1,
             }}
           >
-            <Typography
-              sx={{
-                fontSize: 16,   // 👈 giảm về giống Dialog
-                fontWeight: 700,
-                display: "flex",
-                alignItems: "center",
-                gap: 1,
-              }}
-            >
-              Sao lưu dữ liệu
-            </Typography>
+            Sao lưu dữ liệu
+          </Typography>
 
-            <IconButton
-              onClick={onClose}
-              sx={{
-                color: "#fff",
-                p: 0.5, // 👈 giống Dialog
-              }}
-            >
-              <CloseIcon />
-            </IconButton>
-          </Box>
+          {/* CLOSE BUTTON - Đã tăng kích thước và căn tuyệt đối sang bên phải */}
+          <IconButton
+            onClick={onClose}
+            sx={{
+              position: "absolute",
+              right: 12,           // Căn phải sát viền
+              color: "#f1f5f9",
+              p: 1,                // Tăng padding lên 1 để vòng tròn hover to, dễ bấm
+              "&:hover": {
+                backgroundColor: "#fff",
+                color: "#ef4444",
+              },
+              transition: "all 0.2s ease",
+            }}
+          >
+            {/* Sử dụng fontSize="medium" để dấu X to rõ ràng hơn */}
+            <CloseIcon fontSize="medium" />
+          </IconButton>
         </Box>
 
         {/* ===== CONTENT ===== */}

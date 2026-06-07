@@ -14,6 +14,7 @@ import {
   FormControl,
   InputLabel,
   OutlinedInput,
+  Stack
 } from "@mui/material";
 
 import CloseIcon from "@mui/icons-material/Close";
@@ -141,40 +142,41 @@ export default function DeleteClassesDialog({
         }}
       >
         {/* HEADER */}
-        <Box
-          sx={{
-            px: 3,
-            py: 1.5,
-            bgcolor: "#1976d2",
+        {/* ===== HEADER ===== */}
+        <Box 
+          sx={{ 
+            px: 3, 
+            py: 2,                 // Tăng kích thước padding dọc lên 2 cho thoáng rộng
+            background: "#1976d2", 
             color: "#fff",
+            position: "relative",  // Làm gốc tọa độ để căn tuyệt đối nút X
+            display: "flex",
+            alignItems: "center"
           }}
         >
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }} 
-          >
-            <Typography
-              sx={{
-                fontSize: 16,
-                fontWeight: 700,
-              }}
-            >
-              🎯 Xóa danh sách lớp
-            </Typography>
+          {/* TITLE - Chỉ dùng Typography phẳng */}
+          <Typography sx={{ fontSize: 17, fontWeight: 700 }}>
+            🎯 Xóa danh sách lớp
+          </Typography>
 
-            <IconButton
-              onClick={onClose}
-              sx={{
-                color: "#fff",
-                p: 0.5,
-              }}
-            >
-              <CloseIcon />
-            </IconButton>
-          </Box>
+          {/* CLOSE BUTTON - Căn phải sát mép và tăng kích thước vùng bấm */}
+          <IconButton
+            onClick={onClose}
+            sx={{
+              position: "absolute",
+              right: 12,           // Căn phải sát viền (cân đối với nút kích thước lớn)
+              color: "#f1f5f9",
+              p: 1,                // Tăng padding lên 1 để vòng tròn hover to, dễ bấm
+              "&:hover": {
+                backgroundColor: "#fff",
+                color: "#ef4444",
+              },
+              transition: "all 0.2s ease",
+            }}
+          >
+            {/* Sử dụng fontSize="medium" để dấu X to rõ ràng hơn */}
+            <CloseIcon fontSize="medium" /> 
+          </IconButton>
         </Box>
 
         {/* CONTENT */}
