@@ -362,7 +362,7 @@ export default function QuanTri() {
         maxWidth: 700,
       }}
     >
-      {!openBackup && !openRestore && !openAssign && (
+      {!openBackup && !openRestore && (
         <Card
           elevation={0}
           sx={{
@@ -793,13 +793,11 @@ export default function QuanTri() {
     </Snackbar>
 
     {/* Dialog phân quyền */}
-    {openAssign && (
-      <AssignClassDialog
-        open={openAssign}
-        onClose={() => setOpenAssign(false)}
-        classes={classes}
-      />
-    )}
+    <AssignClassDialog
+      open={openAssign}
+      onClose={() => setOpenAssign(false)}
+      classes={classes}
+    />
 
   </Box>
 );

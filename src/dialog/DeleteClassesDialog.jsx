@@ -241,7 +241,12 @@ export default function DeleteClassesDialog({
             {/* NĂM HỌC */}
             <FormControl
               size="small"
-              sx={{ width: 160 }}
+              sx={{
+                width: {
+                  xs: 120,
+                  sm: 150,
+                },
+              }}
             >
               <InputLabel shrink>
                 Năm học
@@ -253,8 +258,6 @@ export default function DeleteClassesDialog({
                 value={deleteNamHoc}
                 readOnly
                 sx={{
-                  fontWeight: 700,
-                  color: "#1976d2",
                   "& input": {
                     textAlign: "center",
                   },

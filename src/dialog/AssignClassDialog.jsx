@@ -401,14 +401,46 @@ export default function AssignClassDialog({
 
       {/* FOOTER */}
       <DialogActions
-        sx={{ px: 3, pb: 2, justifyContent: "space-between" }}
-      >
-        <Button onClick={onClose}>Đóng</Button>
-
-        <Button variant="contained" onClick={save}>
-          Lưu phân quyền
+        sx={{
+            px: 3,
+            pb: 2,
+            justifyContent: "flex-end",
+            gap: 1.5,
+        }}
+        >
+        <Button
+            variant="outlined"
+            onClick={onClose}
+            sx={{
+            minWidth: 110,
+            height: 42,
+            borderRadius: "12px",
+            textTransform: "none",
+            fontWeight: 600,
+            }}
+        >
+            Hủy
         </Button>
-      </DialogActions>
+
+        <Button
+            variant="contained"
+            onClick={save}
+            sx={{
+            minWidth: 130,
+            height: 42,
+            borderRadius: "12px",
+            textTransform: "none",
+            fontWeight: 700,
+            background: "linear-gradient(135deg, #1976d2, #42a5f5)",
+            boxShadow: "0 10px 20px rgba(25,118,210,0.25)",
+            "&:hover": {
+                background: "linear-gradient(135deg, #1565c0, #1976d2)",
+            },
+            }}
+        >
+            Lưu
+        </Button>
+        </DialogActions>
     </Dialog>
   );
 }

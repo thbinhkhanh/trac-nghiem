@@ -14,6 +14,7 @@ import CloseIcon from "@mui/icons-material/Close";
 export default function ChangePasswordDialog({
   open,
   onClose,
+  account,
   newPw,
   confirmPw,
   setNewPw,

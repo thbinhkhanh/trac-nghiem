@@ -112,18 +112,41 @@ function AppContent() {
 
   const account = localStorage.getItem("account") || "";
 
+  const ACCOUNT_MAP = {
+    Admin: "admin",
+    "Ngọc Tuyết": "ngoctuyet",
+    "Lê Nhàn": "lenhan",
+  };
+
   const handleChangePassword = async () => {
-    if (!newPw.trim()) {
-      setPwError("❌ Mật khẩu mới không được để trống!");
-      return;
-    }
+  if (!newPw.trim()) {
+    setPwError("❌ Mật khẩu mới không được để trống!");
+    return;
+  }
 
-    if (newPw !== confirmPw) {
-      setPwError("❌ Mật khẩu nhập lại không khớp!");
-      return;
-    }
+  if (newPw !== confirmPw) {
+    setPwError("❌ Mật khẩu nhập lại không khớp!");
+    return;
+  }
 
-    // ✅ PASS VALID → đóng dialog + báo thành công ngay
+  const docId = ACCOUNT_MAP[account];
+
+  if (!docId) {
+    setSnackbar({
+      open: true,
+      message: "❌ Không xác định được tài khoản!",
+      severity: "error",
+    });
+    return;
+  }
+
+  try {
+    await setDoc(
+      doc(db, "MATKHAU", docId),
+      { pass: newPw },
+      { merge: true }
+    );
+
     setPwError("");
     setOpenChangePw(false);
 
@@ -133,27 +156,19 @@ function AppContent() {
       severity: "success",
     });
 
-    const docId = account === "TH Lâm Văn Bền" ? "lvb" : "admin";
-
-    // 🔥 Firestore chạy nền (không chặn UI)
-    setDoc(
-      doc(db, "MATKHAU", docId),
-      { pass: newPw },
-      { merge: true }
-    ).catch((err) => {
-      console.error("Lỗi lưu mật khẩu:", err);
-
-      setSnackbar({
-        open: true,
-        message: "❌ Lưu mật khẩu thất bại!",
-        severity: "error",
-      });
-    });
-
-    // reset input
     setNewPw("");
     setConfirmPw("");
-  };
+
+  } catch (err) {
+    console.error(err);
+
+    setSnackbar({
+      open: true,
+      message: "❌ Lưu mật khẩu thất bại!",
+      severity: "error",
+    });
+  }
+};
 
   const [snackbar, setSnackbar] = useState({
     open: false,
@@ -284,7 +299,7 @@ function AppContent() {
                     </Box>
                   </Tooltip>
                 ) : (
-                  <Tooltip title="Lâm Văn Bền" arrow>
+                  <Tooltip title={account} arrow>
                     <Box
                       sx={{
                         width: 24,
@@ -405,6 +420,7 @@ function AppContent() {
       <ChangePasswordDialog
         open={openChangePw}
         onClose={() => setOpenChangePw(false)}
+        account={account}
         newPw={newPw}
         confirmPw={confirmPw}
         setNewPw={setNewPw}
