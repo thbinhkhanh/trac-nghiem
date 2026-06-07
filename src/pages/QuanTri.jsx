@@ -53,6 +53,7 @@ import { db } from "../firebase";
 // =========================
 import BackupPage from "./BackupPage";
 import RestorePage from "./RestorePage";
+import AssignClassDialog from "../dialog/AssignClassDialog";
 
 export default function QuanTri() {
   const navigate = useNavigate();
@@ -77,6 +78,9 @@ export default function QuanTri() {
   const [newPw, setNewPw] = useState("");
   const [confirmPw, setConfirmPw] = useState("");
   const [pwError, setPwError] = useState("");
+
+  const isAdmin = account === "Admin";
+  const [openAssign, setOpenAssign] = useState(false);
 
   // =========================
   // STATE - SNACKBAR
@@ -497,16 +501,39 @@ export default function QuanTri() {
                       border: "1px solid #e2e8f0",
                     }}
                   >
-                    <Typography
+                    <Box
                       sx={{
-                        fontSize: 14,
-                        fontWeight: 700,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
                         mb: 1.5,
-                        color: "#1e293b",
                       }}
                     >
-                      Quản lý lớp
-                    </Typography>
+                      <Typography
+                        sx={{
+                          fontSize: 14,
+                          fontWeight: 700,
+                          color: "#1e293b",
+                        }}
+                      >
+                        Quản lý lớp
+                      </Typography>
+
+                      {isAdmin && (
+                        <Button
+                          variant="contained"
+                          size="small"
+                          onClick={() => setOpenAssign(true)}
+                          sx={{
+                            textTransform: "none",
+                            borderRadius: "4px",
+                            fontWeight: 700,
+                          }}
+                        >
+                          Phân quyền lớp
+                        </Button>
+                      )}
+                    </Box>
 
                     <Stack direction="row" spacing={1} alignItems="center">
                       <FormControl size="small" fullWidth>
@@ -660,7 +687,6 @@ export default function QuanTri() {
                   {/* HỆ THỐNG */}
                   <Box sx={{ p: 1.6, bgcolor: "#fff", border: "1px solid #e2e8f0" }}>
                     <Typography fontWeight={700}>Hệ thống</Typography>
-
                     <Box
                       onClick={() =>
                         updateConfigField("khoaHeThong", !config.khoaHeThong)
@@ -766,58 +792,12 @@ export default function QuanTri() {
       </Alert>
     </Snackbar>
 
-    {/* Dialog đổi mật khẩu */}
-    <Dialog
-      open={openChangePw}
-      onClose={() => setOpenChangePw(false)}
-      maxWidth="xs"
-      fullWidth
-      PaperProps={{ sx: { borderRadius: "14px" } }}
-    >
-      <Box sx={{ px: 3, py: 1.5, background: "#1976d2", color: "#fff" }}>
-        <Stack direction="row" justifyContent="space-between">
-          <Typography fontWeight={700}>Đổi mật khẩu</Typography>
-
-          <IconButton onClick={() => setOpenChangePw(false)}>
-            <CloseIcon />
-          </IconButton>
-        </Stack>
-      </Box>
-
-      <DialogContent sx={{ pt: 3 }}>
-        <Stack spacing={2}>
-          <TextField
-            label="Mật khẩu mới"
-            type="password"
-            value={newPw}
-            onChange={(e) => setNewPw(e.target.value)}
-            fullWidth
-          />
-
-          <TextField
-            label="Nhập lại mật khẩu"
-            type="password"
-            value={confirmPw}
-            onChange={(e) => setConfirmPw(e.target.value)}
-            fullWidth
-          />
-
-          {pwError && (
-            <Typography color="error">{pwError}</Typography>
-          )}
-
-          <Stack direction="row" justifyContent="flex-end" spacing={1}>
-            <Button onClick={() => setOpenChangePw(false)}>
-              Hủy
-            </Button>
-
-            <Button variant="contained" onClick={handleChangePassword}>
-              Lưu
-            </Button>
-          </Stack>
-        </Stack>
-      </DialogContent>
-    </Dialog>
+    {/* Dialog phân quyền */}
+    <AssignClassDialog
+      open={openAssign}
+      onClose={() => setOpenAssign(false)}
+      classes={classes}
+    />
 
   </Box>
 );

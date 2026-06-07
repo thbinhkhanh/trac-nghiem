@@ -20,10 +20,12 @@ import { useConfig } from "../context/ConfigContext";
 
 import { useNavigate } from "react-router-dom";
 import CloseIcon from "@mui/icons-material/Close";
+import { filterClassesByRole } from "../utils/filterClassesByRole";
 
 
 export default function XuatDanhGia() {
   const navigate = useNavigate();
+  const account = localStorage.getItem("account") || "";
 
   const { config } = useConfig();
   const namHocKey = (config?.namHoc || "2025-2026").replace(/-/g, "_");
@@ -88,12 +90,30 @@ export default function XuatDanhGia() {
     setSkipped([]);
 
     try {
-      const files = [];
+      const rawFiles = [];
       for await (const entry of folderHandle.values()) {
         if (entry.kind === "file" && entry.name.endsWith(".xlsx")) {
-          files.push(entry);
+          rawFiles.push(entry);
         }
       }
+
+      // convert tên file → tên lớp
+      const allClasses = rawFiles.map(f =>
+        f.name.replace(/\.xlsx$/i, "")
+      );
+
+      // 🔥 lọc theo quyền user
+      const allowedClasses = await filterClassesByRole({
+        db,
+        account,
+        allClasses,
+      });
+
+      // 🔥 chỉ giữ file được phép
+      const files = rawFiles.filter(f => {
+        const className = f.name.replace(/\.xlsx$/i, "");
+        return allowedClasses.includes(className);
+      });
 
       if (files.length === 0) {
         setMessage("⚠️ Không tìm thấy file .xlsx nào trong thư mục!");

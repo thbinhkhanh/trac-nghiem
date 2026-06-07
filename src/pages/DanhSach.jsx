@@ -40,7 +40,6 @@ import FolderOpenIcon from "@mui/icons-material/FolderOpen";
 import DeleteSweepIcon from "@mui/icons-material/DeleteSweep";
 import CloseIcon from "@mui/icons-material/Close";
 
-
 /* =======================
    Firebase Firestore
 ======================= */
@@ -70,6 +69,7 @@ import { ConfigContext } from "../context/ConfigContext";
 ======================= */
 import { uploadStudents } from "../utils/uploadExcel";
 import updateDATAForStudent from "../utils/updateDATAForStudent";
+import { filterClassesByRole } from "../utils/filterClassesByRole";
 
 /* =======================
    Components (Dialogs)
@@ -80,6 +80,7 @@ import DeleteClassesDialog from "../dialog/DeleteClassesDialog";
 
 export default function DanhSach() {
   const navigate = useNavigate();
+  const account = localStorage.getItem("account") || "";
   /* =======================
    Context
   ======================= */
@@ -170,53 +171,76 @@ export default function DanhSach() {
 
   // 🔹 Lấy danh sách lớp
   const fetchClasses = async () => {
-    try {
-      const ref = doc(db, "DANHSACH_LOP", namHocKey);
-      const snap = await getDoc(ref);
+  try {
+    console.log("📥 [fetchClasses] namHocKey =", namHocKey);
+    console.log("👤 account =", account);
 
-      const raw = snap.exists() ? snap.data()?.list || [] : [];
+    const ref = doc(db, "DANHSACH_LOP", namHocKey);
+    const snap = await getDoc(ref);
 
-      // ✅ lọc rác (QUAN TRỌNG)
-      const classListRaw = raw.filter(
-        (x) => typeof x === "string" && x.trim() && !x.includes("NHAP")
-      );
+    console.log("📦 snapshot exists =", snap.exists());
 
-      // ===== SORT LỚP =====
-      const classList = [...classListRaw].sort((a, b) => {
-        const numA = parseInt(a.match(/\d+/)?.[0] || 0, 10);
-        const numB = parseInt(b.match(/\d+/)?.[0] || 0, 10);
+    const raw = snap.exists() ? snap.data()?.list || [] : [];
 
-        if (numA !== numB) return numA - numB;
+    console.log("📚 RAW classes =", raw);
 
-        const letterA = a.replace(/\d+/g, "");
-        const letterB = b.replace(/\d+/g, "");
+    // ✅ lọc rác (QUAN TRỌNG)
+    const classListRaw = raw.filter(
+      (x) => typeof x === "string" && x.trim() && !x.includes("NHAP")
+    );
 
-        return letterA.localeCompare(letterB, "vi", {
-          sensitivity: "base",
-        });
+    console.log("🧹 classListRaw (after filter rác) =", classListRaw);
+
+    // =========================
+    // 🔐 PHÂN QUYỀN (debug thêm)
+    // =========================
+    const filteredByRole = await filterClassesByRole({
+      db,
+      account,
+      allClasses: classListRaw,
+    });
+
+    console.log("🔐 filteredByRole =", filteredByRole);
+
+    // ===== SORT LỚP =====
+    const classList = [...filteredByRole].sort((a, b) => {
+      const numA = parseInt(a.match(/\d+/)?.[0] || 0, 10);
+      const numB = parseInt(b.match(/\d+/)?.[0] || 0, 10);
+
+      if (numA !== numB) return numA - numB;
+
+      const letterA = a.replace(/\d+/g, "");
+      const letterB = b.replace(/\d+/g, "");
+
+      return letterA.localeCompare(letterB, "vi", {
+        sensitivity: "base",
       });
+    });
 
-      setClasses(classList);
-      setClassData(classList);
+    console.log("✅ FINAL classList =", classList);
 
-      if (classList.length > 0) {
-        setSelectedClass((prev) =>
-          prev && classList.includes(prev)
-            ? prev
-            : config?.lop && classList.includes(config.lop)
-              ? config.lop
-              : classList[0]
-        );
-      } else {
-        setSelectedClass("");
-      }
-    } catch (err) {
-      console.error("❌ Lỗi khi lấy danh sách lớp:", err);
-      setClasses([]);
-      setClassData([]);
+    setClasses(classList);
+    setClassData(classList);
+
+    if (classList.length > 0) {
+      setSelectedClass((prev) =>
+        prev && classList.includes(prev)
+          ? prev
+          : config?.lop && classList.includes(config.lop)
+            ? config.lop
+            : classList[0]
+      );
+    } else {
+      console.warn("⚠️ classList EMPTY → không có lớp nào hiển thị");
       setSelectedClass("");
     }
-  };
+  } catch (err) {
+    console.error("❌ Lỗi khi lấy danh sách lớp:", err);
+    setClasses([]);
+    setClassData([]);
+    setSelectedClass("");
+  }
+};
   
   useEffect(() => {
     fetchClasses();

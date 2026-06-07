@@ -49,6 +49,7 @@ import { collection, getDocs, doc, getDoc } from "firebase/firestore";
 const getLastClassKey = (namHoc) => `gv_last_class_${namHoc}`;
 
 import ResultDialog_GV from "../dialog/ResultDialog_GV";
+import { filterClassesByRole } from "../utils/filterClassesByRole";
 
 // ✅ Chỉ còn 1 trường
 const SCHOOL_LIST = ["TH Lâm Văn Bền"];
@@ -56,6 +57,8 @@ const SCHOOL_LIST = ["TH Lâm Văn Bền"];
 export default function HocSinh() {
   const navigate = useNavigate();
   const { config, setConfig } = useContext(ConfigContext);
+  const account = localStorage.getItem("account") || "";
+  const isAdmin = account === "Admin";
 
   /* =======================
     FORM / SELECTION STATE
@@ -122,7 +125,7 @@ export default function HocSinh() {
 
       const hocKy = config?.hocKy || "Cuối năm";
       const lop = student.lop || config?.lop || "4A";
-      setLop(lop); // 👈 FIX 1: update dropdown ngay lập tức
+      setLop(lop); 
       localStorage.setItem(getLastClassKey(namHoc), lop);
 
       const studentKey = convertToId(student.hoTen || student.id);
@@ -192,30 +195,51 @@ export default function HocSinh() {
   useEffect(() => {
     const fetchClasses = async () => {
       try {
-        //const namHocRaw = config?.namHoc || "2025-2026";
-        //const namHoc = namHocRaw.replaceAll("-", "_");
+        const account = localStorage.getItem("account") || "";
 
         const lopRef = doc(db, "DANHSACH_LOP", namHoc);
         const lopSnap = await getDoc(lopRef);
 
-        const classList = lopSnap.exists()
+        const rawList = lopSnap.exists()
           ? lopSnap.data().list || []
           : [];
 
+        const classList = Array.isArray(rawList) ? rawList : [];
         classList.sort((a, b) => a.localeCompare(b));
 
-        setClasses(classList);
+        // 🔥 lọc quyền
+        const filtered = await filterClassesByRole({
+          db,
+          account,
+          allClasses: classList,
+        });
 
-        // set mặc định lớp truy cậ gần nhất
-        const lastClass = localStorage.getItem(getLastClassKey(namHoc));
+        setClasses(filtered);
 
-        if (lastClass && classList.includes(lastClass)) {
-          setLop(lastClass);
-        } else {
-          setLop(classList[0] || "");
+        // =========================
+        // 👇 ADMIN: giữ logic cũ theo khối
+        // =========================
+        if (isAdmin) {
+          const lastClass = localStorage.getItem(
+            getLastClassKey(namHoc)
+          );
+
+          if (lastClass && filtered.includes(lastClass)) {
+            setLop(lastClass);
+          } else {
+            setLop(filtered[0] || "");
+          }
         }
+
+        // =========================
+        // 👇 USER: auto chọn lớp đầu tiên
+        // =========================
+        else {
+          setLop(filtered[0] || "");
+        }
+
       } catch (err) {
-        console.error("❌ Lỗi fetch lớp theo năm học:", err);
+        console.error("❌ Lỗi fetch lớp:", err);
         setClasses([]);
       }
     };
@@ -235,20 +259,49 @@ export default function HocSinh() {
   }, [khoi, classes]);*/
 
   useEffect(() => {
-    const soKhoi = khoi.replace("Khối ", "");
-    const filtered = classes.filter(cl => cl.startsWith(soKhoi));
+    // =========================
+    // ADMIN: lọc theo khối
+    // =========================
+    if (isAdmin) {
+      const soKhoi = khoi.replace("Khối ", "");
 
-    setFilteredClasses(filtered);
+      const filtered = classes.filter((cl) =>
+        cl.startsWith(soKhoi)
+      );
 
-    const lastClass = localStorage.getItem(getLastClassKey(namHoc));
+      setFilteredClasses(filtered);
 
-    if (lastClass && filtered.includes(lastClass)) {
-      setLop(lastClass);
-    } else {
-      setLop(filtered[0] || "");
+      const lastClass = localStorage.getItem(
+        getLastClassKey(namHoc)
+      );
+
+      if (lastClass && filtered.includes(lastClass)) {
+        setLop(lastClass);
+      } else {
+        setLop(filtered[0] || "");
+      }
+
+      setStudents([]);
     }
 
-    setStudents([]);
+    // =========================
+    // USER: KHÔNG lọc khối, dùng permission
+    // =========================
+    else {
+      setFilteredClasses(classes);
+
+      const lastClass = localStorage.getItem(
+        getLastClassKey(namHoc)
+      );
+
+      if (lastClass && classes.includes(lastClass)) {
+        setLop(lastClass);
+      } else {
+        setLop(classes[0] || "");
+      }
+
+      setStudents([]);
+    }
   }, [khoi, classes]);
 
   useEffect(() => {
@@ -421,35 +474,32 @@ export default function HocSinh() {
           mb: 4,
         }}
       >
-        <FormControl
-          size="small"
-          sx={{ minWidth: 120 }}
-        >
-          <InputLabel>Khối</InputLabel>
-
-          <Select
-            value={khoi}
-            label="Khối"
-            onChange={(e) =>
-              setKhoi(e.target.value)
-            }
+        {account === "Admin" && (
+          <FormControl
+            size="small"
+            sx={{ minWidth: 120 }}
           >
-            {[
-              "Khối 1",
-              "Khối 2",
-              "Khối 3",
-              "Khối 4",
-              "Khối 5",
-            ].map((k) => (
-              <MenuItem
-                key={k}
-                value={k}
-              >
-                {k}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+            <InputLabel>Khối</InputLabel>
+
+            <Select
+              value={khoi}
+              label="Khối"
+              onChange={(e) => setKhoi(e.target.value)}
+            >
+              {[
+                "Khối 1",
+                "Khối 2",
+                "Khối 3",
+                "Khối 4",
+                "Khối 5",
+              ].map((k) => (
+                <MenuItem key={k} value={k}>
+                  {k}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        )}
 
         <FormControl
           size="small"
@@ -464,21 +514,21 @@ export default function HocSinh() {
               const newClass = e.target.value;
 
               setLop(newClass);
-              localStorage.setItem(getLastClassKey(namHoc), newClass);
+              localStorage.setItem(
+                getLastClassKey(namHoc),
+                newClass
+              );
 
               fetchStudentsByClass(newClass);
             }}
           >
-            {filteredClasses.map(
-              (cl) => (
-                <MenuItem
-                  key={cl}
-                  value={cl}
-                >
+            {Array.from(new Set(filteredClasses || []))
+              .sort((a, b) => a.localeCompare(b))
+              .map((cl) => (
+                <MenuItem key={cl} value={cl}>
                   {cl}
                 </MenuItem>
-              )
-            )}
+              ))}
           </Select>
         </FormControl>
       </Box>

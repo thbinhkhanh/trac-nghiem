@@ -19,7 +19,17 @@ import { useNavigate } from "react-router-dom";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebase";
 
-const ACCOUNTS = ["TH Lâm Văn Bền", "Admin"];
+const ACCOUNTS = [
+  "Admin",
+  "Ngọc Tuyết",
+  "Lê Nhàn",
+];
+
+const ACCOUNT_MAP = {
+  Admin: "admin",
+  "Ngọc Tuyết": "ngoctuyet",
+  "Lê Nhàn": "lenhan",
+};
 
 export default function Login({ setIsLoggedIn }) {
   const [username, setUsername] = useState(ACCOUNTS[0]);
@@ -33,37 +43,76 @@ export default function Login({ setIsLoggedIn }) {
   const navigate = useNavigate();
 
   const handleLogin = async () => {
-    if (!ACCOUNTS.includes(username)) {
-      setSnackbar({ open: true, message: "❌ Tài khoản không tồn tại!", severity: "error" });
-      return;
-    }
-
     try {
-      const docId = username === "TH Lâm Văn Bền" ? "lvb" : "admin";
-      const snap = await getDoc(doc(db, "MATKHAU", docId));
+      const cleanUsername = username?.trim();
+      const docId = ACCOUNT_MAP[cleanUsername];
 
-      if (!snap.exists()) {
-        setSnackbar({ open: true, message: "❌ Không tìm thấy mật khẩu!", severity: "error" });
+      console.log("username:", cleanUsername);
+      console.log("docId:", docId);
+
+      // ❗ check mapping
+      if (!docId) {
+        setSnackbar({
+          open: true,
+          message: "❌ Sai mapping tài khoản!",
+          severity: "error",
+        });
         return;
       }
 
-      const savedPw = snap.data().pass;
+      const ref = doc(db, "MATKHAU", docId);
+      const snap = await getDoc(ref);
 
-      if (password === savedPw) {
-        localStorage.setItem("loggedIn", "true");
-        localStorage.setItem("account", username);
-        localStorage.setItem("school", "TH Lâm Văn Bền");
+      console.log("exists:", snap.exists());
+      console.log("data:", snap.data());
 
-        setIsLoggedIn(true); // ⭐ CỰC KỲ QUAN TRỌNG
-
-        //navigate("/tracnghiem-gv", { replace: true });
-        navigate("/dashboard", { replace: true });
-      } else {
-        setSnackbar({ open: true, message: "❌ Mật khẩu sai!", severity: "error" });
+      // ❗ không tìm thấy document
+      if (!snap.exists()) {
+        setSnackbar({
+          open: true,
+          message: "❌ Không tìm thấy tài khoản trên Firestore!",
+          severity: "error",
+        });
+        return;
       }
+
+      const savedPw = snap.data()?.pass;
+
+      // ❗ không có field pass
+      if (!savedPw) {
+        setSnackbar({
+          open: true,
+          message: "❌ Firestore thiếu field 'pass'!",
+          severity: "error",
+        });
+        return;
+      }
+
+      // ❗ sai mật khẩu
+      if (password !== savedPw) {
+        setSnackbar({
+          open: true,
+          message: "❌ Mật khẩu sai!",
+          severity: "error",
+        });
+        return;
+      }
+
+      // ✅ LOGIN OK
+      localStorage.setItem("loggedIn", "true");
+      localStorage.setItem("account", cleanUsername);
+      localStorage.setItem("school", cleanUsername);
+
+      setIsLoggedIn(true);
+      navigate("/dashboard", { replace: true });
+
     } catch (err) {
       console.error(err);
-      setSnackbar({ open: true, message: "❌ Lỗi kết nối Firestore!", severity: "error" });
+      setSnackbar({
+        open: true,
+        message: "❌ Lỗi kết nối Firestore!",
+        severity: "error",
+      });
     }
   };
 

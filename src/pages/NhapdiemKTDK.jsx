@@ -53,6 +53,8 @@ import CloseIcon from "@mui/icons-material/Close";
 // ================= UTILS =================
 import { exportKTDK } from "../utils/exportKTDK";
 import { printKTDK } from "../utils/printKTDK";
+import { filterClassesByRole } from "../utils/filterClassesByRole";
+
 import {
   nhanXetTinHocCuoiKy,
   nhanXetTinHocGiuaKy,
@@ -62,11 +64,13 @@ import {
 
 export default function NhapdiemKTDK() {
   const navigate = useNavigate();
+  const account = localStorage.getItem("account") || "";
   
   const { classData, setClassData, studentData, setStudentData } = useContext(StudentContext);
   const { config, setConfig } = useContext(ConfigContext);
   const namHocKey = (config?.namHoc || "2025-2026").replace(/-/g, "_");
   const { getStudentsForClass, setStudentsForClass } = useContext(StudentKTDKContext);
+
 
   // ================= CLASS / DATA STATE =================
   const [classes, setClasses] = useState([]);
@@ -128,15 +132,22 @@ export default function NhapdiemKTDK() {
 
         classList.sort((a, b) => a.localeCompare(b));
 
-        setClassData(classList);
-        setClasses(classList);
+        // =========================
+        // 🔐 FILTER THEO ACCOUNT
+        // =========================
+        const filtered = await filterClassesByRole({
+          db,
+          account,
+          allClasses: classList,
+        });
 
-        // ✅ CHỈ SET MẶC ĐỊNH 1 LẦN
+        setClassData(filtered);
+        setClasses(filtered);
+
+        // giữ lớp đang chọn nếu còn hợp lệ
         setSelectedClass((prev) => {
-          if (prev && classList.includes(prev)) {
-            return prev; // giữ lớp user đang chọn
-          }
-          return classList[0] || "";
+          if (prev && filtered.includes(prev)) return prev;
+          return filtered[0] || "";
         });
 
       } catch (err) {
@@ -147,7 +158,7 @@ export default function NhapdiemKTDK() {
     };
 
     fetchClasses();
-  }, [classData, setClassData]);
+  }, [config?.namHoc, account]);
 
   /*const getNhanXetMuc = (subject) => {
     if (subject === "Công nghệ") return nhanXetCongNgheCuoiKy;

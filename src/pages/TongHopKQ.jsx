@@ -57,6 +57,7 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import { exportKetQuaExcel } from "../utils/exportKetQuaExcel";
 import { syncLamVanBenToKTDK } from "../utils/syncLamVanBenToKTDK";
 import { syncMasterHocSinh } from "../utils/syncMasterHocSinh";
+import { filterClassesByRole } from "../utils/filterClassesByRole";
 
 /* =======================
    Components
@@ -67,6 +68,8 @@ import DeleteStudentConfirmDialog from "../dialog/DeleteStudentConfirmDialog";
 
 export default function TongHopKQ() {
   const navigate = useNavigate();
+
+  const account = localStorage.getItem("account") || ""; // ✅ THÊM DÒNG NÀY
   // =========================
   // STATE - FILTER / SELECTION
   // =========================
@@ -236,12 +239,18 @@ export default function TongHopKQ() {
         }
 
         const data = snap.data();
-        const classList = data?.list || [];
+        const rawList = data?.list || [];
+        rawList.sort((a, b) => a.localeCompare(b));
 
-        classList.sort((a, b) => a.localeCompare(b));
+        // lọc theo quyền
+        const filtered = await filterClassesByRole({
+          db,
+          account,
+          allClasses: rawList,
+        });
 
-        setClassesList(classList);
-        setSelectedLop(classList[0] || "");
+        setClassesList(filtered);
+        setSelectedLop(filtered[0] || "");
 
       } catch (err) {
         console.error("❌ Lỗi load danh sách lớp:", err);
