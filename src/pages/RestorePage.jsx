@@ -45,6 +45,8 @@ export default function RestorePage({
   config,
   showSnackbar,
 }) {
+
+  const namHocKey = (config?.namHoc || "2025-2026").replace(/-/g, "_");
   const fileInputRef = useRef(null);
 
   const [restoreOptions, setRestoreOptions] =
@@ -439,143 +441,154 @@ export default function RestorePage({
   // PHỤC HỒI
   // =========================
   const handleRestore = async () => {
-    try {
-      const selectedKeys = Object.keys(restoreOptions).filter(
-        (k) => restoreOptions[k]
-      );
+  const selectedKeys = Object.keys(restoreOptions)
+    .filter((k) => restoreOptions[k]);
 
-      if (!selectedFile || selectedKeys.length === 0) {
-        setSnackbar({
-          open: true,
-          severity: "warning",
-          message: "⚠️ Vui lòng chọn file và dữ liệu cần phục hồi",
-        });
-        return;
-      }
+  const VALID_KEYS = [
+    `DANHSACH_${namHocKey}`,
+    `DATA_${namHocKey}`,
+    `DATA_ONTAP_${namHocKey}`,
+    "NGANHANG_DE",
+    "DETHI",
+    "BAITAP_TUAN",
+    "TRACNGHIEM3",
+    "TRACNGHIEM4",
+    "TRACNGHIEM5",
+    "TRACNGHIEM3_New",
+    "TRACNGHIEM4_New",
+    "TRACNGHIEM5_New",
+  ];
 
-      setLoading(true);
-      setProgress(0);
+  if (!selectedFile) {
+    setSnackbar({
+      open: true,
+      severity: "warning",
+      message: "Vui lòng chọn file backup",
+    });
+    return;
+  }
 
-      const json = JSON.parse(await selectedFile.text());
-      const namHocKey = (config?.namHoc || "2025-2026").replaceAll("-", "_");
+  if (selectedKeys.length === 0) {
+    setSnackbar({
+      open: true,
+      severity: "warning",
+      message: "Chọn ít nhất 1 nhóm dữ liệu",
+    });
+    return;
+  }
 
-      let done = 0;
-      const updateProgress = (step = 1) => {
-        done += step;
-        setProgress((done / 100) * 100);
-      };
+  try {
+    setLoading(true);
+    setProgress(0);
 
-      // ================= LỚP =================
-      if (selectedKeys.includes("LOP")) {
-        await commitBatchArray(
-          [
-            {
-              ref: doc(db, "DANHSACH_LOP", namHocKey),
-              data: json.DANHSACH_LOP?.[namHocKey] || {},
-            },
-          ],
-          updateProgress
-        );
+    const text = await selectedFile.text();
+    const jsonDataRaw = JSON.parse(text);
 
-        const hs = json.DS_HOCSINH?.[namHocKey] || {};
-        const ops = [];
+    const jsonData = Object.fromEntries(
+      Object.entries(jsonDataRaw).filter(([k]) =>
+        VALID_KEYS.includes(k)
+      )
+    );
 
-        Object.keys(hs).forEach((lop) => {
-          Object.keys(hs[lop] || {}).forEach((studentId) => {
-            ops.push({
-              ref: doc(
-                db,
-                `DS_HOCSINH_${namHocKey}`,
-                lop,
-                "STUDENTS",
-                studentId
-              ),
-              data: hs[lop][studentId],
-            });
-          });
-        });
+    // =========================
+    // 1. ĐẾM TỔNG (GIỐNG MẪU)
+    // =========================
+    let totalDocs = 0;
 
-        if (ops.length) {
-          await commitBatchArray(ops, updateProgress);
+    const effectiveKeys = selectedKeys.filter((k) => jsonData[k]);
+
+    for (const key of effectiveKeys) {
+      const docs = jsonData[key];
+      if (!docs) continue;
+
+      if (key === `DATA_${namHocKey}` || key === `DATA_ONTAP_${namHocKey}`) {
+        for (const c of Object.keys(docs)) {
+          totalDocs += Object.keys(docs[c]?.HOCSINH || {}).length;
         }
+      } else {
+        totalDocs += Object.keys(docs).length;
       }
-
-      // ================= KẾT QUẢ =================
-      if (selectedKeys.includes("KETQUA")) {
-        const ktdk = json.DATA_KTDK?.[namHocKey] || {};
-        const ontap = json.DATA_ONTAP?.[namHocKey] || {};
-
-        const ops = [];
-
-        ["Cuối kỳ I", "Cuối năm"].forEach((hk) => {
-          Object.keys(ktdk[hk] || {}).forEach((lop) => {
-            Object.keys(ktdk[hk][lop] || {}).forEach((id) => {
-              ops.push({
-                ref: doc(db, `DATA_KTDK_${namHocKey}`, hk, lop, id),
-                data: ktdk[hk][lop][id],
-              });
-            });
-          });
-
-          Object.keys(ontap[hk] || {}).forEach((lop) => {
-            Object.keys(ontap[hk][lop] || {}).forEach((id) => {
-              ops.push({
-                ref: doc(db, `DATA_ONTAP_${namHocKey}`, hk, lop, id),
-                data: ontap[hk][lop][id],
-              });
-            });
-          });
-        });
-
-        if (ops.length) {
-          await commitBatchArray(ops, updateProgress);
-        }
-      }
-
-      // ================= NGÂN HÀNG ĐỀ =================
-      if (selectedKeys.includes("NGANHANG_DE")) {
-        await restoreSimpleCollection(
-          "NGANHANG_DE",
-          json.NGANHANG_DE || {},
-          updateProgress
-        );
-      }
-
-      // ================= ĐỀ THI =================
-      if (selectedKeys.includes("DETHI")) {
-        await restoreSimpleCollection(
-          "DETHI",
-          json.DETHI || {},
-          updateProgress
-        );
-      }
-
-      // ================= SUCCESS =================
-      setProgress(100);
-
-      setSnackbar({
-        open: true,
-        severity: "success",
-        message: "✅ Phục hồi dữ liệu thành công",
-      });
-
-      // giữ UI 1000ms để snackbar kịp render
-      setTimeout(() => {
-        onClose();
-      }, 1000);
-
-    } catch (err) {
-      console.error(err);
-
-      setSnackbar({
-        open: true,
-        severity: "error",
-        message: "❌ Lỗi khi phục hồi dữ liệu",
-      });
-    } finally {
-      setLoading(false);
     }
-  };
+
+    // =========================
+    // 2. RESTORE + PROGRESS MƯỢT
+    // =========================
+    let done = 0;
+    let lastUpdate = 0;
+
+    const updateProgress = () => {
+      const now = Date.now();
+
+      // throttle 50ms để tránh lag UI
+      if (now - lastUpdate < 50) return;
+      lastUpdate = now;
+
+      setProgress(Math.round((done / totalDocs) * 100));
+    };
+
+    for (const key of selectedKeys) {
+      const docs = jsonData[key];
+      if (!docs) continue;
+
+      // ===== DATA / ONTAP =====
+      if (
+        key === `DATA_${namHocKey}` ||
+        key === `DATA_ONTAP_${namHocKey}`
+      ) {
+        for (const classId of Object.keys(docs)) {
+          const hsObj = docs[classId]?.HOCSINH || {};
+
+          const entries = Object.entries(hsObj);
+
+          for (const [studentId, value] of entries) {
+            await setDoc(
+              doc(db, key, classId, "HOCSINH", studentId),
+              value,
+              { merge: true }
+            );
+
+            done++;
+            updateProgress();
+          }
+        }
+      }
+
+      // ===== COLLECTION THƯỜNG =====
+      else {
+        const entries = Object.entries(docs);
+
+        for (const [docId, value] of entries) {
+          await setDoc(doc(db, key, docId), value, {
+            merge: true,
+          });
+
+          done++;
+          updateProgress();
+        }
+      }
+    }
+
+    setProgress(100);
+
+    setSnackbar({
+      open: true,
+      severity: "success",
+      message: "✅ Phục hồi dữ liệu thành công",
+    });
+
+    onClose();
+  } catch (err) {
+    console.error(err);
+
+    setSnackbar({
+      open: true,
+      severity: "error",
+      message: "❌ Lỗi khi phục hồi dữ liệu",
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
   const hasAnyChecked =
     Object.values(
@@ -847,30 +860,35 @@ export default function RestorePage({
             {loading && (
               <Box
                 sx={{
-                  p: 2,
-                  borderRadius: "5px",
-                  bgcolor: "#fff",
-                  border: "1px solid #e2e8f0",
+                  px: 3,
+                  pb: 2,
+                  mt: 2,
+                  display: "flex",
+                  justifyContent: "center",
                 }}
               >
-                <Typography
-                  sx={{
-                    fontSize: 14,
-                    fontWeight: 600,
-                    mb: 1,
-                    color: "#1e293b",
-                  }}
-                >
-                  Đang phục hồi dữ liệu...
-                </Typography>
+                <Box sx={{ width: { xs: "100%", md: "100%" } }}>
+                  
+                  <LinearProgress
+                    variant="determinate"
+                    value={progress}
+                    sx={{
+                      height: 8,
+                      borderRadius: 10,
+                    }}
+                  />
 
-                <LinearProgress
-                  variant="indeterminate"
-                  sx={{
-                    height: 5,
-                    borderRadius: 999,
-                  }}
-                />
+                  <Typography
+                    sx={{
+                      mt: 1,
+                      textAlign: "center",
+                      fontSize: 13,
+                    }}
+                  >
+                    Đang phục hồi... {Math.round(progress)}%
+                  </Typography>
+
+                </Box>
               </Box>
             )}
 

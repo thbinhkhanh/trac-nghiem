@@ -206,141 +206,152 @@ export default function BackupPage({ open, onClose, config }) {
     const namHocRaw = config?.namHoc || "2025-2026";
     const namHocKey = namHocRaw.replaceAll("-", "_");
 
-    let progress = 0;
-    const step = 100 / selectedCollections.length;
+    const classSnap = await getDoc(doc(db, "DANHSACH_LOP", namHocKey));
+    const classList = classSnap.exists() ? classSnap.data().list || [] : [];
 
-    const getClassList = async () => {
-      const snap = await getDoc(
-        doc(db, "DANHSACH_LOP", namHocKey)
-      );
-      return snap.exists() ? snap.data().list || [] : [];
+    const hocKyList = ["Cuối kỳ I", "Cuối năm"];
+
+    // =========================
+    // WEIGHTED PROGRESS (FIXED)
+    // =========================
+    const weights = {
+      LOP: 9,
+      KETQUA: 50,
+      NGANHANG_DE: 40,
+      DETHI: 1,
     };
 
-    const classList = await getClassList();
+    const state = {
+      LOP: 0,
+      KETQUA: 0,
+      NGANHANG_DE: 0,
+      DETHI: 0,
+    };
 
+    let lastUpdate = 0;
+
+    const report = (col, done, total) => {
+      const localPercent = total === 0 ? 100 : (done / total) * 100;
+      state[col] = localPercent;
+
+      const now = Date.now();
+      if (now - lastUpdate < 80) return;
+      lastUpdate = now;
+
+      const global = Object.keys(weights).reduce((sum, key) => {
+        return sum + (state[key] || 0) * (weights[key] / 100);
+      }, 0);
+
+      onProgress?.(Math.min(global, 99));
+    };
+
+    // =========================
+    // HELPER
+    // =========================
+    const backupSimpleCollection = async (name) => {
+      const snap = await getDocs(collection(db, name));
+      const data = {};
+      snap.forEach(d => (data[d.id] = d.data()));
+      return data;
+    };
+
+    // =========================
+    // MAIN
+    // =========================
     for (const col of selectedCollections) {
 
       // =========================
-      // 📦 DANH SÁCH LỚP + HỌC SINH
+      // 📦 LOP
       // =========================
       if (col === "LOP") {
 
-        // 1. lớp
-        const lopSnap = await getDoc(
-          doc(db, "DANHSACH_LOP", namHocKey)
-        );
+        const lopSnap = await getDoc(doc(db, "DANHSACH_LOP", namHocKey));
 
         backupData.DANHSACH_LOP = {
-          [namHocKey]: lopSnap.exists()
-            ? lopSnap.data()
-            : { list: [] }
+          [namHocKey]: lopSnap.exists() ? lopSnap.data() : { list: [] }
         };
 
-        // 2. học sinh theo lớp
-        backupData.DS_HOCSINH = {
-          [namHocKey]: {}
-        };
+        let done = 1;
+        const total = classList.length + 1;
+
+        report("LOP", done, total);
+
+        backupData.DS_HOCSINH = { [namHocKey]: {} };
 
         await Promise.all(
           classList.map(async (lop) => {
             const snap = await getDocs(
-              collection(
-                db,
-                `DS_HOCSINH_${namHocKey}`,
-                lop,
-                "STUDENTS"
-              )
+              collection(db, `DS_HOCSINH_${namHocKey}`, lop, "STUDENTS")
             );
 
             const data = {};
-            snap.forEach(d => {
-              data[d.id] = d.data();
-            });
+            snap.forEach(d => (data[d.id] = d.data()));
 
             backupData.DS_HOCSINH[namHocKey][lop] = data;
+
+            done++;
+            report("LOP", done, total);
           })
         );
       }
 
       // =========================
-      // 📊 KẾT QUẢ ĐÁNH GIÁ
+      // 📊 KETQUA
       // =========================
       else if (col === "KETQUA") {
 
-        backupData.DATA_KTDK = {
-          [namHocKey]: {}
-        };
+        backupData.DATA_KTDK = { [namHocKey]: {} };
+        backupData.DATA_ONTAP = { [namHocKey]: {} };
 
-        backupData.DATA_ONTAP = {
-          [namHocKey]: {}
-        };
+        const total = classList.length * hocKyList.length;
+        let done = 0;
 
-        const hocKyList = ["Cuối kỳ I", "Cuối năm"];
+        const tasks = [];
 
-        await Promise.all(
-          hocKyList.map(async (hocKy) => {
+        for (const hocKy of hocKyList) {
+          backupData.DATA_KTDK[namHocKey][hocKy] = {};
+          backupData.DATA_ONTAP[namHocKey][hocKy] = {};
 
-            backupData.DATA_KTDK[namHocKey][hocKy] = {};
-            backupData.DATA_ONTAP[namHocKey][hocKy] = {};
+          for (const lop of classList) {
+            tasks.push(async () => {
+              const [ktdkSnap, ontapSnap] = await Promise.all([
+                getDocs(collection(db, `DATA_KTDK_${namHocKey}`, hocKy, lop)),
+                getDocs(collection(db, `DATA_ONTAP_${namHocKey}`, hocKy, lop))
+              ]);
 
-            await Promise.all(
-              classList.map(async (lop) => {
+              const ktdkData = {};
+              ktdkSnap.forEach(d => (ktdkData[d.id] = d.data()));
 
-                const ktdkSnap = await getDocs(
-                  collection(
-                    db,
-                    `DATA_KTDK_${namHocKey}`,
-                    hocKy,
-                    lop
-                  )
-                );
+              const ontapData = {};
+              ontapSnap.forEach(d => (ontapData[d.id] = d.data()));
 
-                const ontapSnap = await getDocs(
-                  collection(
-                    db,
-                    `DATA_ONTAP_${namHocKey}`,
-                    hocKy,
-                    lop
-                  )
-                );
+              backupData.DATA_KTDK[namHocKey][hocKy][lop] = ktdkData;
+              backupData.DATA_ONTAP[namHocKey][hocKy][lop] = ontapData;
 
-                const ktdkData = {};
-                ktdkSnap.forEach(d => {
-                  ktdkData[d.id] = d.data();
-                });
+              done++;
+              report("KETQUA", done, total);
+            });
+          }
+        }
 
-                const ontapData = {};
-                ontapSnap.forEach(d => {
-                  ontapData[d.id] = d.data();
-                });
-
-                backupData.DATA_KTDK[namHocKey][hocKy][lop] = ktdkData;
-                backupData.DATA_ONTAP[namHocKey][hocKy][lop] = ontapData;
-              })
-            );
-          })
-        );
+        await Promise.all(tasks.map(fn => fn()));
       }
 
       // =========================
       // 🧪 NGÂN HÀNG ĐỀ
       // =========================
       else if (col === "NGANHANG_DE") {
-        backupData.NGANHANG_DE =
-          await backupSimpleCollection("NGANHANG_DE");
+        backupData.NGANHANG_DE = await backupSimpleCollection("NGANHANG_DE");
+        report("NGANHANG_DE", 1, 1);
       }
 
       // =========================
       // 📝 ĐỀ THI
       // =========================
       else if (col === "DETHI") {
-
-        backupData.DETHI =
-          await backupSimpleCollection("DETHI");
+        backupData.DETHI = await backupSimpleCollection("DETHI");
+        report("DETHI", 1, 1);
       }
-
-      progress += step;
-      onProgress?.(Math.min(progress, 99));
     }
 
     onProgress?.(100);
@@ -593,30 +604,36 @@ export default function BackupPage({ open, onClose, config }) {
             {loading && (
               <Box
                 sx={{
-                  p: 2,
-                  borderRadius: "5px",
-                  bgcolor: "#fff",
-                  border: "1px solid #e2e8f0",
+                  px: 3,
+                  pb: 2,
+                  mt: 2,
+                  display: "flex",
+                  justifyContent: "center",
                 }}
               >
-                <Typography
-                  sx={{
-                    fontSize: 14,
-                    fontWeight: 600,
-                    mb: 1,
-                    color: "#1e293b",
-                  }}
-                >
-                  Đang sao lưu dữ liệu...
-                </Typography>
+                <Box sx={{ width: { xs: "100%", md: "100%" } }}>
+                  
+                  <LinearProgress
+                    variant="determinate"
+                    value={progress}
+                    sx={{
+                      height: 8,
+                      borderRadius: 10,
+                    }}
+                  />
 
-                <LinearProgress
-                  variant="indeterminate"
-                  sx={{
-                    height: 5,
-                    borderRadius: 999,
-                  }}
-                />
+                  <Typography
+                    sx={{
+                      mt: 1,
+                      textAlign: "center",
+                      fontSize: 13,
+                      color: "#1e293b",
+                    }}
+                  >
+                    Đang sao lưu... {Math.round(progress)}%
+                  </Typography>
+
+                </Box>
               </Box>
             )}
 
