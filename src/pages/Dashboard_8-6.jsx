@@ -24,21 +24,11 @@ function DashboardCard({ item, onClick }) {
         overflow: "hidden",
         bgcolor: "#fff",
         borderRadius: "24px",
-
-        p: {
-          xs: 1.75,
-          sm: 2.5,
-        },
-
-        height: {
-          xs: 165,
-          sm: 180,
-        },
-
+        p: 2.5,
+        minHeight: 170,
         cursor: "pointer",
         border: "1px solid #e5e7eb",
         transition: "all .25s ease",
-
         display: "flex",
         flexDirection: "column",
         justifyContent: "space-between",
@@ -47,11 +37,6 @@ function DashboardCard({ item, onClick }) {
           transform: "translateY(-6px)",
           boxShadow: "0 15px 35px rgba(0,0,0,0.12)",
           borderColor: item.color,
-        },
-
-        "&:hover .arrow-btn": {
-          bgcolor: item.color,
-          color: "#fff",
         },
 
         "&::before": {
@@ -68,20 +53,13 @@ function DashboardCard({ item, onClick }) {
       {/* ICON */}
       <Box
         sx={{
-          width: { xs: 46, sm: 54 },
-          height: { xs: 46, sm: 54 },
+          width: 54,
+          height: 54,
           borderRadius: "18px",
           bgcolor: `${item.color}15`,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-
-          "& svg": {
-            fontSize: {
-              xs: 24,
-              sm: 28,
-            },
-          },
         }}
       >
         {item.icon}
@@ -93,17 +71,9 @@ function DashboardCard({ item, onClick }) {
           sx={{
             mt: 2,
             fontWeight: 700,
-            fontSize: {
-              xs: 14,
-              sm: 16,
-            },
+            fontSize: 16,
             color: "#0f172a",
             lineHeight: 1.35,
-
-            display: "-webkit-box",
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: "vertical",
-            overflow: "hidden",
           }}
         >
           {item.label}
@@ -114,12 +84,8 @@ function DashboardCard({ item, onClick }) {
             mt: 1,
             fontSize: 13,
             color: "#64748b",
-            lineHeight: 1.5,
-
-            display: "-webkit-box",
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: "vertical",
-            overflow: "hidden",
+            lineHeight: 1.6,
+            minHeight: 42,
           }}
         >
           {item.description}
@@ -135,7 +101,6 @@ function DashboardCard({ item, onClick }) {
         }}
       >
         <Box
-          className="arrow-btn"
           sx={{
             width: 34,
             height: 34,
@@ -147,6 +112,11 @@ function DashboardCard({ item, onClick }) {
             fontSize: 18,
             color: "#64748b",
             transition: ".2s",
+
+            ".dashboard-card:hover &": {
+              bgcolor: item.color,
+              color: "#fff",
+            },
           }}
         >
           →
@@ -248,11 +218,7 @@ export default function Dashboard({ isLoggedIn }) {
           variant="h6"
           fontWeight={700}
           mb={3}
-          sx={{
-            color: "#0f172a",
-            fontFamily:
-              '"Segoe UI","Arial","Helvetica","Noto Sans","sans-serif"',
-          }}
+          sx={{ color: "#0f172a" }}
         >
           CHỨC NĂNG CHÍNH
         </Typography>
@@ -261,11 +227,13 @@ export default function Dashboard({ isLoggedIn }) {
         <Box
           sx={{
             display: "grid",
-            gap: 2,
+            gap: 2.5,
+            justifyContent: "center",
             gridTemplateColumns: {
-              xs: "repeat(2, minmax(0, 1fr))",
-              md: "repeat(3, minmax(0, 1fr))",
-              lg: "repeat(5, minmax(0, 1fr))",
+              xs: "92%",
+              sm: "repeat(2, 220px)",
+              md: "repeat(3, 220px)",
+              lg: "repeat(5, 220px)",
             },
           }}
         >
