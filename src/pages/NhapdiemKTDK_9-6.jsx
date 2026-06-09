@@ -49,14 +49,18 @@ import RefreshIcon from "@mui/icons-material/Refresh";
 import PrintIcon from "@mui/icons-material/Print";
 import EditIcon from "@mui/icons-material/Edit";
 import CloseIcon from "@mui/icons-material/Close";
-import RateReviewIcon from "@mui/icons-material/RateReview";
 
 // ================= UTILS =================
 import { exportKTDK } from "../utils/exportKTDK";
 import { printKTDK } from "../utils/printKTDK";
 import { filterClassesByRole } from "../utils/filterClassesByRole";
 
-import QuanLyNhanXet from "../dialog/QuanLyNhanXet";
+import {
+  nhanXetTinHocCuoiKy,
+  nhanXetTinHocGiuaKy,
+  nhanXetCongNgheCuoiKy,
+  nhanXetCongNgheGiuaKy
+} from "../utils/nhanXet.js";
 
 export default function NhapdiemKTDK() {
   const navigate = useNavigate();
@@ -82,7 +86,6 @@ export default function NhapdiemKTDK() {
 
   // ================= DIALOG STATE =================
   const [openLTDialog, setOpenLTDialog] = useState(false);
-  const [openNhanXet, setOpenNhanXet] = useState(false);
 
   // ================= EDITING STATE =================
   const [editingStudent, setEditingStudent] = useState(null);
@@ -90,8 +93,6 @@ export default function NhapdiemKTDK() {
   const [fillThucHanh, setFillThucHanh] = useState("");
   const [fillLyThuyet, setFillLyThuyet] = useState("");
 
-  const [nhanXetData, setNhanXetData] = useState(null);
-  
   useEffect(() => {
     if (config?.mon && config.mon !== selectedSubject) {
       setSelectedSubject(config.mon);
@@ -159,134 +160,98 @@ export default function NhapdiemKTDK() {
     fetchClasses();
   }, [config?.namHoc, account]);
 
- const loadNhanXet = async () => {
-     try {
-       const col = `NHAN_XET_${namHocKey}`;
-       const hocKy = config.hocKy;
- 
-       const docId = hocKy.includes("Cuối")
-        ? "TinHoc_CuoiKy"
-        : "TinHoc_GiuaKy";
- 
-       const snap = await getDoc(doc(db, col, docId));
- 
-       // =========================
-       // 🔥 SAFE NORMALIZER (FIX [object Object])
-       // =========================
-       const safe = (v) => {
-         if (!v) return [];
- 
-         // array case
-         if (Array.isArray(v)) {
-           return v.map(i =>
-             typeof i === "string"
-               ? i
-               : (i?.text || i?.value || "")
-           ).filter(Boolean);
-         }
- 
-         // object case (Firestore map)
-         if (typeof v === "object") {
-           return Object.values(v).map(i =>
-             typeof i === "string"
-               ? i
-               : (i?.text || i?.value || "")
-           ).filter(Boolean);
-         }
- 
-         return [];
-       };
- 
-       // =========================
-       // 🔥 DEFAULT DATA
-       // =========================
-       if (!snap.exists()) {
-         setNhanXetData({
-           TỐT: { lyThuyet: [], thucHanh: [] },
-           KHÁ: { lyThuyet: [], thucHanh: [] },
-           ĐẠT: { lyThuyet: [], thucHanh: [] },
-           "CHƯA ĐẠT": { lyThuyet: [], thucHanh: [] },
-         });
-         return;
-       }
- 
-       const raw = snap.data();
- 
-       // =========================
-       // 🔥 NORMALIZE FIRESTORE → UI FORMAT
-       // =========================
-       const normalized = {
-         TỐT: {
-           lyThuyet: safe(raw?.tot?.lyThuyet),
-           thucHanh: safe(raw?.tot?.thucHanh),
-         },
-         KHÁ: {
-           lyThuyet: safe(raw?.kha?.lyThuyet),
-           thucHanh: safe(raw?.kha?.thucHanh),
-         },
-         ĐẠT: {
-           lyThuyet: safe(raw?.trungbinh?.lyThuyet),
-           thucHanh: safe(raw?.trungbinh?.thucHanh),
-         },
-         "CHƯA ĐẠT": {
-           lyThuyet: safe(raw?.yeu?.lyThuyet),
-           thucHanh: safe(raw?.yeu?.thucHanh),
-         },
-       };
- 
-       setNhanXetData(normalized);
- 
-     } catch (err) {
-       console.error("loadNhanXet error:", err);
-     }
-   };
+  /*const getNhanXetMuc = (subject) => {
+    if (subject === "Công nghệ") return nhanXetCongNgheCuoiKy;
+    return nhanXetTinHocCuoiKy; // mặc định Tin học
+  };*/
 
   // ------------------------
 // 🔹 HÀM SINH NHẬN XÉT TỰ ĐỘNG
 // ------------------------
-useEffect(() => {
-  loadNhanXet();
-}, [config.hocKy]);
-
-  // ------------------------
-// 🔹 HÀM SINH NHẬN XÉT TỰ ĐỘNG
-// ------------------------
-const generateNhanXet = (student) => {
-  if (!nhanXetData) return student.nhanXet || "";
-
-  const lt = student.lyThuyet;
-  const th = student.thucHanh;
-
-  // ❗ nếu thiếu 1 trong 2 điểm → không sinh nhận xét
-  if (lt === "" || lt === null || lt === undefined ||
-      th === "" || th === null || th === undefined) {
-    return student.nhanXet || "";
+const generateNhanXet = (student, subject, tongCong = null, mucDat = null) => {
+  // Xác định mức đạt nếu chưa có
+  let computedMucDat = mucDat;
+  if (!computedMucDat && subject === "Tin học" && tongCong != null) {
+    computedMucDat = tongCong >= 9 ? "T" : tongCong >= 5 ? "H" : "C";
+  } else if (!computedMucDat && subject === "Công nghệ" && student.thucHanh) {
+    const lt = parseFloat(student.lyThuyet);
+    const ltLoai = !isNaN(lt) ? (lt >= 9 ? "T" : lt >= 5 ? "H" : "C") : "C";
+    computedMucDat = ltLoai; // ưu tiên LT
   }
 
-  const xepLoai = (diem) => {
-    const score = Number(diem);
+  if (!computedMucDat) return student.nhanXet || "";
 
-    if (score >= 4.5) return "TỐT";
-    if (score >= 3.5) return "KHÁ";
-    if (score >= 2.5) return "ĐẠT";
-    return "CHƯA ĐẠT";
-  };
+  // Chuyển mức đạt sang loại nhận xét
+  const getLoaiMucDat = (xepLoai) =>
+    xepLoai === "T"
+      ? "tot"
+      : xepLoai === "H"
+      ? "kha"
+      : xepLoai === "C"
+      ? "trungbinh"
+      : "yeu";
+
+  const loai = getLoaiMucDat(computedMucDat);
+
+  // Chọn bộ nhận xét theo môn và theo kỳ
+  let source;
+  const isCuoiKy = tongCong > 0;
+  if (subject === "Công nghệ") {
+    source = isCuoiKy ? nhanXetCongNgheCuoiKy : nhanXetCongNgheGiuaKy;
+  } else {
+    source = isCuoiKy ? nhanXetTinHocCuoiKy : nhanXetTinHocGiuaKy;
+  }
 
   const pickRandom = (arr) =>
-    Array.isArray(arr) && arr.length
-      ? arr[Math.floor(Math.random() * arr.length)]
-      : "";
+    arr.length ? arr[Math.floor(Math.random() * arr.length)] : "";
 
-  const loaiLT = xepLoai(lt);
-  const loaiTH = xepLoai(th);
+  if (subject === "Công nghệ") {
+    if (isCuoiKy) {
+      // Cuối kỳ: vế 1 theo LT, vế 2 theo TH
+      const lt = parseFloat(student.lyThuyet);
+      const th = student.thucHanh;
 
-  const nxLT = pickRandom(nhanXetData?.[loaiLT]?.lyThuyet || []);
-  const nxTH = pickRandom(nhanXetData?.[loaiTH]?.thucHanh || []);
+      const loaiLT =
+        !isNaN(lt) ? (lt >= 9 ? "tot" : lt >= 7 ? "kha" : lt >= 5 ? "trungbinh" : "yeu") : loai;
+      const loaiTH =
+        th === "T" ? "tot" : th === "H" ? "kha" : th === "C" ? "yeu" : loai;
 
-  return nxLT && nxTH
-    ? `${nxLT}; ${nxTH}`
-    : nxLT || nxTH || "";
+      const arrLT = source[loaiLT]?.lyThuyet || [];
+      const arrTH = source[loaiTH]?.thucHanh || [];
+
+      let nxLT = pickRandom(arrLT);
+      let nxTH = pickRandom(arrTH);
+
+      if (!nxLT && nxTH) nxLT = nxTH;
+      if (!nxTH && nxLT) nxTH = nxLT;
+
+      return nxLT && nxTH ? `${nxLT}; ${nxTH}` : nxLT || nxTH || "";
+    } else {
+      // Giữa kỳ: chỉ cần một câu theo mức đạt
+      const arr = source[loai] || [];
+      return pickRandom(arr);
+    }
+  }
+
+  if (isCuoiKy) {
+    // Tin học cuối kỳ: có lyThuyet và thucHanh
+    const arrLT = source[loai]?.lyThuyet || [];
+    const arrTH = source[loai]?.thucHanh || [];
+    let nxLT = pickRandom(arrLT);
+    let nxTH = pickRandom(arrTH);
+
+    if (!nxLT && nxTH) nxLT = nxTH;
+    if (!nxTH && nxLT) nxTH = nxLT;
+
+    return nxLT && nxTH ? `${nxLT}; ${nxTH}` : nxLT || nxTH || "";
+  } else {
+    // Tin học giữa kỳ: chỉ cần một câu
+    const arr = source[loai] || [];
+    return pickRandom(arr);
+  }
 };
+
+
 
 // =========================
 // FETCH STUDENTS NEW STRUCTURE
@@ -336,10 +301,12 @@ const fetchStudentsAndStatus = async (cls) => {
 
       // nếu chưa có nhận xét → sinh tự động
       if (!nhanXet || nhanXet.trim() === "") {
-        nhanXet = generateNhanXet({
-          lyThuyet,
-          thucHanh,
-        });
+        nhanXet = generateNhanXet(
+          { lyThuyet, thucHanh, tongCong, mucDat },
+          selectedSubject,
+          tongCong,
+          mucDat
+        );
       }
 
       studentList.push({
@@ -414,66 +381,134 @@ const fetchStudentsAndStatus = async (cls) => {
       prev.map((s) => {
         if (s.maDinhDanh !== maDinhDanh) return s;
 
-        let updated = { ...s, [field]: value };
+        const updated = { ...s, [field]: value };
 
         // =========================
-        // 🧠 VALIDATE INPUT
+        // 🧠 1. VALIDATE INPUT
         // =========================
-        if (field === "lyThuyet" || field === "thucHanh") {
-          if (value === "" || value === "." || value === "-") {
-            updated[field] = value;
-          } else {
+        if (selectedSubject === "Tin học") {
+          if (field === "lyThuyet" || field === "thucHanh") {
+
+            // ✅ cho nhập tạm (tránh bị đơ)
+            if (value === "" || value === "." || value === "-") {
+              updated[field] = value;
+              return updated;
+            }
+
             let num;
 
+            // ✅ dạng 2 chữ số (45 → 4.5, 43 → 4)
             if (/^\d{2}$/.test(value)) {
               const first = parseInt(value[0]);
               const second = parseInt(value[1]);
+
               num = second === 5 ? first + 0.5 : first;
-            } else {
+            }
+
+            // ✅ nhập số thập phân trực tiếp
+            else {
               const raw = parseFloat(value);
-              if (!isNaN(raw)) {
-                const integer = Math.floor(raw);
-                const decimal = raw - integer;
-                num = decimal === 0.5 ? integer + 0.5 : integer;
+              if (isNaN(raw)) return s;
+
+              const integer = Math.floor(raw);
+              const decimal = raw - integer;
+
+              // 👉 chỉ giữ .5, còn lại bỏ
+              if (decimal === 0.5) {
+                num = integer + 0.5;
+              } else {
+                num = integer;
               }
             }
 
-            if (num != null && num >= 0 && num <= 5) {
-              updated[field] = num;
-            }
+            // ❌ ngoài khoảng 0–5
+            if (num < 0 || num > 5) return s;
+
+            updated[field] = num;
           }
         }
 
+        if (selectedSubject === "Công nghệ") {
+          if (field === "lyThuyet") {
+          // ✅ cho nhập tạm
+          if (value === "" || value === "." || value === "-") {
+            updated.lyThuyet = value;
+            updated.tongCong = null;
+            return updated;
+          }
+
+          let num;
+
+          // ✅ giữ nguyên 10
+          if (value === "10") {
+            num = 10;
+          }
+
+          // ✅ dạng 2 chữ số (85 → 8.5, còn lại → 8)
+          else if (/^\d{2}$/.test(value)) {
+            const first = parseInt(value[0]);
+            const second = parseInt(value[1]);
+
+            num = second === 5 ? first + 0.5 : first;
+          }
+
+          // ✅ nhập số thập phân trực tiếp
+          else {
+            const raw = parseFloat(value);
+            if (isNaN(raw)) return s;
+
+            // 👉 chỉ giữ .0 hoặc .5
+            const integer = Math.floor(raw);
+            const decimal = raw - integer;
+
+            if (decimal >= 0.5) {
+              num = integer + 0.5;
+            } else {
+              num = integer;
+            }
+          }
+
+          if (num < 0 || num > 10) return s;
+
+          updated.lyThuyet = num;
+          updated.tongCong = Math.round(num);
+        }
+      }
+
         // =========================
-        // 💬 NHẬN XÉT THỦ CÔNG
+        // 💬 1b. NHẬN XÉT THỦ CÔNG
         // =========================
         if (field === "nhanXet") {
+          // Cho phép nhập tự do, không sinh lại tự động
           updated.nhanXet = value;
           return updated;
         }
 
         // =========================
-        // 🧮 TÍNH TỔNG (LUÔN CHẠY LẠI)
+        // 🧮 2. TÍNH TỔNG
         // =========================
-        const lt =
-          updated.lyThuyet !== "" && updated.lyThuyet != null
-            ? parseFloat(updated.lyThuyet)
-            : null;
+        if (selectedSubject === "Tin học") {
+          const lt = updated.lyThuyet != null ? parseFloat(updated.lyThuyet) : null;
+          const th = updated.thucHanh != null ? parseFloat(updated.thucHanh) : null;
 
-        const th =
-          updated.thucHanh !== "" && updated.thucHanh != null
-            ? parseFloat(updated.thucHanh)
-            : null;
-
-        updated.tongCong =
-          lt != null && th != null && !isNaN(lt) && !isNaN(th)
-            ? Math.round(lt + th)
-            : null;
+          updated.tongCong =
+            lt != null && th != null && !isNaN(lt) && !isNaN(th)
+              ? Math.round(lt + th)
+              : null;
+        }
 
         // =========================
-        // 🔄 RESET KHI CHƯA ĐỦ ĐIỂM
+        // 🎯 3. XÉT THEO TỔNG
         // =========================
-        if (updated.tongCong == null) {
+        const isNoScore =
+          updated.tongCong === null ||
+          updated.tongCong === undefined ||
+          isNaN(updated.tongCong);
+
+        // =========================
+        // 🔄 4. RESET VỀ DB
+        // =========================
+        if (isNoScore && field !== "mucDat") {
           updated.mucDat =
             s.dgtx_mucdat && s.dgtx_mucdat !== ""
               ? s.dgtx_mucdat
@@ -488,7 +523,7 @@ const fetchStudentsAndStatus = async (cls) => {
         }
 
         // =========================
-        // 🌟 MỨC ĐẠT
+        // 🌟 5. SINH MỨC ĐẠT (nếu không chỉnh thủ công)
         // =========================
         if (field !== "mucDat") {
           updated.mucDat =
@@ -500,9 +535,14 @@ const fetchStudentsAndStatus = async (cls) => {
         }
 
         // =========================
-        // 💬 NHẬN XÉT AUTO
+        // 💬 6. SINH NHẬN XÉT TỰ ĐỘNG
         // =========================
-        updated.nhanXet = generateNhanXet(updated);
+        updated.nhanXet = generateNhanXet(
+          updated,
+          selectedSubject,
+          updated.tongCong,
+          updated.mucDat
+        );
 
         return updated;
       })
@@ -526,7 +566,8 @@ const fetchStudentsAndStatus = async (cls) => {
 
     const selectedSemester = config.hocKy || "Giữa kỳ I";
 
-   const selectedMon = "Tin học";
+    const selectedMon = config.mon || "Công nghệ";
+    const isCongNghe = selectedMon === "Công nghệ";
 
     // ✅ FIX: mapping đầy đủ (THÊM GKI)
     let termDoc;
@@ -624,7 +665,8 @@ const fetchStudentsAndStatus = async (cls) => {
   if (!student) return;
 
   const selectedSemester = config.hocKy || "Giữa kỳ I";
-  const selectedMon = config.mon || "Tin học";
+  const selectedMon = config.mon || "Công nghệ";
+  const isCongNghe = selectedMon === "Công nghệ";
 
   // ✅ Mapping đầy đủ giống handleSaveAll
   let termDoc;
@@ -889,10 +931,17 @@ const fetchStudentsAndStatus = async (cls) => {
             <IconButton
               onClick={() => {
                 setStudents((prev) =>
-                  prev.map((s) => ({
-                    ...s,
-                    nhanXet: generateNhanXet(s),
-                  }))
+                  prev.map((s) => {
+                    return {
+                      ...s,
+                      nhanXet: generateNhanXet(
+                        s,
+                        selectedSubject,
+                        s.tongCong,
+                        s.mucDat
+                      ),
+                    };
+                  })
                 );
               }}
               sx={{
@@ -905,24 +954,6 @@ const fetchStudentsAndStatus = async (cls) => {
               <RefreshIcon fontSize="small" />
             </IconButton>
           </Tooltip>
-
-          {/* ✅ NÚT NHẬN XÉT → ĐẶT SAU REFRESH */}
-          <Tooltip title="Quản lý nhận xét" arrow>
-            <IconButton
-              onClick={() => setOpenNhanXet(true)}
-              sx={{
-                color: "#1976d2",
-                bgcolor: "white",
-                boxShadow: 2,
-                "&:hover": {
-                  bgcolor: "#e3f2fd",
-                },
-              }}
-            >
-              <RateReviewIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-
         </Box>
 
         {/* 🟨 Tiêu đề & Học kỳ hiện tại */}
@@ -985,6 +1016,25 @@ const fetchStudentsAndStatus = async (cls) => {
               ))}
             </Select>
           </FormControl>
+
+          {/* Môn học */}
+          {/*<FormControl size="small" sx={{ minWidth: 120, flexShrink: 0, mt: 1 }}>
+            <InputLabel id="monhoc-label">Môn</InputLabel>
+            <Select
+              labelId="monhoc-label"
+              value={selectedSubject}
+              label="Môn"
+              onChange={async (e) => {
+                const value = e.target.value;
+                setSelectedSubject(value);
+                setConfig(prev => ({ ...prev, mon: value }));
+                await setDoc(doc(db, "CONFIG", "config"), { mon: value }, { merge: true });
+              }}
+            >
+              <MenuItem value="Tin học">Tin học</MenuItem>
+              <MenuItem value="Công nghệ">Công nghệ</MenuItem>
+            </Select>
+          </FormControl>*/}
         </Box>
 
         {/* 🧾 Bảng học sinh (giữ nguyên định dạng gốc) */}
@@ -1059,17 +1109,44 @@ const fetchStudentsAndStatus = async (cls) => {
 
                               updated.lyThuyet = val;
 
-                              const lt = parseFloat(val);
-                              const th = parseFloat(s.thucHanh);
+                              // ===== TIN HỌC =====
+                              if (selectedSubject === "Tin học") {
+                                const lt = parseFloat(val);
+                                const th = parseFloat(s.thucHanh);
 
-                              if (!isNaN(lt) && !isNaN(th)) {
-                                updated.tongCong = Math.round(lt + th);
+                                if (!isNaN(lt) && !isNaN(th)) {
+                                  updated.tongCong = Math.round(lt + th);
+                                  updated.mucDat =
+                                    updated.tongCong >= 9 ? "T" :
+                                    updated.tongCong >= 5 ? "H" : "C";
 
-                                updated.mucDat =
-                                  updated.tongCong >= 9 ? "T" :
-                                  updated.tongCong >= 5 ? "H" : "C";
+                                  updated.nhanXet = generateNhanXet(
+                                    updated,
+                                    selectedSubject,
+                                    updated.tongCong,
+                                    updated.mucDat
+                                  );
+                                }
+                              }
 
-                                updated.nhanXet = generateNhanXet(updated);
+                              // ===== CÔNG NGHỆ =====
+                              if (selectedSubject === "Công nghệ") {
+                                const lt = parseFloat(val);
+
+                                if (!isNaN(lt)) {
+                                  updated.tongCong = Math.round(lt);
+
+                                  updated.mucDat =
+                                    lt >= 9 ? "T" :
+                                    lt >= 5 ? "H" : "C";
+
+                                  updated.nhanXet = generateNhanXet(
+                                    updated,
+                                    selectedSubject,
+                                    updated.tongCong,
+                                    updated.mucDat
+                                  );
+                                }
                               }
 
                               return updated;
@@ -1085,11 +1162,14 @@ const fetchStudentsAndStatus = async (cls) => {
                           "& .MuiSelect-icon": { display: "none" }
                         }}
                       >
-                        {["-", 0, 1, 2, 3, 4, 5].map((v) => (
-                          <MenuItem key={v} value={v}>
-                            {v}
-                          </MenuItem>
-                        ))}
+                        {selectedSubject === "Tin học"
+                          ? ["-", 0, 1, 2, 3, 4, 5].map((v) => (
+                              <MenuItem key={v} value={v}>{v}</MenuItem>
+                            ))
+                          : ["-", 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((v) => (
+                              <MenuItem key={v} value={v}>{v}</MenuItem>
+                            ))
+                        }
                       </Select>
                     </FormControl>
                   </Box>
@@ -1125,18 +1205,58 @@ const fetchStudentsAndStatus = async (cls) => {
                               // 🔥 nếu chọn "-", reset về rỗng
                               let updated = { ...s, thucHanh: val === "-" ? "" : val };
 
-                              const lt = parseFloat(updated.lyThuyet);
-                              const th = parseFloat(val);
+                              // ===== TIN HỌC =====
+                              if (selectedSubject === "Tin học") {
+                                const lt = parseFloat(updated.lyThuyet);
+                                const th = parseFloat(val);
 
-                            if (!isNaN(lt) && !isNaN(th)) {
-                              updated.tongCong = Math.round(lt + th);
+                                if (!isNaN(lt) && !isNaN(th)) {
+                                  updated.tongCong = Math.round(lt + th);
 
-                              if (updated.tongCong >= 9) updated.mucDat = "T";
-                              else if (updated.tongCong >= 5) updated.mucDat = "H";
-                              else updated.mucDat = "C";
+                                  if (updated.tongCong >= 9) updated.mucDat = "T";
+                                  else if (updated.tongCong >= 5) updated.mucDat = "H";
+                                  else updated.mucDat = "C";
 
-                              updated.nhanXet = generateNhanXet(updated);
-                            }                            
+                                  let loaiLT = lt > 4 ? "tot" : lt > 3 ? "kha" : lt >= 2.5 ? "trungbinh" : "yeu";
+                                  let loaiTH = th > 4 ? "tot" : th > 3 ? "kha" : th >= 2.5 ? "trungbinh" : "yeu";
+
+                                  const arrLT = nhanXetTinHocCuoiKy[loaiLT]?.lyThuyet || [];
+                                  const arrTH = nhanXetTinHocCuoiKy[loaiTH]?.thucHanh || [];
+
+                                  const nxLT = arrLT[Math.floor(Math.random() * arrLT.length)] || "";
+                                  const nxTH = arrTH[Math.floor(Math.random() * arrTH.length)] || "";
+
+                                  updated.nhanXet = `${nxLT}; ${nxTH}`.trim();
+                                }
+                              }
+
+                              // ===== CÔNG NGHỆ =====
+                              if (selectedSubject === "Công nghệ") {
+                                if (!["-", "T", "H", "C"].includes(val)) return s;
+
+                                const lyThuyetNum = parseFloat(updated.lyThuyet);
+
+                                let loaiLyThuyet = "yeu";
+                                if (!isNaN(lyThuyetNum)) {
+                                  if (lyThuyetNum >= 9) loaiLyThuyet = "tot";
+                                  else if (lyThuyetNum >= 5) loaiLyThuyet = "kha";
+                                  else loaiLyThuyet = "trungbinh";
+                                }
+
+                                let loaiThucHanh = "yeu";
+                                if (val === "T") loaiThucHanh = "tot";
+                                else if (val === "H") loaiThucHanh = "kha";
+                                else if (val === "C") loaiThucHanh = "trungbinh";
+                                else if (val === "-") loaiThucHanh = "yeu"; // reset thì coi như rỗng
+
+                                const arrLT = nhanXetCongNgheCuoiKy[loaiLyThuyet]?.lyThuyet || [];
+                                const arrTH = nhanXetCongNgheCuoiKy[loaiThucHanh]?.thucHanh || [];
+
+                                const nxLT = arrLT[Math.floor(Math.random() * arrLT.length)] || "";
+                                const nxTH = arrTH[Math.floor(Math.random() * arrTH.length)] || "";
+
+                                updated.nhanXet = `${nxLT}; ${nxTH}`.trim();
+                              }
 
                               return updated;
                             })
@@ -1152,11 +1272,15 @@ const fetchStudentsAndStatus = async (cls) => {
                         }}
                       >
                         {/* 👉 Tuỳ môn */}
-                        {["-", 0, 1, 2, 3, 4, 5].map((v) => (
-                          <MenuItem key={v} value={v}>
-                            {v}
-                          </MenuItem>
-                        ))}
+                        {selectedSubject === "Tin học" ? (
+                          ["-", 0, 1, 2, 3, 4, 5].map((v) => (
+                            <MenuItem key={v} value={v}>{v}</MenuItem>
+                          ))
+                        ) : (
+                          ["-", "T", "H", "C"].map((v) => (
+                            <MenuItem key={v} value={v}>{v}</MenuItem>
+                          ))
+                        )}
                       </Select>
                     </FormControl>
                   </Box>
@@ -1228,94 +1352,274 @@ const fetchStudentsAndStatus = async (cls) => {
                   {/* 🟩 Cột Giáo viên – nhập theo cột, dùng teacher.dgtx */}    
                   {/* 🟨 Cột Lí thuyết */}
                   <TableCell align="center" sx={{ px: 1 }}>
-                    <Box
-                      sx={{
-                        position: "relative",
-                        display: "flex",
-                        alignItems: "center",
-                        borderRadius: 1,
-                        transition: "all 0.2s ease",
+                    {selectedSubject === "Tin học" ? (
+                      <Box
+                        sx={{
+                          position: "relative",
+                          display: "flex",
+                          alignItems: "center",
+                          borderRadius: 1,
+                          transition: "all 0.2s ease",
 
-                        "&:hover": {
-                          backgroundColor: "#ffffff",
-                          boxShadow: "inset 0 0 0 1px #1976d2",
-                        },
+                          // 🔥 hover = hiện ô nhập rõ
+                          "&:hover": {
+                            //backgroundColor: "#f1f8ff",
+                            backgroundColor: "#ffffff", // ✅ luôn trắng
+                            boxShadow: "inset 0 0 0 1px #1976d2",
+                          },
 
-                        "&:focus-within": {
-                          backgroundColor: "#ffffff",
-                          boxShadow: "inset 0 0 0 2px #1976d2",
-                        },
-                      }}
-                    >
-                      <TextField
-                        variant="standard"
-                        value={student.lyThuyet ?? ""}
-                        onChange={(e) =>
-                          handleCellChange(
-                            student.maDinhDanh,
-                            "lyThuyet",
-                            e.target.value
-                          )
-                        }
-                        fullWidth
-                        inputProps={{
-                          style: {
-                            textAlign: "center",
-                            padding: "4px 8px",
+                          // 🔥 focus = đậm hơn
+                          "&:focus-within": {
+                            //backgroundColor: "#e3f2fd",
+                            backgroundColor: "#ffffff", // ✅ luôn trắng
+                            boxShadow: "inset 0 0 0 2px #1976d2",
+                          },
+
+                          "& .edit-icon": {
+                            position: "absolute",
+                            right: 4,
+                            opacity: 0,
+                            transition: "opacity 0.2s ease",
+                          },
+
+                          "&:hover .edit-icon": {
+                            opacity: 1,
                           },
                         }}
-                        id={`lyThuyet-${idx}`}
-                        onKeyDown={(e) =>
-                          handleKeyNavigation(e, idx, "lyThuyet")
-                        }
-                        InputProps={{
-                          disableUnderline: true,
+                      >
+                        {/* ✅ INPUT */}
+                        <TextField
+                          variant="standard"
+                          value={student.lyThuyet ?? ""}
+                          onChange={(e) =>
+                            handleCellChange(
+                              student.maDinhDanh,
+                              "lyThuyet",
+                              e.target.value
+                            )
+                          }
+                          fullWidth
+                          inputProps={{
+                            style: {
+                              textAlign: "center",
+                              padding: "4px 8px"
+                            },
+                          }}
+                          id={`lyThuyet-${idx}`}
+                          onKeyDown={(e) =>
+                            handleKeyNavigation(e, idx, "lyThuyet")
+                          }
+                          InputProps={{
+                            disableUnderline: true,
+                          }}
+                        />
+
+                        {/* ✏️ Icon hover */}
+                        {/*<IconButton
+                          size="small"
+                          className="edit-icon"
+                          onClick={() => handleOpenLTDialog(student)}
+                          sx={{ p: 0.5 }}
+                        >
+                          <EditIcon fontSize="inherit" />
+                        </IconButton>*/}
+                      </Box>
+                    ) : (
+                      <Box
+                        sx={{
+                          borderRadius: 1,
+                          transition: "all 0.2s ease",
+
+                          "&:hover": {
+                            //backgroundColor: "#f1f8ff",
+                            backgroundColor: "#ffffff", // ✅ luôn trắng
+                            boxShadow: "inset 0 0 0 1px #1976d2",
+                          },
+
+                          "&:focus-within": {
+                            //backgroundColor: "#e3f2fd",
+                            backgroundColor: "#ffffff", // ✅ luôn trắng
+                            boxShadow: "inset 0 0 0 2px #1976d2",
+                          },
                         }}
-                      />
-                    </Box>
+                      >
+                        <TextField
+                          variant="standard"
+                          value={student.lyThuyet || ""}
+                          onChange={(e) =>
+                            handleCellChange(
+                              student.maDinhDanh,
+                              "lyThuyet",
+                              e.target.value
+                            )
+                          }
+                          fullWidth
+                          inputProps={{
+                            style: {
+                              textAlign: "center",
+                              padding: "4px 6px",
+                            },
+                          }}
+                          id={`lyThuyet-${idx}`}
+                          onKeyDown={(e) =>
+                            handleKeyNavigation(e, idx, "lyThuyet")
+                          }
+                          InputProps={{ disableUnderline: true }}
+                        />
+                      </Box>
+                    )}
                   </TableCell>
                   {/* 🟨 Cột Thực hành */}
                   <TableCell align="center" sx={{ px: 1 }}>
-                    <Box
-                      sx={{
-                        borderRadius: 1,
-                        transition: "all 0.2s ease",
+                    {selectedSubject === "Công nghệ" ? (
+                      <Box
+                        sx={{
+                          borderRadius: 1,
+                          transition: "all 0.2s ease",
 
-                        "&:hover": {
-                          backgroundColor: "#ffffff",
-                          boxShadow: "inset 0 0 0 1px #1976d2",
-                        },
+                          // 🔥 hover
+                          "&:hover": {
+                            //backgroundColor: "#f1f8ff",
+                            backgroundColor: "#ffffff", // ✅ luôn trắng
+                            boxShadow: "inset 0 0 0 1px #1976d2",
+                          },
 
-                        "&:focus-within": {
-                          backgroundColor: "#ffffff",
-                          boxShadow: "inset 0 0 0 2px #1976d2",
-                        },
-                      }}
-                    >
-                      <TextField
-                        variant="standard"
-                        value={student.thucHanh ?? ""}
-                        onChange={(e) =>
-                          handleCellChange(
-                            student.maDinhDanh,
-                            "thucHanh",
-                            e.target.value
-                          )
-                        }
-                        fullWidth
-                        inputProps={{
-                          style: {
-                            textAlign: "center",
-                            padding: "4px 6px",
+                          // 🔥 focus
+                          "&:focus-within": {
+                            //backgroundColor: "#e3f2fd",
+                            backgroundColor: "#ffffff", // ✅ luôn trắng
+                            boxShadow: "inset 0 0 0 2px #1976d2",
+                          },
+
+                          // icon dropdown
+                          "& .MuiSelect-icon": {
+                            opacity: 0,
+                            transition: "opacity 0.2s ease",
+                          },
+                          "&:hover .MuiSelect-icon": {
+                            opacity: 1,
                           },
                         }}
-                        id={`thucHanh-${idx}`}
-                        onKeyDown={(e) =>
-                          handleKeyNavigation(e, idx, "thucHanh")
-                        }
-                        InputProps={{ disableUnderline: true }}
-                      />
-                    </Box>
+                      >
+                        <FormControl variant="standard" fullWidth>
+                          <Select
+                            value={student.thucHanh ?? ""}
+                            onChange={(e) => {
+                              const val = e.target.value;
+
+                              setStudents((prev) =>
+                                prev.map((s) => {
+                                  // ✅ CHỈ update đúng học sinh đang chọn
+                                  if (s.maDinhDanh !== student.maDinhDanh) return s;
+
+                                  let updated = { ...s };
+
+                                  // 🔥 RESET
+                                  if (val === "") {
+                                    return {
+                                      ...s,
+                                      thucHanh: "",
+                                      tongCong: null,
+                                      mucDat: s.mucDat_goc || s.dgtx_mucdat || "",
+                                      nhanXet: s.nhanXet_goc || "",
+                                    };
+                                  }
+
+                                  updated.thucHanh = val;
+
+                                  // ===== CÔNG NGHỆ =====
+                                  if (selectedSubject === "Công nghệ") {
+                                    const lt = parseFloat(s.lyThuyet);
+
+                                    if (!isNaN(lt)) {
+                                      updated.tongCong = Math.round(lt);
+
+                                      updated.mucDat =
+                                        lt >= 9 ? "T" :
+                                        lt >= 5 ? "H" : "C";
+
+                                      updated.nhanXet = generateNhanXet(
+                                        updated,
+                                        selectedSubject,
+                                        updated.tongCong,
+                                        updated.mucDat
+                                      );
+                                    }
+                                  }
+
+                                  return updated;
+                                })
+                              );
+                            }}
+                            disableUnderline
+                            id={`thucHanh-${idx}`}
+                            sx={{
+                              textAlign: "center",
+                              px: 1,
+
+                              "& .MuiSelect-select": {
+                                py: "4px",
+                                fontSize: "14px",
+                                textAlign: "center",
+                              },
+                            }}
+                            onKeyDown={(e) =>
+                              handleKeyNavigation(e, idx, "thucHanh")
+                            }
+                          >
+                            <MenuItem value="">
+                              <em>-</em>
+                            </MenuItem>
+                            <MenuItem value="T">T</MenuItem>
+                            <MenuItem value="H">H</MenuItem>
+                            <MenuItem value="C">C</MenuItem>
+                          </Select>
+                        </FormControl>
+                      </Box>
+                    ) : (
+                      <Box
+                        sx={{
+                          borderRadius: 1,
+                          transition: "all 0.2s ease",
+
+                          "&:hover": {
+                            //backgroundColor: "#f1f8ff",
+                            backgroundColor: "#ffffff", // ✅ luôn trắng
+                            boxShadow: "inset 0 0 0 1px #1976d2",
+                          },
+
+                          "&:focus-within": {
+                            //backgroundColor: "#e3f2fd",
+                            backgroundColor: "#ffffff", // ✅ luôn trắng
+                            boxShadow: "inset 0 0 0 2px #1976d2",
+                          },
+                        }}
+                      >
+                        <TextField
+                          variant="standard"
+                          value={student.thucHanh ?? ""}
+                          onChange={(e) =>
+                            handleCellChange(
+                              student.maDinhDanh,
+                              "thucHanh",
+                              e.target.value
+                            )
+                          }
+                          fullWidth
+                          inputProps={{
+                            style: {
+                              textAlign: "center",
+                              padding: "4px 6px",
+                            },
+                          }}
+                          id={`thucHanh-${idx}`}
+                          onKeyDown={(e) =>
+                            handleKeyNavigation(e, idx, "thucHanh")
+                          }
+                          InputProps={{ disableUnderline: true }}
+                        />
+                      </Box>
+                    )}
                   </TableCell>
 
                   {/* 🟨 Cột Tổng cộng */}
@@ -1513,10 +1817,18 @@ const fetchStudentsAndStatus = async (cls) => {
         </Alert>
       </Snackbar>
 
-      <QuanLyNhanXet
-        open={openNhanXet}
-        onClose={() => setOpenNhanXet(false)}
-      />
+      {/*<CapNhatLyThuyetDialog
+        open={openLTDialog}
+        onClose={handleCloseLTDialog}
+        student={editingStudent}
+        lop={selectedClass}
+        value={ltValue}
+        setValue={setLtValue}
+        handleCellChange={handleCellChange}
+        onSaveOne={handleSaveOne} 
+      />*/}
     </Box>
   );
+
+
 }
