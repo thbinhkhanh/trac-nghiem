@@ -657,9 +657,20 @@ export default function BackupPage({ open, onClose, config }) {
           >
             <Button
               onClick={onClose}
+              variant="outlined"
               sx={{
-                textTransform:
-                  "none",
+                minWidth: 110,
+                height: 42,
+                borderRadius: "12px",
+                textTransform: "none",
+                fontWeight: 600,
+                borderColor: "#cbd5e1",
+                color: "#475569",
+                background: "#fff",
+                "&:hover": {
+                  borderColor: "#94a3b8",
+                  background: "#f1f5f9",
+                },
               }}
             >
               Hủy
@@ -671,15 +682,22 @@ export default function BackupPage({ open, onClose, config }) {
               onClick={handleBackup}
               disabled={loading}
               sx={{
-                textTransform:
-                  "none",
-                borderRadius:
-                  "12px",
+                minWidth: 130,
+                height: 42,
+                borderRadius: "12px",
+                textTransform: "none",
                 fontWeight: 700,
-                boxShadow: "none",
+                background: "linear-gradient(135deg, #3b82f6, #2563eb)",
+                boxShadow: "0 10px 20px rgba(59,130,246,0.25)",
 
                 "&:hover": {
-                  boxShadow: "none",
+                  background: "linear-gradient(135deg, #2563eb, #1d4ed8)",
+                  boxShadow: "0 12px 24px rgba(37,99,235,0.35)",
+                },
+
+                "&.Mui-disabled": {
+                  background: "#93c5fd",
+                  color: "#fff",
                 },
               }}
             >
