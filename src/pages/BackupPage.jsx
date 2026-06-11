@@ -31,8 +31,7 @@ import {
 import { db } from "../firebase";
 
 const BACKUP_KEYS = [
-  { key: "LOP", label: "Danh sách lớp" },
-  { key: "KETQUA", label: "Kết quả đánh giá" },
+  { key: "HOCSINH", label: "Dữ liệu học sinh" },
   { key: "NGANHANG_DE", label: "Đề KTĐK" },
   { key: "DETHI", label: "Đề thi" },
 ];
@@ -215,15 +214,13 @@ export default function BackupPage({ open, onClose, config }) {
     // WEIGHTED PROGRESS (FIXED)
     // =========================
     const weights = {
-      LOP: 9,
-      KETQUA: 50,
-      NGANHANG_DE: 40,
+      HOCSINH: 70,
+      NGANHANG_DE: 29,
       DETHI: 1,
     };
 
     const state = {
-      LOP: 0,
-      KETQUA: 0,
+      HOCSINH: 0,
       NGANHANG_DE: 0,
       DETHI: 0,
     };
@@ -261,80 +258,51 @@ export default function BackupPage({ open, onClose, config }) {
     for (const col of selectedCollections) {
 
       // =========================
-      // 📦 LOP
+      // 👨‍🎓 HỌC SINH
       // =========================
-      if (col === "LOP") {
+      if (col === "HOCSINH") {
 
-        const lopSnap = await getDoc(doc(db, "DANHSACH_LOP", namHocKey));
+        const collectionName =
+          `DATA_HOCSINH_${namHocKey}`;
 
-        backupData.DANHSACH_LOP = {
-          [namHocKey]: lopSnap.exists() ? lopSnap.data() : { list: [] }
-        };
+        backupData[collectionName] = {};
 
-        let done = 1;
-        const total = classList.length + 1;
-
-        report("LOP", done, total);
-
-        backupData.DS_HOCSINH = { [namHocKey]: {} };
+        let done = 0;
+        const total = classList.length;
 
         await Promise.all(
+
           classList.map(async (lop) => {
+
             const snap = await getDocs(
-              collection(db, `DS_HOCSINH_${namHocKey}`, lop, "STUDENTS")
+              collection(
+                db,
+                collectionName,
+                lop,
+                "STUDENTS"
+              )
             );
 
-            const data = {};
-            snap.forEach(d => (data[d.id] = d.data()));
+            if (!snap.empty) {
 
-            backupData.DS_HOCSINH[namHocKey][lop] = data;
+              backupData[collectionName][lop] = {};
+
+              snap.forEach((d) => {
+
+                backupData[collectionName][lop][d.id] =
+                  d.data();
+
+              });
+
+            }
 
             done++;
-            report("LOP", done, total);
+            report("HOCSINH", done, total);
+
           })
+
         );
-      }
 
-      // =========================
-      // 📊 KETQUA
-      // =========================
-      else if (col === "KETQUA") {
-
-        backupData.DATA_KTDK = { [namHocKey]: {} };
-        backupData.DATA_ONTAP = { [namHocKey]: {} };
-
-        const total = classList.length * hocKyList.length;
-        let done = 0;
-
-        const tasks = [];
-
-        for (const hocKy of hocKyList) {
-          backupData.DATA_KTDK[namHocKey][hocKy] = {};
-          backupData.DATA_ONTAP[namHocKey][hocKy] = {};
-
-          for (const lop of classList) {
-            tasks.push(async () => {
-              const [ktdkSnap, ontapSnap] = await Promise.all([
-                getDocs(collection(db, `DATA_KTDK_${namHocKey}`, hocKy, lop)),
-                getDocs(collection(db, `DATA_ONTAP_${namHocKey}`, hocKy, lop))
-              ]);
-
-              const ktdkData = {};
-              ktdkSnap.forEach(d => (ktdkData[d.id] = d.data()));
-
-              const ontapData = {};
-              ontapSnap.forEach(d => (ontapData[d.id] = d.data()));
-
-              backupData.DATA_KTDK[namHocKey][hocKy][lop] = ktdkData;
-              backupData.DATA_ONTAP[namHocKey][hocKy][lop] = ontapData;
-
-              done++;
-              report("KETQUA", done, total);
-            });
-          }
-        }
-
-        await Promise.all(tasks.map(fn => fn()));
       }
 
       // =========================
@@ -483,116 +451,57 @@ export default function BackupPage({ open, onClose, config }) {
             bgcolor: "#f8fafc",
           }}
         >
-          <Stack spacing={2}>
-            {/* ===== HỌC SINH ===== */}
+          <Stack spacing={2}>           
+
+            {/* ===== Dữ liệu sao lưu ===== */}
             <Box
               sx={{
                 p: 1.8,
                 borderRadius: "5px",
                 bgcolor: "#fff",
-                border:
-                  "1px solid #e2e8f0",
+                border: "1px solid #e2e8f0",
               }}
             >
               <Typography
+                variant="body1"
                 sx={{
-                  fontSize: 14,
-                  fontWeight: 700,
-                  mb: 1,
+                  fontWeight: 600,
                   color: "#1e293b",
+                  mb: 0.5,
                 }}
               >
-                Học sinh
+                Dữ liệu sao lưu
               </Typography>
 
               <Stack spacing={0.5}>
+                {/* ===== DỮ LIỆU HỌC SINH ===== */}
                 <FormControlLabel
                   control={
                     <Checkbox
-                      checked={
-                        backupOptions["LOP"]
-                      }
-                      onChange={() =>
-                        toggleOption("LOP")
-                      }
+                      checked={backupOptions["HOCSINH"]}
+                      onChange={() => toggleOption("HOCSINH")}
                     />
                   }
-                  label="Danh sách lớp"
+                  label="Học sinh"
                 />
 
+                {/* ===== ĐỀ KTĐK ===== */}
                 <FormControlLabel
                   control={
                     <Checkbox
-                      checked={
-                        backupOptions[
-                          "KETQUA"
-                        ]
-                      }
-                      onChange={() =>
-                        toggleOption(
-                          "KETQUA"
-                        )
-                      }
-                    />
-                  }
-                  label="Kết quả đánh giá"
-                />
-              </Stack>
-            </Box>
-
-            {/* ===== NGÂN HÀNG ĐỀ ===== */}
-            <Box
-              sx={{
-                p: 1.8,
-                borderRadius: "5px",
-                bgcolor: "#fff",
-                border:
-                  "1px solid #e2e8f0",
-              }}
-            >
-              <Typography
-                sx={{
-                  fontSize: 14,
-                  fontWeight: 700,
-                  mb: 1,
-                  color: "#1e293b",
-                }}
-              >
-                Ngân hàng đề
-              </Typography>
-
-              <Stack spacing={0.5}>
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={
-                        backupOptions[
-                          "NGANHANG_DE"
-                        ]
-                      }
-                      onChange={() =>
-                        toggleOption(
-                          "NGANHANG_DE"
-                        )
-                      }
+                      checked={backupOptions["NGANHANG_DE"]}
+                      onChange={() => toggleOption("NGANHANG_DE")}
                     />
                   }
                   label="Đề KTĐK"
                 />
 
+                {/* ===== ĐỀ THI ===== */}
                 <FormControlLabel
                   control={
                     <Checkbox
-                      checked={
-                        backupOptions[
-                          "DETHI"
-                        ]
-                      }
-                      onChange={() =>
-                        toggleOption(
-                          "DETHI"
-                        )
-                      }
+                      checked={backupOptions["DETHI"]}
+                      onChange={() => toggleOption("DETHI")}
                     />
                   }
                   label="Đề thi"

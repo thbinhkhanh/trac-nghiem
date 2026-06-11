@@ -39,6 +39,7 @@ import {
   getDoc,
   writeBatch,
   deleteDoc,
+  setDoc,
 } from "firebase/firestore";
 
 import { useNavigate } from "react-router-dom";
@@ -131,10 +132,7 @@ export default function TongHopKQ() {
 
   const namHocKey = namHoc.replace(/-/g, "_");
 
-  const folder =
-    loai === "ktdk"
-      ? `DATA_KTDK_${namHocKey}`
-      : `DATA_ONTAP_${namHocKey}`;
+  //const folder = `DATA_HOCSINH_${namHocKey}`;
   
   useEffect(() => {
     const fetchConfig = async () => {
@@ -147,7 +145,7 @@ export default function TongHopKQ() {
     fetchConfig();
   }, []);
 
-  const handleSyncHocSinh = async () => {
+  /*const handleSyncHocSinh = async () => {
     try {
       setSyncing(true);
 
@@ -171,9 +169,9 @@ export default function TongHopKQ() {
     } finally {
       setSyncing(false);
     }
-  };
+  };*/
 
-  const handleSyncData = () => {
+  /*const handleSyncData = () => {
     openConfirmDialog(
       "Đồng bộ dữ liệu",
       "Bạn có chắc muốn đồng bộ LAMVANBEN → DATA KTDK? Dữ liệu có thể bị ghi đè!",
@@ -199,7 +197,7 @@ export default function TongHopKQ() {
         }
       }
     );
-  };
+  };*/
 
   // 🔹 Lấy học kỳ từ CONFIG/config
   useEffect(() => {
@@ -297,7 +295,37 @@ export default function TongHopKQ() {
     try {
       const classKey = selectedLop.replace(".", "_");
 
-      const colRef = collection(db, folder, hocKi, classKey);
+      // =========================
+      // MAP HỌC KỲ
+      // =========================
+      const hkMap = {
+        "Giữa kỳ I": "gki",
+        "Cuối kỳ I": "cki",
+        "Giữa kỳ II": "gkii",
+        "Cuối năm": "cn",
+      };
+
+      const hkField = hkMap[hocKi] || "cki";
+
+      // =========================
+      // MAP LOẠI (KTĐK / ÔN TẬP)
+      // =========================
+      const typeMap = {
+        ktdk: "Ktdk",
+        ontap: "Ontap",
+      };
+
+      const typeField = typeMap[loai] || "Ktdk";
+
+      // =========================
+      // FIRESTORE
+      // =========================
+      const colRef = collection(
+        db,
+        `DATA_HOCSINH_${namHocKey}`,
+        classKey,
+        "STUDENTS"
+      );
 
       const snapshot = await getDocs(colRef);
 
@@ -306,31 +334,47 @@ export default function TongHopKQ() {
         return;
       }
 
+      // =========================
+      // MAP DATA
+      // =========================
       let data = snapshot.docs.map((docSnap) => {
         const d = docSnap.data();
 
+        // 🔥 LẤY ĐÚNG NODE THEO LOẠI + HỌC KỲ
+        const hkData = d?.[typeField]?.[hkField] || {
+          lyThuyet: null,
+          ngayKiemTra: "",
+          thoiGianLamBai: "",
+        };
+
         return {
           docId: docSnap.id,
-          hoVaTen: d.hoVaTen || "",
-          diem: d.lyThuyet ?? "",
-          thoiGianLamBai: d.thoiGianLamBai || "",
+
+          hoVaTen: d.hoTen || "",
+
+          diem: hkData.lyThuyet ?? "",
+          thoiGianLamBai: hkData.thoiGianLamBai || "",
+          ngayHienThi: hkData.ngayKiemTra || "",
+
           soLanLam: d.soLanLam ?? "",
-          ngayHienThi: d.ngayKiemTra || "",
         };
       });
 
-      // ✅ CHỈ SORT 1 LẦN DUY NHẤT
+      // =========================
+      // SORT
+      // =========================
       data = data.sort(compareFullNamesRightToLeft);
 
-      // ✅ MAP STT SAU KHI SORT
-      const finalData = data.map((item, idx) => ({
-        ...item,
-        stt: idx + 1,
-      }));
+      setResults(
+        data.map((item, idx) => ({
+          ...item,
+          stt: idx + 1,
+        }))
+      );
 
-      setResults(finalData);
     } catch (err) {
       console.error("❌ LOAD RESULTS ERROR:", err);
+      setResults([]);
     } finally {
       setLoading(false);
     }
@@ -340,44 +384,133 @@ export default function TongHopKQ() {
     loadResults();
   }, [selectedLop, hocKi, loai]);
 
-  // Xóa lớp
-  const handleDeleteClass = async () => {
+  const handleResetStudent = async (student) => {
     try {
       const classKey = selectedLop.replace(".", "_");
 
-      const colRef = collection(
+      const docRef = doc(
         db,
-        folder,
-        hocKi,
-        classKey
+        `DATA_HOCSINH_${namHocKey}`,
+        classKey,
+        "STUDENTS",
+        student.docId
       );
 
-      const snapshot = await getDocs(colRef);
+      const hkMap = {
+        "Giữa kỳ I": "gki",
+        "Cuối kỳ I": "cki",
+        "Giữa kỳ II": "gkii",
+        "Cuối năm": "cn",
+      };
 
-      if (snapshot.empty) {
-        setSnackbarSeverity("warning");
-        setSnackbarMessage("Không có dữ liệu để xóa!");
-        setSnackbarOpen(true);
-        return;
+      const hkField = hkMap[hocKi] || "cki";
+      const typeField = loai === "ktdk" ? "Ktdk" : "Ontap";
+
+      await setDoc(
+        docRef,
+        {
+          [typeField]: {
+            [hkField]: {
+              lyThuyet: null,
+              ngayKiemTra: "",
+              thoiGianLamBai: "",
+              mucDat: "",
+              nhanXet: "",
+              tongCong: null,
+            },
+          },
+        },
+        { merge: true }
+      );
+
+      // cập nhật UI
+      setResults(prev =>
+        prev.map(r =>
+          r.docId === student.docId
+            ? {
+                ...r,
+                diem: "",
+                thoiGianLamBai: "",
+                ngayHienThi: "",
+                soLanLam: "",
+              }
+            : r
+        )
+      );
+
+      setDeleteOpen(false);
+      setDeleteStudent(null);
+
+    } catch (err) {
+      console.error("RESET STUDENT ERROR:", err);
+    }
+  };
+
+  const handleResetClassesData = async (selected) => {
+    try {
+      setDeleting(true);
+
+      const hkMap = {
+        "Giữa kỳ I": "gki",
+        "Cuối kỳ I": "cki",
+        "Giữa kỳ II": "gkii",
+        "Cuối năm": "cn",
+      };
+
+      const hkField = hkMap[hocKi] || "cki";
+      const typeField = loai === "ktdk" ? "Ktdk" : "Ontap";
+
+      for (const lop of selected) {
+        const classKey = lop.replace(".", "_");
+
+        const colRef = collection(
+          db,
+          `DATA_HOCSINH_${namHocKey}`,
+          classKey,
+          "STUDENTS"
+        );
+
+        const snap = await getDocs(colRef);
+
+        const batch = writeBatch(db);
+
+        snap.docs.forEach((docSnap) => {
+          const ref = docSnap.ref;
+
+          batch.set(
+            ref,
+            {
+              [typeField]: {
+                [hkField]: {
+                  lyThuyet: null,
+                  ngayKiemTra: "",
+                  thoiGianLamBai: "",
+                  mucDat: "",
+                  nhanXet: "",
+                  tongCong: null,
+                },
+              },
+            },
+            { merge: true }
+          );
+        });
+
+        await batch.commit();
       }
 
-      const batch = writeBatch(db);
-      snapshot.docs.forEach((d) => batch.delete(d.ref));
-
-      await batch.commit();
-
       setSnackbarSeverity("success");
-      setSnackbarMessage("✅ Đã xóa thành công!");
+      setSnackbarMessage("✅ Đã reset dữ liệu thành công!");
       setSnackbarOpen(true);
 
       setDeleteDialogOpen(false);
       loadResults();
-
     } catch (err) {
-      console.error(err);
+      console.error("RESET ERROR:", err);
       setSnackbarSeverity("error");
-      setSnackbarMessage("❌ Xóa thất bại!");
+      setSnackbarMessage("❌ Reset thất bại!");
       setSnackbarOpen(true);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -406,39 +539,6 @@ export default function TongHopKQ() {
         }
       }
     );
-  };
-
-  const handleDeleteRow = async () => {
-    if (!deleteItem) return;
-
-    try {
-      const classKey = selectedLop.replace(".", "_");
-
-      const docRef = doc(
-        db,
-        folder,
-        hocKi,
-        classKey,
-        deleteItem.docId
-      );
-
-      await deleteDoc(docRef);
-
-      setSnackbarSeverity("success");
-      setSnackbarMessage("🗑️ Đã xóa học sinh!");
-      setSnackbarOpen(true);
-
-      setOpenDeleteRow(false);
-      setDeleteItem(null);
-
-      loadResults(); // reload lại bảng
-    } catch (err) {
-      console.error("DELETE ROW ERROR:", err);
-
-      setSnackbarSeverity("error");
-      setSnackbarMessage("❌ Xóa thất bại!");
-      setSnackbarOpen(true);
-    }
   };
 
   const openConfirmDialog = (title, content, onConfirm) => {
@@ -557,9 +657,9 @@ export default function TongHopKQ() {
                 >
                   <SyncIcon />
                 </IconButton>
-              </Tooltip>
+              </Tooltip>*/}
 
-              <Tooltip title="Đồng bộ danh sách học sinh">
+              {/*<Tooltip title="Đồng bộ danh sách học sinh">
                 <IconButton
                   onClick={handleSyncHocSinh}
                   disabled={syncing}
@@ -818,65 +918,14 @@ export default function TongHopKQ() {
         selectedLop={selectedLop}
         hocKi={hocKi}
         setHocKi={setHocKi}
-        onConfirmDelete={async (selected) => {
-          try {
-            setDeleting(true);
-
-            const batch = writeBatch(db);
-
-            for (const lop of selected) {
-              const colRef = collection(
-                db,
-                folder,
-                hocKi,
-                lop
-              );
-
-              const snap = await getDocs(colRef);
-
-              snap.docs.forEach((d) => batch.delete(d.ref));
-            }
-
-            await batch.commit();
-
-            setSnackbarSeverity("success");
-            setSnackbarMessage("✅ Đã xóa dữ liệu lớp thành công!");
-            setSnackbarOpen(true);
-
-            setDeleteDialogOpen(false);
-            loadResults();
-          } catch (err) {
-            console.error(err);
-            setSnackbarSeverity("error");
-            setSnackbarMessage("❌ Xóa thất bại!");
-            setSnackbarOpen(true);
-          } finally {
-            setDeleting(false);
-          }
-        }}
+        onConfirmDelete={handleResetClassesData}
       />
 
       <DeleteStudentConfirmDialog
         open={deleteOpen}
         student={deleteStudent}
         onClose={() => setDeleteOpen(false)}
-        onConfirm={async (student) => {
-          try {
-            await deleteDoc(
-              doc(db, folder, hocKi, selectedLop.replace(".", "_"), student.docId)
-            );
-
-            setResults(prev =>
-              prev
-                .filter(r => r.docId !== student.docId)
-                .map((r, i) => ({ ...r, stt: i + 1 }))
-            );
-
-            setDeleteOpen(false);
-          } catch (err) {
-            console.error(err);
-          }
-        }}
+        onConfirm={handleResetStudent}
       />
 
     </Box>    

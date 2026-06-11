@@ -132,7 +132,7 @@ export default function Info() {
       const snap = await getDocs(
         collection(
           db,
-          `DS_HOCSINH_${namHoc}`,
+          `DATA_HOCSINH_${namHoc}`,
           classKey,
           "STUDENTS"
         )

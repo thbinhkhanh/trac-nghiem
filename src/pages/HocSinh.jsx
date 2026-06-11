@@ -197,6 +197,7 @@ export default function HocSinh() {
           school,
           fullname: student.hoTen,
           lop,
+          studentId: student.id,
         },
       });
 
@@ -266,7 +267,7 @@ export default function HocSinh() {
       const snap = await getDocs(
         collection(
           db,
-          `DS_HOCSINH_${namHoc}`,
+          `DATA_HOCSINH_${namHoc}`,
           classKey,
           "STUDENTS"
         )

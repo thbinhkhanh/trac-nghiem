@@ -288,118 +288,102 @@ const generateNhanXet = (student) => {
     : nxLT || nxTH || "";
 };
 
+const mapHocKyToKey = (hocKy) => {
+  switch (hocKy) {
+    case "Giữa kỳ I":
+      return "gki";
+    case "Cuối kỳ I":
+      return "cki";
+    case "Giữa kỳ II":
+      return "gkii";
+    case "Cuối năm":
+    default:
+      return "cn";
+  }
+};
+
 // =========================
 // FETCH STUDENTS NEW STRUCTURE
 // =========================
-const fetchStudentsAndStatus = async (cls) => {
-  const currentClass = cls || selectedClass;
-  if (!currentClass) return;
-
+const fetchStudentsAndStatus = async () => {
   try {
-    const yearKey = (config?.namHoc || "2025-2026").replace(/-/g, "_");
-    const hocKyKey = config?.hocKy || "Cuối năm";
-
-    const sourceRoot = `DATA_KTDK_${yearKey}`;
-
-    const classKey = currentClass.replace(".", "_");
-
-    const hsCollection = collection(
+    const studentsRef = collection(
       db,
-      sourceRoot,
-      hocKyKey,
-      classKey
+      `DATA_HOCSINH_${namHocKey}`,
+      selectedClass,
+      "STUDENTS"
     );
 
-    const snap = await getDocs(hsCollection);
+    const snap = await getDocs(studentsRef);
 
     if (snap.empty) {
       setStudents([]);
       return;
     }
 
-    const studentList = [];
+    // map học kỳ -> key firestore
+    const hocKyKeyMap = {
+      "Giữa kỳ I": "gki",
+      "Cuối kỳ I": "cki",
+      "Giữa kỳ II": "gkii",
+      "Cuối năm": "cn",
+    };
 
-    snap.forEach((docSnap) => {
-      const maHS = docSnap.id;
+    const hocKyKey = hocKyKeyMap[config?.hocKy] || "cn";
+
+    const list = snap.docs.map((docSnap) => {
       const data = docSnap.data();
 
-      // =========================
-      // DATA MỚI FLAT (không còn GKI/CKI/GKII/CN nữa)
-      // =========================
-      const lyThuyet = data.lyThuyet ?? null;
-      const thucHanh = data.thucHanh ?? null;
-      const tongCong = data.tongCong ?? null;
-      const mucDat = data.mucDat ?? "";
-      const nhanXetRaw = data.nhanXet ?? "";
+      const ktdk = data?.Ktdk?.[hocKyKey] || {};
+      const ontap = data?.Ontap?.[hocKyKey] || {};
 
-      let nhanXet = nhanXetRaw;
+      return {
+        maDinhDanh: docSnap.id,
 
-      // nếu chưa có nhận xét → sinh tự động
-      if (!nhanXet || nhanXet.trim() === "") {
-        nhanXet = generateNhanXet({
-          lyThuyet,
-          thucHanh,
-        });
-      }
-
-      studentList.push({
-        maDinhDanh: maHS,
-        hoVaTen: data.hoVaTen || "",
-        stt: data.stt || null,
-
-        // raw data mới
-        lop: data.lop || currentClass,
+        hoVaTen: data.hoTen || "",
+        lop: data.lop || selectedClass,
+        khoi: data.khoi || "",
         mon: data.mon || "",
-        ngayKiemTra: data.ngayKiemTra || "",
-        thoiGianLamBai: data.thoiGianLamBai || "",
 
-        // scores
-        lyThuyet,
-        thucHanh,
-        tongCong,
-        mucDat,
-        nhanXet,
+        // =========================
+        // KTDK
+        // =========================
+        lyThuyet: ktdk.lyThuyet ?? null,
+        thucHanh: ktdk.thucHanh ?? null,
+        tongCong: ktdk.tongCong ?? null,
+        mucDat: ktdk.mucDat ?? "",
+        nhanXet: ktdk.nhanXet ?? "",
 
-        // keep fallback
-        nhanXet_goc: nhanXet,
-        mucDat_goc: mucDat,
-      });
+        // 👇 các cột lịch sử
+        mucDat_GKI: data?.Ktdk?.gki?.mucDat ?? "",
+        mucDat_CKI: data?.Ktdk?.cki?.mucDat ?? "",
+        mucDat_GKII: data?.Ktdk?.gkii?.mucDat ?? "",
+        mucDat_CN: data?.Ktdk?.cn?.mucDat ?? "",
+      };
     });
 
     // =========================
-    // SORT theo tên (tiếng Việt)
+    // SORT TIẾNG VIỆT (ĐÚNG TỪ PHẢI QUA TRÁI)
     // =========================
-    studentList.sort((a, b) => {
-      const aName = (a.hoVaTen || "")
-        .trim()
-        .split(" ")
-        .slice(-1)[0]
-        .toLowerCase();
+    list.sort((a, b) => {
+      const getLastName = (name) =>
+        (name || "").trim().split(" ").slice(-1)[0];
 
-      const bName = (b.hoVaTen || "")
-        .trim()
-        .split(" ")
-        .slice(-1)[0]
-        .toLowerCase();
-
-      return aName.localeCompare(bName, "vi");
+      return getLastName(a.hoVaTen).localeCompare(
+        getLastName(b.hoVaTen),
+        "vi"
+      );
     });
 
-    // =========================
-    // STT lại
-    // =========================
-    const finalList = studentList.map((s, idx) => ({
+    const finalList = list.map((s, i) => ({
       ...s,
-      stt: idx + 1,
+      stt: i + 1,
     }));
 
     setStudents(finalList);
     setOriginalStudents(finalList);
-
-    setStudentsForClass(config.hocKy, classKey, finalList);
-
   } catch (err) {
-    console.error("❌ Lỗi khi lấy DATA_KTDK:", err);
+    console.error("❌ Lỗi load DS_HOCSINH:", err);
     setStudents([]);
   }
 };
@@ -522,87 +506,43 @@ const fetchStudentsAndStatus = async (cls) => {
   };
 
   const handleSaveAll = async () => {
-    if (!students || students.length === 0) return;
-
-    const selectedSemester = config.hocKy || "Giữa kỳ I";
-
-   const selectedMon = "Tin học";
-
-    // ✅ FIX: mapping đầy đủ (THÊM GKI)
-    let termDoc;
-    switch (selectedSemester) {
-      case "Giữa kỳ I":
-        termDoc = "GKI";
-        break;
-      case "Cuối kỳ I":
-        termDoc = "CKI";
-        break;
-      case "Giữa kỳ II":
-        termDoc = "GKII";
-        break;
-      default:
-        termDoc = "CN";
-        break;
-    }
-
-    const classKey = (selectedClass || "").replace(".", "_");
-    const batch = writeBatch(db);
-
-    students.forEach((s) => {
-      const hsRef = doc(db, `DATA_${namHocKey}`, classKey, "HOCSINH", s.maDinhDanh);
-
-      const ktdkData = {
-        [termDoc]: {
-          dgtx_gv: s.dgtx_mucdat || "",
-          dgtx_mucdat: s.dgtx_mucdat || "",
-          //dgtx_nx: s.nhanXet || "",
-          dgtx_nx: "",
-
-          lyThuyet:
-            s.lyThuyet !== "" &&
-            s.lyThuyet !== null &&
-            s.lyThuyet !== undefined
-              ? Number(s.lyThuyet)
-              : null,
-
-          // Chỉ sửa thucHanh cho Tin học
-          thucHanh: isCongNghe
-            ? s.thucHanh ?? "" // Công nghệ giữ nguyên
-            : s.thucHanh === "" || s.thucHanh === null || s.thucHanh === undefined
-            ? null             // Tin học: UI rỗng → null
-            : Number(s.thucHanh), // Tin học: còn lại → số (0 vẫn là 0)
-
-          tongCong:
-            s.tongCong !== null && s.tongCong !== undefined
-              ? Number(s.tongCong)
-              : null,
-
-          mucDat: s.mucDat || "",
-          nhanXet: s.nhanXet || "",
-          //nhanXet: "",
-        },
-      };
-
-      batch.set(
-        hsRef,
-        {
-          hoVaTen: s.hoVaTen || "",
-          stt: s.stt || null,
-          [isCongNghe ? "CongNghe" : "TinHoc"]: {
-            ktdk: ktdkData,
-          },
-        },
-        { merge: true }
-      );
-    });
+    if (!students?.length) return;
 
     try {
+      const hocKyKey = mapHocKyToKey(config?.hocKy);
+
+      const batch = writeBatch(db);
+
+      students.forEach((s) => {
+        const hsRef = doc(
+          db,
+          `DATA_HOCSINH_${namHocKey}`,
+          selectedClass,
+          "STUDENTS",
+          s.maDinhDanh
+        );
+
+        batch.set(
+          hsRef,
+          {
+            Ktdk: {
+              [hocKyKey]: {
+                lyThuyet: s.lyThuyet ?? null,
+                thucHanh: s.thucHanh ?? null,
+                tongCong: s.tongCong ?? null,
+                mucDat: s.mucDat ?? "",
+                nhanXet: s.nhanXet ?? "",
+              },
+            },
+          },
+          { merge: true }
+        );
+      });
+
       await batch.commit();
 
-      setStudentData((prev) => ({ ...prev, [classKey]: students }));
-      if (typeof setStudentsForClass === "function") {
-        setStudentsForClass(termDoc, classKey, students);
-      }
+      // cập nhật state local
+      setStudents((prev) => [...prev]);
 
       setSnackbar({
         open: true,
@@ -610,10 +550,11 @@ const fetchStudentsAndStatus = async (cls) => {
         severity: "success",
       });
     } catch (err) {
-      console.error("❌ Lỗi lưu dữ liệu học sinh:", err);
+      console.error("❌ Lỗi lưu KTDK:", err);
+
       setSnackbar({
         open: true,
-        message: "❌ Lỗi khi lưu dữ liệu học sinh!",
+        message: "❌ Lỗi khi lưu dữ liệu!",
         severity: "error",
       });
     }
@@ -1122,27 +1063,43 @@ const fetchStudentsAndStatus = async (cls) => {
 
                           setStudents((prev) =>
                             prev.map((s) => {
-                              // 🔥 nếu chọn "-", reset về rỗng
-                              let updated = { ...s, thucHanh: val === "-" ? "" : val };
+                              // 🔥 RESET HOÀN TOÀN KHI CHỌN "-"
+                              if (val === "-") {
+                                return {
+                                  ...s,
+                                  thucHanh: "",
+                                  tongCong: null,
+                                  mucDat: s.mucDat_goc || s.dgtx_mucdat || "",
+                                  nhanXet: s.nhanXet_goc || "",
+                                };
+                              }
+
+                              let updated = {
+                                ...s,
+                                thucHanh: val,
+                              };
 
                               const lt = parseFloat(updated.lyThuyet);
                               const th = parseFloat(val);
 
-                            if (!isNaN(lt) && !isNaN(th)) {
-                              updated.tongCong = Math.round(lt + th);
+                              if (!isNaN(lt) && !isNaN(th)) {
+                                updated.tongCong = Math.round(lt + th);
 
-                              if (updated.tongCong >= 9) updated.mucDat = "T";
-                              else if (updated.tongCong >= 5) updated.mucDat = "H";
-                              else updated.mucDat = "C";
+                                updated.mucDat =
+                                  updated.tongCong >= 9
+                                    ? "T"
+                                    : updated.tongCong >= 5
+                                    ? "H"
+                                    : "C";
 
-                              updated.nhanXet = generateNhanXet(updated);
-                            }                            
+                                updated.nhanXet = generateNhanXet(updated);
+                              }
 
                               return updated;
                             })
                           );
 
-                          setFillThucHanh(""); // 🔥 reset để chọn lại được
+                          setFillThucHanh("");
                         }}
                         renderValue={() => "▾"}
                         sx={{

@@ -33,8 +33,7 @@ import {
 import { db } from "../firebase";
 
 const BACKUP_KEYS = [
-  { key: "LOP", label: "Danh sách lớp" },
-  { key: "KETQUA", label: "Kết quả đánh giá" },
+  { key: "HOCSINH", label: "Học sinh" },
   { key: "NGANHANG_DE", label: "Đề KTĐK" },
   { key: "DETHI", label: "Đề thi" },
 ];
@@ -123,39 +122,18 @@ export default function RestorePage({
       const disabled = {};
 
       // =========================
-      // LỚP
-      // =========================
-      const hasLOP =
-        json.DANHSACH_LOP &&
-        Object.keys(json.DANHSACH_LOP).length > 0;
-
-      checked.LOP = hasLOP;
-      disabled.LOP = !hasLOP;
-
-      // =========================
       // HỌC SINH
       // =========================
+      const hocSinhKey = Object.keys(json).find(
+        key => key.startsWith("DATA_HOCSINH")
+      );
+
       const hasHS =
-        json.DS_HOCSINH &&
-        Object.keys(json.DS_HOCSINH).length > 0;
+        hocSinhKey &&
+        Object.keys(json[hocSinhKey]).length > 0;
 
-      checked.LOP = checked.LOP || hasHS;
-
-      // =========================
-      // KẾT QUẢ
-      // =========================
-      const hasKETQUA =
-        json.DATA_KTDK ||
-        json.DATA_ONTAP;
-
-      const hasKETQUA_REAL =
-        (json.DATA_KTDK &&
-          Object.keys(json.DATA_KTDK).length > 0) ||
-        (json.DATA_ONTAP &&
-          Object.keys(json.DATA_ONTAP).length > 0);
-
-      checked.KETQUA = !!hasKETQUA_REAL;
-      disabled.KETQUA = !hasKETQUA_REAL;
+      checked.HOCSINH = !!hasHS;
+      disabled.HOCSINH = !hasHS;
 
       // =========================
       // NGÂN HÀNG ĐỀ
@@ -182,6 +160,7 @@ export default function RestorePage({
 
     } catch (err) {
       console.error(err);
+
       setSnackbar({
         open: true,
         severity: "error",
@@ -228,97 +207,6 @@ export default function RestorePage({
   };
 
   // =========================
-  // KHÔI PHỤC LAMVANBEN
-  // =========================
-  const restoreLAMVANBEN = async (
-    lvb,
-    onProgress
-  ) => {
-
-    const operations = [];
-
-    // =========================
-    // lop
-    // =========================
-    if (lvb.lop) {
-
-      operations.push({
-        ref: doc(db, "LAMVANBEN", "lop"),
-        data: lvb.lop,
-      });
-    }
-
-    // =========================
-    // Cuối kỳ I
-    // =========================
-    if (lvb.Cuoi_ky_I) {
-
-      Object.keys(lvb.Cuoi_ky_I).forEach(
-        (className) => {
-
-          const students =
-            lvb.Cuoi_ky_I[className];
-
-          Object.keys(students).forEach(
-            (studentId) => {
-
-              operations.push({
-                ref: doc(
-                  db,
-                  "LAMVANBEN",
-                  "Cuối kỳ I",
-                  className,
-                  studentId
-                ),
-
-                data:
-                  students[studentId],
-              });
-            }
-          );
-        }
-      );
-    }
-
-    // =========================
-    // Cuối năm
-    // =========================
-    if (lvb.Ca_nam) {
-
-      Object.keys(lvb.Ca_nam).forEach(
-        (className) => {
-
-          const students =
-            lvb.Ca_nam[className];
-
-          Object.keys(students).forEach(
-            (studentId) => {
-
-              operations.push({
-                ref: doc(
-                  db,
-                  "LAMVANBEN",
-                  "Cuối năm",
-                  className,
-                  studentId
-                ),
-
-                data:
-                  students[studentId],
-              });
-            }
-          );
-        }
-      );
-    }
-
-    await commitBatchArray(
-      operations,
-      onProgress
-    );
-  };
-
-  // =========================
   // COLLECTION THƯỜNG
   // =========================
   const restoreSimpleCollection =
@@ -362,47 +250,24 @@ export default function RestorePage({
     let total = 0;
 
     // =========================
-    // LOP
+    // HỌC SINH
     // =========================
-    if (
-      selectedKeys.includes("LOP") &&
-      jsonData.LAMVANBEN?.lop
-    ) {
-      total += 1;
-    }
+    if (selectedKeys.includes("HOCSINH")) {
 
-    // =========================
-    // KETQUA
-    // =========================
-    if (
-      selectedKeys.includes("KETQUA")
-    ) {
+      const hocSinhKey = Object.keys(jsonData).find(
+        key => key.startsWith("DATA_HOCSINH")
+      );
 
-      const lvb =
-        jsonData.LAMVANBEN || {};
+      if (hocSinhKey) {
 
-      if (lvb.Cuoi_ky_I) {
+        Object.values(jsonData[hocSinhKey]).forEach(
+          students => {
 
-        Object.keys(
-          lvb.Cuoi_ky_I
-        ).forEach((className) => {
+            total += Object.keys(students).length;
 
-          total += Object.keys(
-            lvb.Cuoi_ky_I[className]
-          ).length;
-        });
-      }
+          }
+        );
 
-      if (lvb.Ca_nam) {
-
-        Object.keys(
-          lvb.Ca_nam
-        ).forEach((className) => {
-
-          total += Object.keys(
-            lvb.Ca_nam[className]
-          ).length;
-        });
       }
     }
 
@@ -425,7 +290,9 @@ export default function RestorePage({
     // DETHI
     // =========================
     if (
-      selectedKeys.includes("DETHI") &&
+      selectedKeys.includes(
+        "DETHI"
+      ) &&
       jsonData.DETHI
     ) {
 
@@ -441,154 +308,199 @@ export default function RestorePage({
   // PHỤC HỒI
   // =========================
   const handleRestore = async () => {
-  const selectedKeys = Object.keys(restoreOptions)
-    .filter((k) => restoreOptions[k]);
 
-  const VALID_KEYS = [
-    `DANHSACH_${namHocKey}`,
-    `DATA_${namHocKey}`,
-    `DATA_ONTAP_${namHocKey}`,
-    "NGANHANG_DE",
-    "DETHI",
-    "BAITAP_TUAN",
-    "TRACNGHIEM3",
-    "TRACNGHIEM4",
-    "TRACNGHIEM5",
-    "TRACNGHIEM3_New",
-    "TRACNGHIEM4_New",
-    "TRACNGHIEM5_New",
-  ];
+    const selectedKeys = Object.keys(
+      restoreOptions
+    ).filter((k) => restoreOptions[k]);
 
-  if (!selectedFile) {
-    setSnackbar({
-      open: true,
-      severity: "warning",
-      message: "Vui lòng chọn file backup",
-    });
-    return;
-  }
-
-  if (selectedKeys.length === 0) {
-    setSnackbar({
-      open: true,
-      severity: "warning",
-      message: "Chọn ít nhất 1 nhóm dữ liệu",
-    });
-    return;
-  }
-
-  try {
-    setLoading(true);
-    setProgress(0);
-
-    const text = await selectedFile.text();
-    const jsonDataRaw = JSON.parse(text);
-
-    const jsonData = Object.fromEntries(
-      Object.entries(jsonDataRaw).filter(([k]) =>
-        VALID_KEYS.includes(k)
-      )
-    );
-
-    // =========================
-    // 1. ĐẾM TỔNG (GIỐNG MẪU)
-    // =========================
-    let totalDocs = 0;
-
-    const effectiveKeys = selectedKeys.filter((k) => jsonData[k]);
-
-    for (const key of effectiveKeys) {
-      const docs = jsonData[key];
-      if (!docs) continue;
-
-      if (key === `DATA_${namHocKey}` || key === `DATA_ONTAP_${namHocKey}`) {
-        for (const c of Object.keys(docs)) {
-          totalDocs += Object.keys(docs[c]?.HOCSINH || {}).length;
-        }
-      } else {
-        totalDocs += Object.keys(docs).length;
-      }
+    if (!selectedFile) {
+      setSnackbar({
+        open: true,
+        severity: "warning",
+        message: "Vui lòng chọn file backup",
+      });
+      return;
     }
 
-    // =========================
-    // 2. RESTORE + PROGRESS MƯỢT
-    // =========================
-    let done = 0;
-    let lastUpdate = 0;
+    if (selectedKeys.length === 0) {
+      setSnackbar({
+        open: true,
+        severity: "warning",
+        message: "Chọn ít nhất 1 nhóm dữ liệu",
+      });
+      return;
+    }
 
-    const updateProgress = () => {
-      const now = Date.now();
+    try {
 
-      // throttle 50ms để tránh lag UI
-      if (now - lastUpdate < 50) return;
-      lastUpdate = now;
+      setLoading(true);
+      setProgress(0);
 
-      setProgress(Math.round((done / totalDocs) * 100));
-    };
+      const text = await selectedFile.text();
 
-    for (const key of selectedKeys) {
-      const docs = jsonData[key];
-      if (!docs) continue;
+      const jsonData = JSON.parse(text);
 
-      // ===== DATA / ONTAP =====
-      if (
-        key === `DATA_${namHocKey}` ||
-        key === `DATA_ONTAP_${namHocKey}`
-      ) {
-        for (const classId of Object.keys(docs)) {
-          const hsObj = docs[classId]?.HOCSINH || {};
+      // =========================
+      // ĐẾM TỔNG DOC
+      // =========================
+      const totalDocs = countTotalDocs(
+        jsonData,
+        selectedKeys
+      );
 
-          const entries = Object.entries(hsObj);
+      let done = 0;
+      let lastUpdate = 0;
 
-          for (const [studentId, value] of entries) {
-            await setDoc(
-              doc(db, key, classId, "HOCSINH", studentId),
-              value,
-              { merge: true }
-            );
+      const updateProgress = () => {
 
-            done++;
-            updateProgress();
+        const now = Date.now();
+
+        if (now - lastUpdate < 50) return;
+
+        lastUpdate = now;
+
+        setProgress(
+          Math.round(
+            (done / totalDocs) * 100
+          )
+        );
+      };
+
+      // =========================
+      // HỌC SINH (Batch)
+      // =========================
+      if (selectedKeys.includes("HOCSINH")) {
+
+        const hocSinhKey = Object.keys(jsonData).find(
+          key => key.startsWith("DATA_HOCSINH")
+        );
+
+        if (hocSinhKey) {
+
+          const operations = [];
+
+          for (const [lop, students] of Object.entries(
+            jsonData[hocSinhKey]
+          )) {
+
+            for (const [studentId, value] of Object.entries(
+              students
+            )) {
+
+              operations.push({
+                ref: doc(
+                  db,
+                  hocSinhKey,
+                  lop,
+                  "STUDENTS",
+                  studentId
+                ),
+                data: value,
+              });
+
+            }
           }
+
+          await commitBatchArray(
+            operations,
+            (count) => {
+              done += count;
+              updateProgress();
+            }
+          );
         }
       }
 
-      // ===== COLLECTION THƯỜNG =====
-      else {
-        const entries = Object.entries(docs);
+      // =========================
+      // NGÂN HÀNG ĐỀ
+      // =========================
+      if (
+        selectedKeys.includes(
+          "NGANHANG_DE"
+        ) &&
+        jsonData.NGANHANG_DE
+      ) {
 
-        for (const [docId, value] of entries) {
-          await setDoc(doc(db, key, docId), value, {
-            merge: true,
-          });
+        for (const [docId, value] of Object.entries(
+          jsonData.NGANHANG_DE
+        )) {
+
+          await setDoc(
+            doc(
+              db,
+              "NGANHANG_DE",
+              docId
+            ),
+            value,
+            {
+              merge: true,
+            }
+          );
 
           done++;
+
           updateProgress();
         }
       }
+
+      // =========================
+      // ĐỀ THI
+      // =========================
+      if (
+        selectedKeys.includes(
+          "DETHI"
+        ) &&
+        jsonData.DETHI
+      ) {
+
+        for (const [docId, value] of Object.entries(
+          jsonData.DETHI
+        )) {
+
+          await setDoc(
+            doc(
+              db,
+              "DETHI",
+              docId
+            ),
+            value,
+            {
+              merge: true,
+            }
+          );
+
+          done++;
+
+          updateProgress();
+        }
+      }
+
+      setProgress(100);
+
+      setSnackbar({
+        open: true,
+        severity: "success",
+        message: "✅ Phục hồi dữ liệu thành công",
+      });
+
+      onClose();
+
+    } catch (err) {
+
+      console.error(err);
+
+      setSnackbar({
+        open: true,
+        severity: "error",
+        message: "❌ Lỗi khi phục hồi dữ liệu",
+      });
+
+    } finally {
+
+      setLoading(false);
+
     }
-
-    setProgress(100);
-
-    setSnackbar({
-      open: true,
-      severity: "success",
-      message: "✅ Phục hồi dữ liệu thành công",
-    });
-
-    onClose();
-  } catch (err) {
-    console.error(err);
-
-    setSnackbar({
-      open: true,
-      severity: "error",
-      message: "❌ Lỗi khi phục hồi dữ liệu",
-    });
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   const hasAnyChecked =
     Object.values(
@@ -737,89 +649,29 @@ export default function RestorePage({
                 </Typography>
               )}
             </Box>
-
-            {/* HỌC SINH */}
+            {/* DỮ LIỆU SAO LƯU */}
             <Box
               sx={{
                 p: 1.8,
                 borderRadius: "5px",
                 bgcolor: "#fff",
-                border:
-                  "1px solid #e2e8f0",
+                border: "1px solid #e2e8f0",
               }}
             >
               <Typography
                 sx={{
-                  fontSize: 14,
+                  fontSize: 16,
                   fontWeight: 700,
                   mb: 1,
                   color: "#1e293b",
                 }}
               >
-                Học sinh
+                Dữ liệu phục hồi
               </Typography>
 
               <Stack spacing={0.5}>
                 {[
-                  "LOP",
-                  "KETQUA",
-                ].map((key) => (
-                  <FormControlLabel
-                    key={key}
-                    control={
-                      <Checkbox
-                        checked={
-                          restoreOptions[
-                            key
-                          ] || false
-                        }
-                        disabled={
-                          disabledOptions[
-                            key
-                          ]
-                        }
-                        onChange={() =>
-                          toggleOption(
-                            key
-                          )
-                        }
-                      />
-                    }
-                    label={
-                      BACKUP_KEYS.find(
-                        (b) =>
-                          b.key ===
-                          key
-                      )?.label
-                    }
-                  />
-                ))}
-              </Stack>
-            </Box>
-
-            {/* NGÂN HÀNG ĐỀ */}
-            <Box
-              sx={{
-                p: 1.8,
-                borderRadius: "5px",
-                bgcolor: "#fff",
-                border:
-                  "1px solid #e2e8f0",
-              }}
-            >
-              <Typography
-                sx={{
-                  fontSize: 14,
-                  fontWeight: 700,
-                  mb: 1,
-                  color: "#1e293b",
-                }}
-              >
-                Ngân hàng đề
-              </Typography>
-
-              <Stack spacing={0.5}>
-                {[
+                  "HOCSINH",
                   "NGANHANG_DE",
                   "DETHI",
                 ].map((key) => (
@@ -827,28 +679,14 @@ export default function RestorePage({
                     key={key}
                     control={
                       <Checkbox
-                        checked={
-                          restoreOptions[
-                            key
-                          ] || false
-                        }
-                        disabled={
-                          disabledOptions[
-                            key
-                          ]
-                        }
-                        onChange={() =>
-                          toggleOption(
-                            key
-                          )
-                        }
+                        checked={restoreOptions[key] || false}
+                        disabled={disabledOptions[key]}
+                        onChange={() => toggleOption(key)}
                       />
                     }
                     label={
                       BACKUP_KEYS.find(
-                        (b) =>
-                          b.key ===
-                          key
+                        (b) => b.key === key
                       )?.label
                     }
                   />

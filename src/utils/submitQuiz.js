@@ -211,25 +211,48 @@ export const handleSubmitQuiz = async ({
         .replace(/[^a-z0-9_]/g, "");
 
     const namHocKey = (config?.namHoc || "2025-2026").replace(/-/g, "_");
-    const hocKiFinal = configData?.hocKy || "Cuối kỳ I";
 
     const classKey = (studentClass || "")
       .replace(/\./g, "_")
       .replace(/\s+/g, "_");
 
-    const studentDocId = normalizeName(studentName);
+    const studentDocId =
+      String(studentId).startsWith("HS")
+        ? normalizeName(studentName)
+        : studentId;
 
-    const examType = (configData?.examType || config?.examType || "").toLowerCase();
-    const collectionRoot =
-      examType === "ktdk"
-        ? `DATA_KTDK_${namHocKey}`
-        : `DATA_ONTAP_${namHocKey}`;
+    // =========================
+    // MAP HỌC KỲ
+    // =========================
+    const hkMap = {
+      "Giữa kỳ I": "gki",
+      "Cuối kỳ I": "cki",
+      "Giữa kỳ II": "gkii",
+      "Cuối năm": "cn",
+    };
 
+    const hkKey = hkMap[configData?.hocKy || "Cuối kỳ I"] || "cki";
+
+    // =========================
+    // LOẠI BÀI (KTĐK / ÔN TẬP)
+    // =========================
+    const typeMap = {
+      ktdk: "Ktdk",
+      ontap: "Ontap",
+    };
+
+    const typeKey =
+      typeMap[(configData?.examType || config?.examType || "").toLowerCase()] ||
+      "Ktdk";
+
+    // =========================
+    // DOC ROOT MỚI
+    // =========================
     const docRef = doc(
       db,
-      collectionRoot,
-      hocKiFinal,
+      `DATA_HOCSINH_${namHocKey}`,
       classKey,
+      "STUDENTS",
       studentDocId
     );
 
@@ -237,31 +260,53 @@ export const handleSubmitQuiz = async ({
 
     const ngayLam = new Date().toLocaleDateString("vi-VN");
 
+    // =========================
+    // DATA UPDATE THEO CẤU TRÚC MỚI
+    // =========================
+    const fieldPath = `${typeKey}.${hkKey}`;
+
     if (docSnap.exists()) {
       const oldData = docSnap.data();
 
-      const oldScore = oldData?.lyThuyet ?? 0;
-      const soLanLam = (oldData?.soLanLam ?? 0) + 1;
+      const oldScore = oldData?.[typeKey]?.[hkKey]?.lyThuyet ?? 0;
+
+      const soLanLam =
+        oldData?.[typeKey]?.[hkKey]?.soLanLam
+          ? oldData[typeKey][hkKey].soLanLam + 1
+          : 1;
 
       await updateDoc(docRef, {
-        lyThuyet: total > oldScore ? total : oldScore,
-        hoVaTen: capitalizeName(studentName),
+        [`${fieldPath}.lyThuyet`]: total > oldScore ? total : oldScore,
+        [`${fieldPath}.ngayKiemTra`]: ngayLam,
+        [`${fieldPath}.thoiGianLamBai`]: durationStr,
+        [`${fieldPath}.soLanLam`]: soLanLam,
+
+        hoTen: capitalizeName(studentName),
         lop: studentClass,
         mon: "Tin học",
-        ngayKiemTra: ngayLam,
-        thoiGianLamBai: durationStr,
-        soLanLam: soLanLam,
+        updatedAt: Date.now(),
       });
 
     } else {
       await setDoc(docRef, {
-        hoVaTen: capitalizeName(studentName),
+        hoTen: capitalizeName(studentName),
         lop: studentClass,
+        khoi: classKey.charAt(0), // nếu bạn cần khối
         mon: "Tin học",
-        lyThuyet: total,
-        ngayKiemTra: ngayLam,
-        thoiGianLamBai: durationStr,
-        soLanLam: 1,
+        updatedAt: Date.now(),
+
+        [typeKey]: {
+          [hkKey]: {
+            lyThuyet: total,
+            ngayKiemTra: ngayLam,
+            thoiGianLamBai: durationStr,
+            soLanLam: 1,
+            mucDat: "",
+            nhanXet: "",
+            thucHanh: "",
+            tongCong: null,
+          },
+        },
       });
     }
 

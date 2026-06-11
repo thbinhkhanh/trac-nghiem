@@ -97,12 +97,22 @@ export default function DeleteClassesConfirmDialog({
             {selectedCount === 1 ? (
               <>
                 Bạn có chắc chắn muốn xóa danh sách lớp{" "}
-                <b>{selectedClasses[0]}</b>?
+                <b>{selectedClasses[0]}</b> không?
+                <br />
+                <br />
+                <span style={{ color: "#ef4444" }}>
+                  Dữ liệu học sinh trong lớp cũng sẽ bị xóa vĩnh viễn.
+                </span>
               </>
             ) : (
               <>
                 Bạn có chắc chắn muốn xóa danh sách{" "}
-                <b>{selectedCount}</b> lớp đã chọn?
+                <b>{selectedCount}</b> lớp đã chọn không?
+                <br />
+                <br />
+                <span style={{ color: "#ef4444" }}>
+                  Toàn bộ dữ liệu học sinh của các lớp này cũng sẽ bị xóa vĩnh viễn.
+                </span>
               </>
             )}
           </Typography>
@@ -116,8 +126,8 @@ export default function DeleteClassesConfirmDialog({
             }}
           >
             {/*Thao tác này sẽ xóa toàn bộ học sinh và dữ liệu của các lớp đã chọn.
-            <br />*/}
-            Hành động này không thể hoàn tác.
+            <br />
+            Hành động này không thể hoàn tác.*/}
           </Typography>
         </Box>
       </DialogContent>

@@ -171,76 +171,76 @@ export default function DanhSach() {
 
   // 🔹 Lấy danh sách lớp
   const fetchClasses = async () => {
-  try {
-    console.log("📥 [fetchClasses] namHocKey =", namHocKey);
-    console.log("👤 account =", account);
+    try {
+      console.log("📥 [fetchClasses] namHocKey =", namHocKey);
+      console.log("👤 account =", account);
 
-    const ref = doc(db, "DANHSACH_LOP", namHocKey);
-    const snap = await getDoc(ref);
+      const ref = doc(db, "DANHSACH_LOP", namHocKey);
+      const snap = await getDoc(ref);
 
-    console.log("📦 snapshot exists =", snap.exists());
+      console.log("📦 snapshot exists =", snap.exists());
 
-    const raw = snap.exists() ? snap.data()?.list || [] : [];
+      const raw = snap.exists() ? snap.data()?.list || [] : [];
 
-    console.log("📚 RAW classes =", raw);
+      console.log("📚 RAW classes =", raw);
 
-    // ✅ lọc rác (QUAN TRỌNG)
-    const classListRaw = raw.filter(
-      (x) => typeof x === "string" && x.trim() && !x.includes("NHAP")
-    );
-
-    console.log("🧹 classListRaw (after filter rác) =", classListRaw);
-
-    // =========================
-    // 🔐 PHÂN QUYỀN (debug thêm)
-    // =========================
-    const filteredByRole = await filterClassesByRole({
-      db,
-      account,
-      allClasses: classListRaw,
-    });
-
-    console.log("🔐 filteredByRole =", filteredByRole);
-
-    // ===== SORT LỚP =====
-    const classList = [...filteredByRole].sort((a, b) => {
-      const numA = parseInt(a.match(/\d+/)?.[0] || 0, 10);
-      const numB = parseInt(b.match(/\d+/)?.[0] || 0, 10);
-
-      if (numA !== numB) return numA - numB;
-
-      const letterA = a.replace(/\d+/g, "");
-      const letterB = b.replace(/\d+/g, "");
-
-      return letterA.localeCompare(letterB, "vi", {
-        sensitivity: "base",
-      });
-    });
-
-    console.log("✅ FINAL classList =", classList);
-
-    setClasses(classList);
-    setClassData(classList);
-
-    if (classList.length > 0) {
-      setSelectedClass((prev) =>
-        prev && classList.includes(prev)
-          ? prev
-          : config?.lop && classList.includes(config.lop)
-            ? config.lop
-            : classList[0]
+      // ✅ lọc rác (QUAN TRỌNG)
+      const classListRaw = raw.filter(
+        (x) => typeof x === "string" && x.trim() && !x.includes("NHAP")
       );
-    } else {
-      console.warn("⚠️ classList EMPTY → không có lớp nào hiển thị");
+
+      console.log("🧹 classListRaw (after filter rác) =", classListRaw);
+
+      // =========================
+      // 🔐 PHÂN QUYỀN (debug thêm)
+      // =========================
+      const filteredByRole = await filterClassesByRole({
+        db,
+        account,
+        allClasses: classListRaw,
+      });
+
+      console.log("🔐 filteredByRole =", filteredByRole);
+
+      // ===== SORT LỚP =====
+      const classList = [...filteredByRole].sort((a, b) => {
+        const numA = parseInt(a.match(/\d+/)?.[0] || 0, 10);
+        const numB = parseInt(b.match(/\d+/)?.[0] || 0, 10);
+
+        if (numA !== numB) return numA - numB;
+
+        const letterA = a.replace(/\d+/g, "");
+        const letterB = b.replace(/\d+/g, "");
+
+        return letterA.localeCompare(letterB, "vi", {
+          sensitivity: "base",
+        });
+      });
+
+      console.log("✅ FINAL classList =", classList);
+
+      setClasses(classList);
+      setClassData(classList);
+
+      if (classList.length > 0) {
+        setSelectedClass((prev) =>
+          prev && classList.includes(prev)
+            ? prev
+            : config?.lop && classList.includes(config.lop)
+              ? config.lop
+              : classList[0]
+        );
+      } else {
+        console.warn("⚠️ classList EMPTY → không có lớp nào hiển thị");
+        setSelectedClass("");
+      }
+    } catch (err) {
+      console.error("❌ Lỗi khi lấy danh sách lớp:", err);
+      setClasses([]);
+      setClassData([]);
       setSelectedClass("");
     }
-  } catch (err) {
-    console.error("❌ Lỗi khi lấy danh sách lớp:", err);
-    setClasses([]);
-    setClassData([]);
-    setSelectedClass("");
-  }
-};
+  };
   
   useEffect(() => {
     fetchClasses();
@@ -289,7 +289,7 @@ export default function DanhSach() {
     try {
       const studentsRef = collection(
         db,
-        `DS_HOCSINH_${namHocKey}`,
+        `DATA_HOCSINH_${namHocKey}`,
         selectedClass,
         "STUDENTS"
       );
@@ -349,7 +349,7 @@ export default function DanhSach() {
   };
 
   const reloadClasses = async () => {
-    const snap = await getDocs(collection(db, `DS_HOCSINH_${namHocKey}`));
+    const snap = await getDocs(collection(db, `DATA_HOCSINH_${namHocKey}`));
 
     const classList = snap.docs.map((d) => d.id);
 
@@ -439,19 +439,22 @@ export default function DanhSach() {
 
     const ma = newMaDinhDanh.trim();
     const ten = newName.trim().toUpperCase();
-    const sttMoi = students.length + 1; // STT mới
-    const lop = selectedClass; // ví dụ "4.1"
+    const tenThuong = newName.trim();
+    const sttMoi = students.length + 1;
+    const lop = selectedClass;
 
     // 🔹 Đóng dialog ngay
     setIsAdding(false);
     setEditingStudent(null);
 
     try {
-      // 1️⃣ Ghi Firestore DANHSACH với lop + stt
+      // =========================
+      // 1️⃣ CHỈ GHI DS_HOCSINH
+      // =========================
       await setDoc(
         doc(
           db,
-          `DS_HOCSINH_${namHocKey}`,
+          `DATA_HOCSINH_${namHocKey}`,
           selectedClass,
           "STUDENTS",
           ma
@@ -464,15 +467,24 @@ export default function DanhSach() {
         { merge: true }
       );
 
-      // 2️⃣ Cập nhật UI ngay
+      // =========================
+      // 2️⃣ UPDATE UI
+      // =========================
       const updatedStudents = [
         ...students,
-        { maDinhDanh: ma, hoTen: ten, stt: sttMoi, lop },
+        {
+          maDinhDanh: ma,
+          hoTen: ten,
+          stt: sttMoi,
+          lop,
+        },
       ];
 
       setStudents(updatedStudents);
 
-      // 3️⃣ Cập nhật cache StudentContext
+      // =========================
+      // 3️⃣ CACHE
+      // =========================
       setStudentData((prev) => ({
         ...prev,
         [namHocKey]: {
@@ -481,17 +493,12 @@ export default function DanhSach() {
         },
       }));
 
-      // 4️⃣ Reset input
+      // =========================
+      // 4️⃣ RESET INPUT
+      // =========================
       setNewMaDinhDanh("");
       setNewName("");
 
-      // 5️⃣ Cập nhật DATA chạy nền
-      await updateDATAForStudent(selectedClass, {
-        maDinhDanh: ma,
-        hoTen: ten,
-        stt: sttMoi,
-        lop,
-      }, updatedStudents);
     } catch (err) {
       console.error("❌ Lỗi khi thêm học sinh:", err);
     }
@@ -509,11 +516,13 @@ export default function DanhSach() {
     setEditingStudent(null);
 
     try {
-      // 1️⃣ Ghi Firestore DANHSACH
+      // =========================
+      // 1️⃣ CHỈ UPDATE DS_HOCSINH
+      // =========================
       await updateDoc(
         doc(
           db,
-          `DS_HOCSINH_${namHocKey}`,
+          `DATA_HOCSINH_${namHocKey}`,
           selectedClass,
           "STUDENTS",
           ma
@@ -523,13 +532,18 @@ export default function DanhSach() {
         }
       );
 
-      // 2️⃣ Cập nhật UI ngay
+      // =========================
+      // 2️⃣ UPDATE UI
+      // =========================
       const updatedStudents = students.map((s) =>
         s.maDinhDanh === ma ? { ...s, hoTen: ten } : s
       );
+
       setStudents(updatedStudents);
 
-      // 3️⃣ Cập nhật cache StudentContext
+      // =========================
+      // 3️⃣ CACHE
+      // =========================
       setStudentData((prev) => ({
         ...prev,
         [namHocKey]: {
@@ -538,8 +552,6 @@ export default function DanhSach() {
         },
       }));
 
-      // 4️⃣ 🔹 Cập nhật DATA chạy nền
-      await updateDATAForStudent(selectedClass, { maDinhDanh: ma, hoTen: ten }, updatedStudents);
     } catch (err) {
       console.error("❌ Lỗi khi cập nhật học sinh:", err);
     }
@@ -549,32 +561,38 @@ export default function DanhSach() {
   const handleDeleteStudent = async (student) => {
     if (!student) return;
 
-    const ma = student.maDinhDanh;
+    const ma = student.docId || student.maDinhDanh;
 
-    // 🔹 Đóng dialog ngay nếu đang mở
+    console.log("🧨 DELETE STUDENT ONLY:", ma);
+
     setIsAdding(false);
     setEditingStudent(null);
 
     try {
-      // 1️⃣ Xóa trên Firestore DANHSACH
-      await deleteDoc(
-        doc(
-          db,
-          `DS_HOCSINH_${namHocKey}`,
-          selectedClass,
-          "STUDENTS",
-          ma
-        )
+      // =========================
+      // CHỈ XÓA DS_HOCSINH
+      // =========================
+      const docRef = doc(
+        db,
+        `DATA_HOCSINH_${namHocKey}`,
+        selectedClass,
+        "STUDENTS",
+        ma
       );
 
-      // 3️⃣ Cập nhật UI ngay
+      console.log("🧨 DELETE PATH:", docRef.path);
+
+      await deleteDoc(docRef);
+
+      // =========================
+      // UPDATE UI
+      // =========================
       const updatedStudents = students
-        .filter((s) => s.maDinhDanh !== ma)
+        .filter((s) => (s.docId || s.maDinhDanh) !== ma)
         .map((s, i) => ({ ...s, stt: i + 1 }));
 
       setStudents(updatedStudents);
 
-      // 4️⃣ Cập nhật cache StudentContext
       setStudentData((prev) => ({
         ...prev,
         [namHocKey]: {
@@ -583,10 +601,11 @@ export default function DanhSach() {
         },
       }));
 
-      // 5️⃣ Reset trạng thái hover nếu cần
       setHoveredHS(null);
+
+      console.log("✅ DELETE SUCCESS:", ma);
     } catch (err) {
-      console.error("❌ Lỗi khi xóa học sinh:", err);
+      console.error("❌ DELETE ERROR:", err);
     }
   };
 
@@ -603,58 +622,29 @@ export default function DanhSach() {
       for (const lop of selectedClasses) {
 
         // =========================
-        // XÓA DS_HOCSINH
+        // 1️⃣ XÓA DS_HOCSINH
         // =========================
         const studentsRef = collection(
           db,
-          `DS_HOCSINH_${namHocKey}`,
+          `DATA_HOCSINH_${namHocKey}`,
           lop,
           "STUDENTS"
         );
 
         const studentsSnap = await getDocs(studentsRef);
 
-        let batch = writeBatch(db);
+        const batch = writeBatch(db);
 
         studentsSnap.forEach((studentDoc) => {
           batch.delete(studentDoc.ref);
         });
 
+        // xóa luôn document lớp (nếu có)
         batch.delete(
           doc(
             db,
-            `DS_HOCSINH_${namHocKey}`,
+            `DATA_HOCSINH_${namHocKey}`,
             lop
-          )
-        );
-
-        await batch.commit();
-
-        // =========================
-        // XÓA DATA
-        // =========================
-        const lopKey = lop.replace(/\./g, "_");
-
-        const dataStudentsRef = collection(
-          db,
-          `DATA_${namHocKey}`,
-          lopKey,
-          "HOCSINH"
-        );
-
-        const dataStudentsSnap = await getDocs(dataStudentsRef);
-
-        batch = writeBatch(db);
-
-        dataStudentsSnap.forEach((studentDoc) => {
-          batch.delete(studentDoc.ref);
-        });
-
-        batch.delete(
-          doc(
-            db,
-            `DATA_${namHocKey}`,
-            lopKey
           )
         );
 
@@ -662,7 +652,7 @@ export default function DanhSach() {
       }
 
       // =========================
-      // CẬP NHẬT DANH SÁCH LỚP
+      // 2️⃣ CẬP NHẬT DANH SÁCH LỚP
       // =========================
       const newClasses = classes.filter(
         (c) => !selectedClasses.includes(c)
@@ -680,15 +670,11 @@ export default function DanhSach() {
       await fetchClasses();
 
       if (selectedClasses.includes(selectedClass)) {
-        setSelectedClass(
-          newClasses.length
-            ? newClasses[0]
-            : ""
-        );
+        setSelectedClass(newClasses.length ? newClasses[0] : "");
       }
 
       // =========================
-      // THÔNG BÁO THÀNH CÔNG
+      // 3️⃣ THÔNG BÁO THÀNH CÔNG
       // =========================
       setSnackbar({
         open: true,
@@ -702,9 +688,6 @@ export default function DanhSach() {
     } catch (err) {
       console.error("❌ Lỗi xóa lớp:", err);
 
-      // =========================
-      // THÔNG BÁO LỖI
-      // =========================
       setSnackbar({
         open: true,
         severity: "error",

@@ -41,13 +41,15 @@ const runWithLimit = async (items, limit, handler) => {
 };
 
 // =========================
-// CHUNK ARRAY (FOR BATCH 500 LIMIT)
+// CHUNK ARRAY
 // =========================
 const chunkArray = (arr, size) => {
   const result = [];
+
   for (let i = 0; i < arr.length; i += size) {
     result.push(arr.slice(i, i + size));
   }
+
   return result;
 };
 
@@ -79,10 +81,10 @@ export const syncMasterHocSinh = async ({ db, namHoc, hocKy }) => {
 
           const ref = doc(
             db,
-            "DS_HOCSINH_2025_2026",
+            `DS_HOCSINH_${namHocKey}`,
             classKey,
             "STUDENTS",
-            docItem.id
+            docItem.id // giữ nguyên ID học sinh
           );
 
           writes.push({
@@ -90,15 +92,13 @@ export const syncMasterHocSinh = async ({ db, namHoc, hocKy }) => {
             data: {
               hoTen: data.hoVaTen || data.hoTen || "",
               khoi: classKey.charAt(0),
-              lop: classKey,
+              lop: data.lop || classKey,
               updatedAt: Date.now(),
             },
           });
         });
 
-        // =========================
-        // BATCH WRITE (MAX 500)
-        // =========================
+        // Batch tối đa 500 document
         const batches = chunkArray(writes, 500);
 
         for (const batchItems of batches) {
@@ -111,7 +111,9 @@ export const syncMasterHocSinh = async ({ db, namHoc, hocKy }) => {
           await batch.commit();
         }
 
-        console.log(`✅ Done class ${classKey} - ${writes.length} students`);
+        console.log(
+          `✅ Done class ${classKey} - ${writes.length} students`
+        );
       } catch (err) {
         console.warn("⚠️ skip class:", classKey, err.message);
       }
