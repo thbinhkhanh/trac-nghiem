@@ -61,7 +61,7 @@ export const exportKetQuaExcel = async (
     const row1 = sheet.addRow(["TRƯỜNG TH LÂM VĂN BỀN"]);
     row1.font = { size: 12, bold: true, color: { argb: "FF0D47A1" } };
     row1.alignment = { horizontal: "left", vertical: "middle" };
-    row1.height = 20;
+    row1.height = 35;
 
     sheet.addRow([]);
 
@@ -69,22 +69,22 @@ export const exportKetQuaExcel = async (
     sheet.mergeCells("A3:E3");
     row3.font = { size: 14, bold: true, color: { argb: "FF0D47A1" } };
     row3.alignment = { horizontal: "center", vertical: "middle" };
-    row3.height = 22;
+    row3.height = 35;
 
     const row4 = sheet.addRow([`${hocKy} – NH: ${schoolYear}`]);
     sheet.mergeCells("A4:E4");
     row4.font = { size: 12, bold: true, color: { argb: "FF0D47A1" } };
     row4.alignment = { horizontal: "center", vertical: "middle" };
-    row4.height = 18;
+    row4.height = 35;
 
     sheet.addRow([]);
 
     // ===============================
     // 🔹 HEADER
     // ===============================
-    const headerKeys = ["STT", "HỌ VÀ TÊN", "Điểm", "Thời gian", "Ngày"];
+    const headerKeys = ["STT", "HỌ VÀ TÊN", "ĐIỂM", "THỜI GIAN", "NGÀY KIỂM TRA"];
     const headerRow = sheet.addRow(headerKeys);
-    headerRow.height = 25;
+    headerRow.height = 35;
 
     headerRow.eachCell((cell) => {
       cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
@@ -112,7 +112,7 @@ export const exportKetQuaExcel = async (
     results.forEach((r, idx) => {
       const row = sheet.addRow([
         r.stt || idx + 1,
-        r.hoVaTen || "",
+        (r.hoVaTen || "").toUpperCase(),
         r.diem ?? "",
         r.thoiGianLamBai || "",
         r.ngayHienThi || "",
@@ -144,8 +144,8 @@ export const exportKetQuaExcel = async (
       { width: 6 },
       { width: 30 },
       { width: 10 },
-      { width: 15 },
-      { width: 15 },
+      { width: 18 },
+      { width: 18 },
     ];
 
     // ===============================

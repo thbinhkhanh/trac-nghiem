@@ -1,12 +1,6 @@
-import ExcelJS from "exceljs/dist/exceljs.min.js";
+import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 
-/**
- * Xuất danh sách kiểm tra định kỳ ra Excel (giữ định dạng bảng cũ)
- * @param {Array} students - Mảng học sinh
- * @param {string} className - Tên lớp
- * @param {string} term - GKI, CKI, GKII, CN
- */
 export const exportKTDK = async (students, className, term = "CKI", subject = "Tin học", namHoc) => {
   if (!students || students.length === 0) {
     alert("❌ Không có dữ liệu học sinh để xuất!");
@@ -20,11 +14,10 @@ export const exportKTDK = async (students, className, term = "CKI", subject = "T
     CN: "Cuối năm",
   };
   const termLabel = termMap[term] || term;
-    const subjectLabel =
+  const subjectLabel =
     subject?.toLowerCase() === "công nghệ"
       ? "CÔNG NGHỆ"
       : "TIN HỌC";
-
 
   try {
     const workbook = new ExcelJS.Workbook();
@@ -49,41 +42,53 @@ export const exportKTDK = async (students, className, term = "CKI", subject = "T
     // 🔹 Tiêu đề trường
     const schoolRow = sheet.addRow(["TRƯỜNG TH LÂM VĂN BỀN"]);
     schoolRow.font = { bold: true, size: 12 };
-    sheet.mergeCells(`A1:H1`);
-    schoolRow.alignment = { horizontal: "left" };
+    sheet.mergeCells(`A1:G1`);
+
+    schoolRow.alignment = {
+      horizontal: "left",
+      vertical: "middle",   // ✅ thêm cái này
+    };
+
+    schoolRow.height = 35;
 
     // 🔹 Tiêu đề chính
-    //const titleRow = sheet.addRow([`KẾT QUẢ KTĐK - LỚP ${className}`]);
-    const titleRow = sheet.addRow([
-      `MÔN ${subjectLabel} - LỚP ${className}`,
-    ]);
-
+    const titleRow = sheet.addRow([`MÔN ${subjectLabel} - LỚP ${className}`]);
     titleRow.font = { bold: true, size: 14, color: { argb: "FF0D47A1" } };
-    sheet.mergeCells(`A2:H2`);
-    titleRow.alignment = { horizontal: "center", vertical: "middle" };
-    titleRow.height = 25;
+    sheet.mergeCells(`A2:G2`);
+
+    titleRow.alignment = {
+      horizontal: "center",
+      vertical: "middle",   // ✅ quan trọng
+    };
+
+    titleRow.height = 35;
 
     // 🔹 Dòng học kỳ & năm học
     const subRow = sheet.addRow([`${termLabel} – NH: ${namHoc}`]);
     subRow.font = { italic: true, size: 12 };
-    sheet.mergeCells(`A3:H3`);
-    subRow.alignment = { horizontal: "center" };
+    sheet.mergeCells(`A3:G3`);
+
+    subRow.alignment = {
+      horizontal: "center",
+      vertical: "middle",   // ✅ thêm luôn
+    };
+
+    subRow.height = 35;
     sheet.addRow([]);
 
     // 🔹 Header
     const header = [
       "STT",
-      "Họ và tên",
-      "ĐGTX",
-      "Lí thuyết",
-      "Thực hành",
-      "Tổng cộng",
-      "Mức đạt",
-      "Nhận xét",
+      "HỌ VÀ TÊN",
+      "LÍ THUYẾT",
+      "THỰC HÀNH",
+      "TỔNG CỘNG",
+      "MỨC ĐẠT",
+      "NHẬN XÉT",
     ];
     const headerRow = sheet.addRow(header);
     headerRow.font = { bold: true, color: { argb: "FFFFFFFF" } };
-    headerRow.height = 22;
+    headerRow.height = 35;
     headerRow.eachCell((cell) => {
       cell.fill = {
         type: "pattern",
@@ -99,12 +104,11 @@ export const exportKTDK = async (students, className, term = "CKI", subject = "T
       };
     });
 
-    // 🔹 Dữ liệu (sửa field đúng)
+    // 🔹 Dữ liệu
     students.forEach((s, idx) => {
       const row = sheet.addRow([
         idx + 1,
-        s.hoVaTen ?? "",
-        s.dgtx_mucdat ?? "",
+        String(s.hoVaTen ?? "").toUpperCase(),
         s.lyThuyet ?? "",
         s.thucHanh ?? "",
         s.tongCong ?? "",
@@ -112,13 +116,15 @@ export const exportKTDK = async (students, className, term = "CKI", subject = "T
         s.nhanXet ?? "",
       ]);
 
+      row.height = 35; // cố định chiều cao cho tất cả các dòng
+
       row.eachCell((cell, col) => {
         cell.font = { size: 12 };
         cell.alignment = {
           vertical: "middle",
-          horizontal: col === 2 || col === 8 ? "left" : "center",
+          horizontal: col === 2 || col === 7 ? "left" : "center",
           wrapText: true,
-          indent: col === 2 || col === 8 ? 1 : 0,
+          indent: col === 2 || col === 7 ? 1 : 0,
         };
         cell.border = {
           top: { style: "thin" },
@@ -133,11 +139,10 @@ export const exportKTDK = async (students, className, term = "CKI", subject = "T
     sheet.columns = [
       { width: 6 },
       { width: 35 },
-      { width: 10 },
-      { width: 11 },
-      { width: 11 },
-      { width: 11 },
-      { width: 11 },
+      { width: 15 },
+      { width: 15 },
+      { width: 15 },
+      { width: 15 },
       { width: 45 },
     ];
 
@@ -146,7 +151,6 @@ export const exportKTDK = async (students, className, term = "CKI", subject = "T
     const blob = new Blob([buffer], {
       type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     });
-    //saveAs(blob, `KTĐK_${className}_${term}.xlsx`);
     saveAs(blob, `${subject}_${term}_${className}.xlsx`);
   } catch (err) {
     console.error("❌ Lỗi khi xuất Excel:", err);

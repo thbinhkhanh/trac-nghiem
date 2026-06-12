@@ -89,7 +89,7 @@ export const printKTDK = (students, className, selectedSemester = "Giữa kỳ I
           ${list.map(s => `
             <tr>
               <td>${s.stt}</td>
-              <td>${s.hoVaTen || ""}</td>
+              <td>${(s.hoVaTen || "").toUpperCase()}</td>
               <td>${s.dgtx_mucdat || ""}</td>
               <td>${s.lyThuyet || ""}</td>
               <td>${s.thucHanh || ""}</td>
