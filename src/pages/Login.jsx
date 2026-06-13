@@ -47,9 +47,6 @@ export default function Login({ setIsLoggedIn }) {
       const cleanUsername = username?.trim();
       const docId = ACCOUNT_MAP[cleanUsername];
 
-      console.log("username:", cleanUsername);
-      console.log("docId:", docId);
-
       // ❗ check mapping
       if (!docId) {
         setSnackbar({
@@ -62,9 +59,6 @@ export default function Login({ setIsLoggedIn }) {
 
       const ref = doc(db, "MATKHAU", docId);
       const snap = await getDoc(ref);
-
-      console.log("exists:", snap.exists());
-      console.log("data:", snap.data());
 
       // ❗ không tìm thấy document
       if (!snap.exists()) {

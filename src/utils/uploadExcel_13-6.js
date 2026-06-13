@@ -10,12 +10,7 @@ export const uploadStudents = async ({
 }) => {
   if (!namHocKey) return;
 
-  const fileList = files
-    ? Array.from(files)
-    : file
-      ? [file]
-      : [];
-
+  const fileList = files ? Array.from(files) : file ? [file] : [];
   if (fileList.length === 0) return;
 
   const basePath = `DATA_HOCSINH_${namHocKey}`;
@@ -27,13 +22,11 @@ export const uploadStudents = async ({
   const parsedData = [];
 
   // =========================
-  // 1. PARSE FILE / FOLDER
+  // 1. PARSE FILE
   // =========================
   for (const f of fileList) {
     const path = f.webkitRelativePath || f.name;
-
-    // ✅ FIX: lấy TÊN FILE (không lấy folder)
-    const fileName = path.split("/").pop(); // lấy file cuối cùng
+    const fileName = path.split("/").pop();
     const lop = fileName.replace(/\.[^/.]+$/, "").trim();
 
     allLops.add(lop);
@@ -53,7 +46,7 @@ export const uploadStudents = async ({
       .filter((r) => r.ma && r.ten)
       .map((r) => ({
         maDinhDanh: String(r.ma).trim(),
-        hoTen: String(r.ten).toUpperCase().trim(),
+        hoTen: String(r.ten).trim(),
         stt: r.stt || null,
         lop,
       }));
@@ -86,7 +79,59 @@ export const uploadStudents = async ({
         batch.set(ref, {
           hoTen: s.hoTen,
           lop: s.lop,
-          stt: s.stt,
+          khoi: lop.match(/\d+/)?.[0] || "",
+          mon: "Tin học",
+
+          updatedAt: Date.now(),
+
+          // =========================
+          // STRUCTURE MỚI
+          // =========================
+          ktdk: {
+            gki: {
+              lyThuyet: null,
+              ngayKiemTra: "",
+              thoiGianLamBai: "",
+            },
+            cki: {
+              lyThuyet: null,
+              ngayKiemTra: "",
+              thoiGianLamBai: "",
+            },
+            gkii: {
+              lyThuyet: null,
+              ngayKiemTra: "",
+              thoiGianLamBai: "",
+            },
+            cn: {
+              lyThuyet: null,
+              ngayKiemTra: "",
+              thoiGianLamBai: "",
+            },
+          },
+
+          ontap: {
+            gki: {
+              lyThuyet: null,
+              ngayKiemTra: "",
+              thoiGianLamBai: "",
+            },
+            cki: {
+              lyThuyet: null,
+              ngayKiemTra: "",
+              thoiGianLamBai: "",
+            },
+            gkii: {
+              lyThuyet: null,
+              ngayKiemTra: "",
+              thoiGianLamBai: "",
+            },
+            cn: {
+              lyThuyet: null,
+              ngayKiemTra: "",
+              thoiGianLamBai: "",
+            },
+          },
         });
       }
 
@@ -114,9 +159,7 @@ export const uploadStudents = async ({
 
   await setDoc(
     lopRef,
-    {
-      list: newList,
-    },
+    { list: newList },
     { merge: true }
   );
 };

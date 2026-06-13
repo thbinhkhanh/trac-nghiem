@@ -129,7 +129,6 @@ export default function AssignClassDialog({
         { merge: true }
       );
 
-      console.log("✔ Đã lưu lớp vào DANHSACH_LOP:", currentYear, updated);
     } catch (error) {
       console.error("Lỗi chạy nền khi thêm lớp: ", error);
 
@@ -230,8 +229,7 @@ export default function AssignClassDialog({
           });
         });
         setLockedBy(lockMap);
-
-        console.log("Chạy ngầm: Xóa lớp thành công trên Firestore ->", currentYear);
+        
       } catch (error) {
         console.error("Lỗi chạy nền khi xóa lớp: ", error);
         // Khôi phục lại dữ liệu trên giao diện nếu thao tác ngầm thất bại

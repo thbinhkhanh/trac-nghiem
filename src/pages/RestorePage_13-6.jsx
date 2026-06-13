@@ -308,8 +308,11 @@ export default function RestorePage({
   // PHỤC HỒI
   // =========================
   const handleRestore = async () => {
-    const selectedKeys = Object.keys(restoreOptions)
-      .filter((k) => restoreOptions[k]);
+
+    const selectedKeys = Object.keys(
+      restoreOptions
+    ).filter((k) => restoreOptions[k]);
+
     if (!selectedFile) {
       setSnackbar({
         open: true,
@@ -323,196 +326,169 @@ export default function RestorePage({
       setSnackbar({
         open: true,
         severity: "warning",
-        message: "Chọn ít nhất một dữ liệu",
+        message: "Chọn ít nhất 1 nhóm dữ liệu",
       });
       return;
     }
+
     try {
+
       setLoading(true);
       setProgress(0);
 
-      const jsonData = JSON.parse(
-        await selectedFile.text()
+      const text = await selectedFile.text();
+
+      const jsonData = JSON.parse(text);
+
+      // =========================
+      // ĐẾM TỔNG DOC
+      // =========================
+      const totalDocs = countTotalDocs(
+        jsonData,
+        selectedKeys
       );
 
-      let totalDocs = 0;
       let done = 0;
-
-      // =========================
-      // ĐẾM TỔNG DOCUMENT
-      // =========================
-
-      // HỌC SINH
-      if (selectedKeys.includes("HOCSINH")) {
-
-        const hocSinhKey = Object.keys(jsonData)
-          .find((k) => k.startsWith("DATA_HOCSINH"));
-
-        if (hocSinhKey) {
-
-          Object.values(jsonData[hocSinhKey]).forEach(
-            (classObj) => {
-
-              const students =
-                classObj.STUDENTS || {};
-
-              totalDocs +=
-                Object.keys(students).length;
-            }
-          );
-        }
-      }
-
-      // NGÂN HÀNG ĐỀ
-      if (
-        selectedKeys.includes("NGANHANG_DE") &&
-        jsonData.NGANHANG_DE
-      ) {
-
-        totalDocs +=
-          Object.keys(jsonData.NGANHANG_DE).length;
-      }
-
-      // ĐỀ THI
-      if (
-        selectedKeys.includes("DETHI") &&
-        jsonData.DETHI
-      ) {
-
-        totalDocs +=
-          Object.keys(jsonData.DETHI).length;
-      }
+      let lastUpdate = 0;
 
       const updateProgress = () => {
+
+        const now = Date.now();
+
+        if (now - lastUpdate < 50) return;
+
+        lastUpdate = now;
+
         setProgress(
-          totalDocs === 0
-            ? 100
-            : Math.round(done * 100 / totalDocs)
+          Math.round(
+            (done / totalDocs) * 100
+          )
         );
       };
 
-      // ==================================================
-      // HỌC SINH
-      // ==================================================
+      // =========================
+      // HỌC SINH (Batch)
+      // =========================
       if (selectedKeys.includes("HOCSINH")) {
-        const hocSinhKey = Object.keys(jsonData)
-          .find((k) => k.startsWith("DATA_HOCSINH"));
+
+        const hocSinhKey = Object.keys(jsonData).find(
+          key => key.startsWith("DATA_HOCSINH")
+        );
+
         if (hocSinhKey) {
-          const classes =
-            jsonData[hocSinhKey];
-          for (const classId of Object.keys(classes)) {
-            const students =
-              classes[classId].STUDENTS || {};
 
-            let batch = writeBatch(db);
-            let count = 0;
+          const operations = [];
 
-            for (const studentId of Object.keys(students)) {
+          for (const [lop, students] of Object.entries(
+            jsonData[hocSinhKey]
+          )) {
 
-              batch.set(
-                doc(
+            for (const [studentId, value] of Object.entries(
+              students
+            )) {
+
+              operations.push({
+                ref: doc(
                   db,
                   hocSinhKey,
-                  classId,
+                  lop,
                   "STUDENTS",
                   studentId
                 ),
-                students[studentId],
-                { merge: true }
-              );
+                data: value,
+              });
 
-              count++;
-              if (count === 450) {
-                await batch.commit();
-                done += count;
-                updateProgress();
-                batch = writeBatch(db);
-                count = 0;
-              }
             }
-            if (count > 0) {
-              await batch.commit();
+          }
+
+          await commitBatchArray(
+            operations,
+            (count) => {
               done += count;
               updateProgress();
             }
-          }
+          );
         }
       }
-      // ==================================================
+
+      // =========================
       // NGÂN HÀNG ĐỀ
-      // ==================================================
+      // =========================
       if (
-        selectedKeys.includes("NGANHANG_DE") &&
+        selectedKeys.includes(
+          "NGANHANG_DE"
+        ) &&
         jsonData.NGANHANG_DE
       ) {
-        let batch = writeBatch(db);
-        let count = 0;
 
-        for (const docId of Object.keys(jsonData.NGANHANG_DE)) {
-          batch.set(
-            doc(db, "NGANHANG_DE", docId),
-            jsonData.NGANHANG_DE[docId],
-            { merge: true }
+        for (const [docId, value] of Object.entries(
+          jsonData.NGANHANG_DE
+        )) {
+
+          await setDoc(
+            doc(
+              db,
+              "NGANHANG_DE",
+              docId
+            ),
+            value,
+            {
+              merge: true,
+            }
           );
-          count++;
-          if (count === 450) {
-            await batch.commit();
-            done += count;
-            updateProgress();
 
-            batch = writeBatch(db);
-            count = 0;
-          }
-        }
-        if (count > 0) {
-          await batch.commit();
-          done += count;
+          done++;
+
           updateProgress();
         }
       }
 
-      // ==================================================
+      // =========================
       // ĐỀ THI
-      // ==================================================
+      // =========================
       if (
-        selectedKeys.includes("DETHI") &&
+        selectedKeys.includes(
+          "DETHI"
+        ) &&
         jsonData.DETHI
       ) {
 
-        let batch = writeBatch(db);
-        let count = 0;
+        for (const [docId, value] of Object.entries(
+          jsonData.DETHI
+        )) {
 
-        for (const docId of Object.keys(jsonData.DETHI)) {
-          batch.set(
-            doc(db, "DETHI", docId),
-            jsonData.DETHI[docId],
-            { merge: true }
+          await setDoc(
+            doc(
+              db,
+              "DETHI",
+              docId
+            ),
+            value,
+            {
+              merge: true,
+            }
           );
-          count++;
-          if (count === 450) {
-            await batch.commit();
-            done += count;
-            updateProgress();
-            batch = writeBatch(db);
-            count = 0;
-          }
-        }
-        if (count > 0) {
-          await batch.commit();
-          done += count;
+
+          done++;
+
           updateProgress();
         }
       }
 
       setProgress(100);
+
       setSnackbar({
         open: true,
         severity: "success",
         message: "✅ Phục hồi dữ liệu thành công",
       });
+
       onClose();
+
     } catch (err) {
+
       console.error(err);
+
       setSnackbar({
         open: true,
         severity: "error",
@@ -520,7 +496,9 @@ export default function RestorePage({
       });
 
     } finally {
+
       setLoading(false);
+
     }
   };
 

@@ -33,29 +33,18 @@ const ResultDialog_GV = ({
   const [snackbarSeverity, setSnackbarSeverity] = useState("success");
 
   const getScore = () => {
-  console.log("📊 configData:", configData);
-  console.log("📦 studentResult:", studentResult);
 
   if (configData?.kiemTraDinhKi) {
-    console.log("👉 Mode: kiemTraDinhKi");
-    console.log("👉 lyThuyet:", studentResult?.lyThuyet);
     return studentResult?.lyThuyet ?? "";
   }
 
   if (configData?.baiTapTuan) {
-    console.log("👉 Mode: baiTapTuan");
-    console.log("👉 diemTN:", studentResult?.diemTN);
     return convertPercentToScore(studentResult?.diemTN);
   }
 
   if (configData?.onTap) {
-    console.log("👉 Mode: onTap");
-    console.log("👉 lyThuyet:", studentResult?.lyThuyet);
     return studentResult?.lyThuyet ?? "";
   }
-
-  console.log("👉 Mode: default");
-  console.log("👉 lyThuyet:", studentResult?.lyThuyet);
 
   return studentResult?.lyThuyet ?? "";
 };

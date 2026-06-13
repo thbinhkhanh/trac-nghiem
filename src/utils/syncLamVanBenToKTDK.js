@@ -124,7 +124,6 @@ export const syncLamVanBenToKTDK = async ({
       })
     );
 
-    console.log("✅ SYNC DONE (SAFE + NO OVERWRITE CN)");
   } catch (err) {
     console.error("❌ SYNC ERROR:", err);
   }

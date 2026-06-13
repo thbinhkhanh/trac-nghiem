@@ -64,8 +64,6 @@ export const syncMasterHocSinh = async ({ db, namHoc, hocKy }) => {
     const sourceRoot = `DATA_KTDK_${namHocKey}`;
     const classList = generateClassList();
 
-    console.log("🚀 Start sync:", classList.length, "classes");
-
     await runWithLimit(classList, 3, async (classKey) => {
       try {
         const snap = await getDocs(
@@ -111,15 +109,11 @@ export const syncMasterHocSinh = async ({ db, namHoc, hocKy }) => {
           await batch.commit();
         }
 
-        console.log(
-          `✅ Done class ${classKey} - ${writes.length} students`
-        );
       } catch (err) {
         console.warn("⚠️ skip class:", classKey, err.message);
       }
     });
 
-    console.log("🎉 SYNC DONE");
   } catch (err) {
     console.error("❌ SYNC MASTER ERROR:", err);
   }

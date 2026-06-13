@@ -1,5 +1,12 @@
 import * as XLSX from "xlsx";
-import { doc, getDoc, setDoc, writeBatch } from "firebase/firestore";
+import {
+  doc,
+  getDoc,
+  setDoc,
+  writeBatch,
+  collection,
+  getDocs,
+} from "firebase/firestore";
 
 export const uploadStudents = async ({
   file,
@@ -11,155 +18,180 @@ export const uploadStudents = async ({
   if (!namHocKey) return;
 
   const fileList = files ? Array.from(files) : file ? [file] : [];
-  if (fileList.length === 0) return;
+  if (!fileList.length) return;
 
   const basePath = `DATA_HOCSINH_${namHocKey}`;
 
-  let totalStudents = 0;
-  let processedStudents = 0;
+  const normalizeId = (id) =>
+    String(id).replace(/\.0$/, "").trim().replace(/\s+/g, "");
 
+  const normalizeClass = (lop) => String(lop).trim();
+
+  const makeKey = (lop, ma) =>
+    `${normalizeClass(lop)}_${normalizeId(ma)}`;
+
+  let allRows = [];
   const allLops = new Set();
-  const parsedData = [];
 
   // =========================
-  // 1. PARSE FILE
+  // 1. PARSE EXCEL (UPDATED)
   // =========================
   for (const f of fileList) {
     const path = f.webkitRelativePath || f.name;
-    const fileName = path.split("/").pop();
-    const lop = fileName.replace(/\.[^/.]+$/, "").trim();
 
-    allLops.add(lop);
+    const fileClass = path
+      .split("/")
+      .pop()
+      .replace(/\.[^/.]+$/, "")
+      .trim();
 
-    const data = await f.arrayBuffer();
-    const workbook = XLSX.read(data);
+    const workbook = XLSX.read(await f.arrayBuffer());
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
 
-    const jsonData = XLSX.utils.sheet_to_json(sheet, {
-      header: ["stt", "ma", "ten"],
-      defval: "",
-    });
+    if (!rows.length) continue;
 
-    const rows = jsonData.slice(1);
+    rows.forEach((item) => {
+      const ma =
+        item["Mã học sinh"] ||
+        item["MÃ HỌC SINH"] ||
+        item.maDinhDanh;
 
-    const students = rows
-      .filter((r) => r.ma && r.ten)
-      .map((r) => ({
-        maDinhDanh: String(r.ma).trim(),
-        hoTen: String(r.ten).trim(),
-        stt: r.stt || null,
+      const ten =
+        item["Họ và tên"] ||
+        item["HỌ VÀ TÊN"] ||
+        item.hoVaTen;
+
+      if (!ma || !ten) return;
+
+      let rawLop =
+        item["Lớp"] ||
+        item["LỚP"] ||
+        item.lop;
+
+      if (!rawLop) rawLop = fileClass;
+
+      const lop = normalizeClass(rawLop);
+
+      allLops.add(lop);
+
+      allRows.push({
+        ma: normalizeId(ma),
+        ten: String(ten).trim(),
         lop,
-      }));
-
-    parsedData.push({ lop, students });
-    totalStudents += students.length;
+        stt:
+          item.stt ||
+          item["STT"] ||
+          item["SỐ THỨ TỰ"] ||
+          item["SO THU TU"] ||
+          null,
+      });
+    });
   }
 
-  if (totalStudents === 0) return;
+  if (!allRows.length) return;
 
   // =========================
-  // 2. UPLOAD STUDENTS
+  // SOURCE SET (Excel)
   // =========================
-  for (const group of parsedData) {
-    const { lop, students } = group;
+  const sourceSet = new Set(
+    allRows.map((r) => makeKey(r.lop, r.ma))
+  );
 
-    for (let i = 0; i < students.length; i += 450) {
-      const batch = writeBatch(db);
-      const chunk = students.slice(i, i + 450);
+  // =========================
+  // TARGET SET (Firestore)
+  // =========================
+  const targetSet = new Set();
 
-      for (const s of chunk) {
-        const ref = doc(
-          db,
-          basePath,
-          lop,
-          "STUDENTS",
-          s.maDinhDanh
-        );
+  for (const lop of allLops) {
+    const snap = await getDocs(
+      collection(db, basePath, lop, "STUDENTS")
+    );
 
-        batch.set(ref, {
-          hoTen: s.hoTen,
-          lop: s.lop,
-          khoi: lop.match(/\d+/)?.[0] || "",
-          mon: "Tin học",
+    snap.forEach((docSnap) => {
+      targetSet.add(makeKey(lop, docSnap.id));
+    });
+  }
 
-          updatedAt: Date.now(),
+  // =========================
+  // DIFF ONLY NEW
+  // =========================
+  const missingStudents = allRows.filter(
+    (r) => !targetSet.has(makeKey(r.lop, r.ma))
+  );
 
-          // =========================
-          // STRUCTURE MỚI
-          // =========================
-          ktdk: {
-            gki: {
-              lyThuyet: null,
-              ngayKiemTra: "",
-              thoiGianLamBai: "",
-            },
-            cki: {
-              lyThuyet: null,
-              ngayKiemTra: "",
-              thoiGianLamBai: "",
-            },
-            gkii: {
-              lyThuyet: null,
-              ngayKiemTra: "",
-              thoiGianLamBai: "",
-            },
-            cn: {
-              lyThuyet: null,
-              ngayKiemTra: "",
-              thoiGianLamBai: "",
-            },
-          },
+  if (!missingStudents.length) return;
 
-          ontap: {
-            gki: {
-              lyThuyet: null,
-              ngayKiemTra: "",
-              thoiGianLamBai: "",
-            },
-            cki: {
-              lyThuyet: null,
-              ngayKiemTra: "",
-              thoiGianLamBai: "",
-            },
-            gkii: {
-              lyThuyet: null,
-              ngayKiemTra: "",
-              thoiGianLamBai: "",
-            },
-            cn: {
-              lyThuyet: null,
-              ngayKiemTra: "",
-              thoiGianLamBai: "",
-            },
-          },
-        });
-      }
+  // =========================
+  // STRUCTURE
+  // =========================
+  const buildStructure = () => ({
+    ktdk: {
+      gki: { lyThuyet: null, ngayKiemTra: "", thoiGianLamBai: "" },
+      cki: { lyThuyet: null, ngayKiemTra: "", thoiGianLamBai: "" },
+      gkii: { lyThuyet: null, ngayKiemTra: "", thoiGianLamBai: "" },
+      cn: { lyThuyet: null, ngayKiemTra: "", thoiGianLamBai: "" },
+    },
+    ontap: {
+      gki: { lyThuyet: null, ngayKiemTra: "", thoiGianLamBai: "" },
+      cki: { lyThuyet: null, ngayKiemTra: "", thoiGianLamBai: "" },
+      gkii: { lyThuyet: null, ngayKiemTra: "", thoiGianLamBai: "" },
+      cn: { lyThuyet: null, ngayKiemTra: "", thoiGianLamBai: "" },
+    },
+  });
 
-      await batch.commit();
+  // =========================
+  // BATCH INSERT
+  // =========================
+  let done = 0;
+  const batchSize = 450;
 
-      processedStudents += chunk.length;
+  for (let i = 0; i < missingStudents.length; i += batchSize) {
+    const batch = writeBatch(db);
+    const chunk = missingStudents.slice(i, i + batchSize);
 
-      if (onProgress) {
-        onProgress(
-          Math.round((processedStudents / totalStudents) * 100)
-        );
-      }
+    for (const s of chunk) {
+      const ref = doc(
+        db,
+        basePath,
+        s.lop,
+        "STUDENTS",
+        s.ma
+      );
+
+      batch.set(ref, {
+        hoTen: s.ten,
+        lop: s.lop,
+        khoi: s.lop.match(/\d+/)?.[0] || "",
+        mon: "Tin học",
+        stt: s.stt ? Number(s.stt) : null,
+        updatedAt: Date.now(),
+        ...buildStructure(),
+      });
+    }
+
+    await batch.commit();
+
+    done += chunk.length;
+
+    if (onProgress) {
+      onProgress(
+        Math.round((done / missingStudents.length) * 100)
+      );
     }
   }
 
   // =========================
-  // 3. UPDATE DANH SÁCH LỚP
+  // UPDATE CLASS LIST
   // =========================
   const lopRef = doc(db, "DANHSACH_LOP", namHocKey);
 
   const snap = await getDoc(lopRef);
   const oldList = snap.exists() ? snap.data().list || [] : [];
 
-  const newList = Array.from(new Set([...oldList, ...allLops]));
-
-  await setDoc(
-    lopRef,
-    { list: newList },
-    { merge: true }
+  const newList = Array.from(
+    new Set([...oldList, ...allLops])
   );
+
+  await setDoc(lopRef, { list: newList }, { merge: true });
 };

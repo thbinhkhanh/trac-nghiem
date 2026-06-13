@@ -125,8 +125,6 @@ export const syncLamVanBenToKTDK = async ({
         }
       })
     );
-
-    console.log("✅ SYNC DONE");
   } catch (err) {
     console.error("❌ SYNC ERROR:", err);
   }

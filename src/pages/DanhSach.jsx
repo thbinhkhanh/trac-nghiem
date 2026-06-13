@@ -172,24 +172,14 @@ export default function DanhSach() {
   // 🔹 Lấy danh sách lớp
   const fetchClasses = async () => {
     try {
-      console.log("📥 [fetchClasses] namHocKey =", namHocKey);
-      console.log("👤 account =", account);
-
       const ref = doc(db, "DANHSACH_LOP", namHocKey);
       const snap = await getDoc(ref);
-
-      console.log("📦 snapshot exists =", snap.exists());
-
       const raw = snap.exists() ? snap.data()?.list || [] : [];
-
-      console.log("📚 RAW classes =", raw);
 
       // ✅ lọc rác (QUAN TRỌNG)
       const classListRaw = raw.filter(
         (x) => typeof x === "string" && x.trim() && !x.includes("NHAP")
       );
-
-      console.log("🧹 classListRaw (after filter rác) =", classListRaw);
 
       // =========================
       // 🔐 PHÂN QUYỀN (debug thêm)
@@ -199,8 +189,6 @@ export default function DanhSach() {
         account,
         allClasses: classListRaw,
       });
-
-      console.log("🔐 filteredByRole =", filteredByRole);
 
       // ===== SORT LỚP =====
       const classList = [...filteredByRole].sort((a, b) => {
@@ -216,8 +204,6 @@ export default function DanhSach() {
           sensitivity: "base",
         });
       });
-
-      console.log("✅ FINAL classList =", classList);
 
       setClasses(classList);
       setClassData(classList);
@@ -563,8 +549,6 @@ export default function DanhSach() {
 
     const ma = student.docId || student.maDinhDanh;
 
-    console.log("🧨 DELETE STUDENT ONLY:", ma);
-
     setIsAdding(false);
     setEditingStudent(null);
 
@@ -579,8 +563,6 @@ export default function DanhSach() {
         "STUDENTS",
         ma
       );
-
-      console.log("🧨 DELETE PATH:", docRef.path);
 
       await deleteDoc(docRef);
 
@@ -603,7 +585,6 @@ export default function DanhSach() {
 
       setHoveredHS(null);
 
-      console.log("✅ DELETE SUCCESS:", ma);
     } catch (err) {
       console.error("❌ DELETE ERROR:", err);
     }

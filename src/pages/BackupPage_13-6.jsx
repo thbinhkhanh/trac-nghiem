@@ -285,12 +285,13 @@ export default function BackupPage({ open, onClose, config }) {
 
             if (!snap.empty) {
 
-              backupData[collectionName][lop] = {
-                STUDENTS: {}
-              };
+              backupData[collectionName][lop] = {};
 
               snap.forEach((d) => {
-                backupData[collectionName][lop].STUDENTS[d.id] = d.data();
+
+                backupData[collectionName][lop][d.id] =
+                  d.data();
+
               });
 
             }
