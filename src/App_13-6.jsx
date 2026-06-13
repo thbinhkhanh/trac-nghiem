@@ -75,7 +75,6 @@ function AppContent() {
   );
 
   const [openLogo, setOpenLogo] = useState(false);
-  const [logoScale, setLogoScale] = useState(1);
 
   const [anchorEl, setAnchorEl] = useState(null);
   const openMenu = Boolean(anchorEl);
@@ -503,22 +502,22 @@ function AppContent() {
             alignItems: "center",
             justifyContent: "center",
             zIndex: 2000,
-            cursor: "pointer"
+            cursor: "pointer",
           }}
         >
           {/* Khung trắng */}
           <Box
-            onClick={() => setOpenLogo(false)}
+            onClick={(e) => e.stopPropagation()}
             sx={{
-              width: "clamp(180px, 60vw, 320px)",
-              height: "clamp(180px, 60vw, 320px)",
+              width: "clamp(160px, 42vw, 260px)",
+              height: "clamp(160px, 42vw, 260px)",
               bgcolor: "white",
               borderRadius: "16px",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               boxShadow: "0 10px 40px rgba(0,0,0,0.5)",
-              animation: "zoomIn 0.3s ease"
+              animation: "zoomIn 0.25s ease",
             }}
           >
             <Box
@@ -528,7 +527,7 @@ function AppContent() {
               sx={{
                 maxWidth: "85%",
                 maxHeight: "85%",
-                objectFit: "contain"
+                objectFit: "contain",
               }}
             />
           </Box>
