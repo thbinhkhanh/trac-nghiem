@@ -2,38 +2,6 @@ const getUserPerm = (permissions, account, namHoc) => {
   return permissions?.[namHoc]?.[account] || {};
 };
 
- //* Lấy giao diện theo lớp
-
-  export const getClassGiaoDien = (className, classPermissions, namHoc) => {
-    const yearPerm = classPermissions?.[namHoc];
-
-    console.log("👉 yearPerm:", yearPerm);
-
-    if (!yearPerm) return "dang_nhap";
-
-    const cleanClass = String(className).trim().toUpperCase();
-
-    for (const teacher of Object.keys(yearPerm)) {
-      const teacherData = yearPerm[teacher];
-
-      if (!teacherData) continue;
-
-      // 🔥 check trực tiếp class key (nhanh + đúng)
-      const hasClass = Object.entries(teacherData).some(([cls, value]) => {
-        if (cls === "giaoDien") return false;
-
-        return String(cls).trim().toUpperCase() === cleanClass && value === true;
-      });
-
-      if (hasClass) {
-        console.log("👉 FOUND:", teacher, teacherData.giaoDien);
-        return teacherData.giaoDien || "dang_nhap";
-      }
-    }
-
-    return "dang_nhap";
-  };
-
 /**
  * Kiểm tra user có quyền trên 1 lớp không
  */
@@ -99,4 +67,3 @@ export const getAllowedClasses = (
     (cls) => userPerm[cls]
   );
 };
-

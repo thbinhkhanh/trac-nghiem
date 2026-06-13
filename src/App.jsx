@@ -21,7 +21,8 @@ import {
   Stack,
   Snackbar, 
   Alert,
-  Tooltip
+  Tooltip,
+  Switch
 } from "@mui/material";
 
 import { doc, setDoc } from "firebase/firestore";
@@ -91,6 +92,19 @@ function AppContent() {
 
   const handleMenuOpen = (e) => setAnchorEl(e.currentTarget);
   const handleMenuClose = () => setAnchorEl(null);
+
+  const [userGiaoDien, setUserGiaoDien] = useState(
+    localStorage.getItem("giaoDien") || "the_ten"
+  );
+
+  const toggleGiaoDien = () => {
+    setUserGiaoDien((prev) => {
+      const next = prev === "the_ten" ? "info" : "the_ten";
+      localStorage.setItem("giaoDien", next);
+      return next;
+    });
+  };
+  
 
   const handleLogout = () => {
     localStorage.removeItem("loggedIn");
@@ -211,29 +225,53 @@ function AppContent() {
             onClick={() => setOpenLogo(true)}
           />
 
+          {/* 🔥 CHƯA ĐĂNG NHẬP */}
           {!isLoggedIn ? (
-            <Button
-              component={Link}
-              to="/login"
+            <Box
               sx={{
-                color: "#fff",
                 ml: "auto",
-                textDecoration: "none",
-                "&:hover": {
-                  color: "#fff",
-                  textDecoration: "none",
-                },
-                "&:visited": {
-                  color: "#fff",
-                },
                 display: "flex",
                 alignItems: "center",
                 gap: 1,
               }}
             >
-              <LoginIcon sx={{ fontSize: 20 }} />
-              Đăng nhập
-            </Button>
+              {/* 🔥 TOGGLER nằm chung nhóm với Đăng nhập */}
+              <Tooltip
+                title={
+                  userGiaoDien === "the_ten"
+                    ? "Giao diện Thẻ tên"
+                    : "Giao diện Đăng nhập"
+                }
+              >
+                <Switch
+                  checked={userGiaoDien === "the_ten"}
+                  onChange={toggleGiaoDien}
+                  color="default"
+                />
+              </Tooltip>
+
+              <Button
+                component={Link}
+                to="/login"
+                sx={{
+                  color: "#fff",
+                  textDecoration: "none",
+                  "&:hover": {
+                    color: "#fff",
+                    textDecoration: "none",
+                  },
+                  "&:visited": {
+                    color: "#fff",
+                  },
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1,
+                }}
+              >
+                <LoginIcon sx={{ fontSize: 20 }} />
+                Đăng nhập
+              </Button>
+            </Box>
           ) : (
             <>
               <Button
@@ -257,6 +295,21 @@ function AppContent() {
                   gap: 1,
                 }}
               >
+                {/* 🔥 TOGGLER khi đã đăng nhập (đứng trước Năm học) */}
+                <Tooltip
+                  title={
+                    userGiaoDien === "the_ten"
+                      ? "Giao diện Thẻ tên"
+                      : "Giao diện Đăng nhập"
+                  }
+                >
+                  <Switch
+                    checked={userGiaoDien === "the_ten"}
+                    onChange={toggleGiaoDien}
+                    color="default"
+                  />
+                </Tooltip>
+
                 <Box
                   sx={{
                     minWidth: { xs: 70, sm: 130 },
@@ -314,12 +367,7 @@ function AppContent() {
                         boxShadow: "0 2px 8px rgba(255,255,255,0.25)",
                       }}
                     >
-                      <PersonIcon
-                        sx={{
-                          color: "#1976d2",
-                          fontSize: 22,
-                        }}
-                      />
+                      <PersonIcon sx={{ color: "#1976d2", fontSize: 22 }} />
                     </Box>
                   </Tooltip>
                 )}
@@ -468,7 +516,7 @@ function AppContent() {
           <Route
             path="/hocsinh"
             element={
-              config?.giaoDien === "the_ten" ? (
+              userGiaoDien === "the_ten" ? (
                 <HocSinh />
               ) : (
                 <Info />
@@ -503,12 +551,15 @@ function AppContent() {
             alignItems: "center",
             justifyContent: "center",
             zIndex: 2000,
-            cursor: "pointer"
+            cursor: "pointer",
           }}
         >
           {/* Khung trắng */}
           <Box
-            onClick={() => setOpenLogo(false)}
+            onClick={(e) => {
+              e.stopPropagation();
+              setOpenLogo(false);
+            }}
             sx={{
               width: "clamp(180px, 60vw, 320px)",
               height: "clamp(180px, 60vw, 320px)",
@@ -518,7 +569,7 @@ function AppContent() {
               alignItems: "center",
               justifyContent: "center",
               boxShadow: "0 10px 40px rgba(0,0,0,0.5)",
-              animation: "zoomIn 0.3s ease"
+              animation: "zoomIn 0.3s ease",
             }}
           >
             <Box
@@ -528,7 +579,7 @@ function AppContent() {
               sx={{
                 maxWidth: "85%",
                 maxHeight: "85%",
-                objectFit: "contain"
+                objectFit: "contain",
               }}
             />
           </Box>

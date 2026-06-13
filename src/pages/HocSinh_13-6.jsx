@@ -42,7 +42,6 @@ import { ConfigContext } from "../context/ConfigContext";
 ======================= */
 import { db } from "../firebase";
 import { collection, getDocs, doc, getDoc } from "firebase/firestore";
-import { getClassGiaoDien } from "../utils/permissionUtils";
 
 /* =======================
    Components
@@ -56,7 +55,6 @@ const SCHOOL_LIST = ["TH Lâm Văn Bền"];
 export default function HocSinh() {
   const navigate = useNavigate();
   const { config, setConfig } = useContext(ConfigContext);
-  const permissions = config?.class_permissions || {};
 
   /* =======================
     FORM / SELECTION STATE
@@ -185,18 +183,11 @@ export default function HocSinh() {
       // ==========================
       // UPDATE CONFIG
       // ==========================
-      const giaoDien = getClassGiaoDien(
+      setConfig((prev) => ({
+        ...prev,
         lop,
-        config?.class_permissions,
-        namHoc,
-        config?.giaoDien
-      );
-
-      setConfig({
-        lop,
-        mon: config?.mon || "Tin học",
-        giaoDien
-      });
+        mon: prev?.mon || "Tin học",
+      }));
 
       // ==========================
       // NAVIGATE
@@ -474,19 +465,6 @@ export default function HocSinh() {
               const newClass = e.target.value;
 
               setLop(newClass);
-
-              // lấy giao diện theo giáo viên sở hữu lớp
-              const giaoDien = getClassGiaoDien(
-                newClass,
-                config?.class_permissions,
-                namHoc,
-                config?.giaoDien
-              );
-
-              setConfig({
-                lop: newClass,
-                giaoDien
-              });
 
               localStorage.setItem(getLastClassKey(namHoc), newClass);
 

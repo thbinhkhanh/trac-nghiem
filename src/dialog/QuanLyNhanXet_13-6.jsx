@@ -56,7 +56,7 @@ const [namHoc, setNamHoc] = useState(
   `${currentYear}-${currentYear + 1}`
 );
 
-const loaiKy = "Cuối kỳ";
+const [loaiKy, setLoaiKy] = useState("Giữa kỳ");
 
 // ================= STATE: UI CONTROL =================
 const [selectedLevel, setSelectedLevel] = useState("TỐT");
@@ -73,7 +73,9 @@ const [tab, setTab] = useState(0); // 0 = Lý thuyết, 1 = Thực hành
   const fileRef = useRef(null);
 
   const getDocId = () => {
-    return "TinHoc";
+    const mon = "TinHoc";
+    const ky = loaiKy === "Giữa kỳ" ? "GiuaKy" : "CuoiKy";
+    return `${mon}_${ky}`;
   };
 
   const normalizeData = (raw) => {
@@ -86,27 +88,35 @@ const [tab, setTab] = useState(0); // 0 = Lý thuyết, 1 = Thực hành
   };
 
   const convertToFirestoreFormat = (data) => {
-    return {
-      tot: {
-        lyThuyet: data.TỐT?.lyThuyet || [],
-        thucHanh: data.TỐT?.thucHanh || [],
-      },
+    const isTinHoc = true;
 
-      kha: {
-        lyThuyet: data.KHÁ?.lyThuyet || [],
-        thucHanh: data.KHÁ?.thucHanh || [],
-      },
-
-      trungbinh: {
-        lyThuyet: data.ĐẠT?.lyThuyet || [],
-        thucHanh: data.ĐẠT?.thucHanh || [],
-      },
-
-      yeu: {
-        lyThuyet: data["CHƯA ĐẠT"]?.lyThuyet || [],
-        thucHanh: data["CHƯA ĐẠT"]?.thucHanh || [],
-      },
-    };
+    return isTinHoc
+      ? {
+          tinHoc: {
+            giuaKy:
+              loaiKy === "Giữa kỳ"
+                ? {
+                    tot: { thucHanh: data.TỐT || [] },
+                    kha: { thucHanh: data.KHÁ || [] },
+                    trungbinh: { thucHanh: data.ĐẠT || [] },
+                    yeu: { thucHanh: data["CHƯA ĐẠT"] || [] },
+                  }
+                : {},
+          },
+        }
+      : {
+          congNghe: {
+            giuaKy:
+              loaiKy === "Giữa kỳ"
+                ? {
+                    tot: { thucHanh: data.TỐT || [] },
+                    kha: { thucHanh: data.KHÁ || [] },
+                    trungbinh: { thucHanh: data.ĐẠT || [] },
+                    yeu: { thucHanh: data["CHƯA ĐẠT"] || [] },
+                  }
+                : {},
+          },
+        };
   };
 
   const loadData = async () => {
@@ -160,7 +170,7 @@ const [tab, setTab] = useState(0); // 0 = Lý thuyết, 1 = Thực hành
 
   useEffect(() => {
     if (open) loadData();
-  }, [open, namHoc]);
+  }, [open, namHoc, loaiKy]);
 
   const [editingId, setEditingId] = useState(null);
   const [editText, setEditText] = useState("");
@@ -242,7 +252,7 @@ const [tab, setTab] = useState(0); // 0 = Lý thuyết, 1 = Thực hành
           if (!mon || !ky || !loai || !level || !text) return;
 
           // chỉ lấy đúng view đang chọn
-          if (ky !== "Cuối kỳ") return;
+          if (ky !== loaiKy) return;
 
           const item = {
             id: crypto.randomUUID(),
@@ -388,6 +398,21 @@ const [tab, setTab] = useState(0); // 0 = Lý thuyết, 1 = Thực hành
       {/* FILTER */}
       <Paper sx={{ p: 2, mb: 2 }}>
         <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+
+          {/* LOẠI KỲ */}
+          <Box sx={{ flex: 1, maxWidth: 130, minWidth: 120 }}>
+            <TextField
+              select
+              size="small"
+              label="Học kỳ"
+              value={loaiKy}
+              onChange={(e) => setLoaiKy(e.target.value)}
+              fullWidth
+            >
+              <MenuItem value="Cuối kỳ">Cuối kỳ</MenuItem>
+              <MenuItem value="Giữa kỳ">Giữa kỳ</MenuItem>
+            </TextField>
+          </Box>
 
           {/* MỨC ĐỘ */}
           <Box sx={{ flex: 1, maxWidth: 130, minWidth: 120 }}>
