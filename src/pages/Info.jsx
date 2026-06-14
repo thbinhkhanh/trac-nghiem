@@ -220,7 +220,7 @@ export default function Info() {
         lop,
         "STUDENTS",
         student.id
-      );
+      ); 
 
       const examSnap = await getDoc(examRef);
 
