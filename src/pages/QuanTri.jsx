@@ -585,7 +585,7 @@ export default function QuanTri() {
                   </Box>
 
                   {/* GIAO DIỆN */}
-                  <Box sx={{ p: 1.6, bgcolor: "#fff", border: "1px solid #e2e8f0" }}>
+                  {/*<Box sx={{ p: 1.6, bgcolor: "#fff", border: "1px solid #e2e8f0" }}>
                     <Typography fontWeight={700}>Giao diện</Typography>
 
                     <RadioGroup
@@ -598,7 +598,7 @@ export default function QuanTri() {
                       <FormControlLabel value="dang_nhap" control={<Radio />} label="Đăng nhập" />
                       <FormControlLabel value="the_ten" control={<Radio />} label="Thẻ tên" />
                     </RadioGroup>
-                  </Box>
+                  </Box>*/}
 
                   {/* LOẠI ĐỀ */}
                   <Box sx={{ p: 1.6, bgcolor: "#fff", border: "1px solid #e2e8f0" }}>

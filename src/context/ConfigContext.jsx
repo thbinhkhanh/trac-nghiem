@@ -57,18 +57,10 @@ export const ConfigProvider = ({ children }) => {
         const data = snapshot.data();
 
         setConfig((prev) => {
-          const newConfig = {
-            ...defaultConfig,
-            ...prev,
-            ...data,
-
-            class_permissions:
-              data.class_permissions ??
-              prev.class_permissions ??
-              {},
-          };
-
-          return newConfig;
+          const hasDiff = Object.keys(defaultConfig).some(
+            (key) => prev[key] !== data[key]
+          );
+          return hasDiff ? { ...prev, ...data } : prev;
         });
       },
       (err) => console.error("❌ Firestore snapshot lỗi:", err)
