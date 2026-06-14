@@ -202,33 +202,55 @@ export default function Info() {
       const namHoc = namHocRaw.replaceAll("-", "_");
       const hocKy = config?.hocKy || "Cuối năm";
 
-      // 🔥 KEY CHUẨN GIỐNG HỆ THỐNG LƯU
-      const studentKey = convertToId(fullname);
+      // ======================
+      // KIỂM TRA KẾT QUẢ KTĐK
+      // ======================
+      const student = students.find(
+        (s) => formatName(s.hoTen) === formatName(fullname)
+      );
+
+      if (!student) {
+        setErrorMsg("❌ Không tìm thấy học sinh!");
+        return;
+      }
 
       const examRef = doc(
         db,
-        `DATA_KTDK_${namHoc}`,
-        hocKy,
+        `DATA_HOCSINH_${namHoc}`,
         lop,
-        studentKey
+        "STUDENTS",
+        student.id
       );
 
       const examSnap = await getDoc(examRef);
 
-      // ======================
-      // ĐÃ LÀM BÀI
-      // ======================
       if (examSnap.exists()) {
         const data = examSnap.data();
 
-        setResultData({
-          ...data,
-          lop,
-          hoVaTen: fullname,
-        });
+        const hkMap = {
+          "Giữa kỳ I": "gki",
+          "Cuối kỳ I": "cki",
+          "Giữa kỳ II": "gkii",
+          "Cuối năm": "cn",
+        };
 
-        setOpenResultDialog(true);
-        return;
+        const hkField = hkMap[config?.hocKy] || "cki";
+
+        // chỉ kiểm tra KTĐK
+        const result = data?.Ktdk?.[hkField];
+
+        if (result) {
+          setResultData({
+            hoVaTen: data.hoTen || fullname,
+            lop: data.lop || lop,
+            lyThuyet: result.lyThuyet ?? "",
+            ngayKiemTra: result.ngayKiemTra || "",
+            thoiGianLamBai: result.thoiGianLamBai || "",
+          });
+
+          setOpenResultDialog(true);
+          return;
+        }
       }
 
       // ======================

@@ -143,7 +143,7 @@ export const exportKTDK = async (students, className, term = "CKI", subject = "T
       { width: 15 },
       { width: 15 },
       { width: 15 },
-      { width: 45 },
+      { width: 70 },
     ];
 
     // 💾 Xuất file

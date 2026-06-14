@@ -145,32 +145,42 @@ export default function HocSinh() {
 
       const examRef = doc(
         db,
-        `DATA_KTDK_${namHoc}`,
-        hocKy,
+        `DATA_HOCSINH_${namHoc}`,
         lop,
-        studentKey
+        "STUDENTS",
+        student.id
       );
 
       const examSnap = await getDoc(examRef);
 
-      // ======================
-      // CÓ ĐIỂM
-      // ======================
       if (examSnap.exists()) {
         const data = examSnap.data();
 
-        setResultData({
-          hoVaTen: data.hoVaTen || student.hoTen,
-          lop: data.lop || student.lop,
-          lyThuyet: data.lyThuyet ?? data.diem ?? 0, // 🔥 FIX QUAN TRỌNG
-          mon: data.mon,
-          ngayKiemTra: data.ngayKiemTra,
-          thoiGianLamBai: data.thoiGianLamBai,
-        });
+        const hkMap = {
+          "Giữa kỳ I": "gki",
+          "Cuối kỳ I": "cki",
+          "Giữa kỳ II": "gkii",
+          "Cuối năm": "cn",
+        };
 
-        setHasResult(true);
-        setOpenResultDialog(true);
-        return;
+        const hkField = hkMap[config?.hocKy] || "cki";
+
+        // dữ liệu KTĐK của học kỳ hiện tại
+        const hkData = data?.Ktdk?.[hkField];
+
+        if (hkData?.lyThuyet != null) {
+          setResultData({
+            hoVaTen: data.hoTen || student.hoTen,
+            lop,
+            lyThuyet: hkData.lyThuyet,
+            ngayKiemTra: hkData.ngayKiemTra || "",
+            thoiGianLamBai: hkData.thoiGianLamBai || "",
+          });
+
+          setHasResult(true);
+          setOpenResultDialog(true);
+          return;
+        }
       }
 
       // ======================

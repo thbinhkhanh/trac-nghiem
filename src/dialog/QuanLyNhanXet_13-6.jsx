@@ -331,7 +331,29 @@ const [tab, setTab] = useState(0); // 0 = Lý thuyết, 1 = Thực hành
     }
   };
 
+  const handleExport = () => {
+    const current = data[selectedLevel] || {};
+    const list = tab === 0 ? current.lyThuyet : current.thucHanh;
+
+    const rows = (list || []).map((item) => ({
+      "Nội dung nhận xét": item.text,
+      "Mức đạt": selectedLevel,
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+    const workbook = XLSX.utils.book_new();
+
+    XLSX.utils.book_append_sheet(workbook, worksheet, "NhanXet");
+
+    XLSX.writeFile(
+      workbook,
+      `NhanXet_${selectedLevel}_${tab === 0 ? "LyThuyet" : "ThucHanh"}.xlsx`
+    );
+  };
+
   const currentList = data[selectedLevel]?.[mode] || [];
+
+
 
   return (
     <Dialog
@@ -452,6 +474,19 @@ const [tab, setTab] = useState(0); // 0 = Lý thuyết, 1 = Thực hành
             }}
           >
             Upload Excel
+          </Button>
+
+          <Button
+            startIcon={<UploadFileIcon />}
+            onClick={handleExport}
+            sx={{
+              whiteSpace: "nowrap",
+              minWidth: "auto",
+              px: 1.5,
+              height: 40,
+            }}
+          >
+            Tải Excel
           </Button>
 
         </Stack>

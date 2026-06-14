@@ -29,6 +29,9 @@ import * as XLSX from "xlsx";
 import { db } from "../firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 
+import ExcelJS from "exceljs";
+import { saveAs } from "file-saver";
+
 // ================= MUI ICONS =================
 import CloseIcon from "@mui/icons-material/Close";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
@@ -37,6 +40,7 @@ import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
+import DownloadIcon from "@mui/icons-material/Download";
 
 // ================= CONTEXT =================
 import { ConfigContext } from "../context/ConfigContext";
@@ -61,7 +65,7 @@ const loaiKy = "Cuối kỳ";
 // ================= STATE: UI CONTROL =================
 const [selectedLevel, setSelectedLevel] = useState("TỐT");
 const [mode, setMode] = useState("lyThuyet");
-const [tab, setTab] = useState(0); // 0 = Lý thuyết, 1 = Thực hành
+const [tab, setTab] = useState(0); // 0 = Lí thuyết, 1 = Thực hành
 
   const [data, setData] = useState({
     TỐT: [],
@@ -217,13 +221,16 @@ const [tab, setTab] = useState(0); // 0 = Lý thuyết, 1 = Thực hành
     const reader = new FileReader();
 
     const norm = (s) =>
-      s?.toString().normalize("NFC").replace(/\s+/g, " ").trim();
+      String(s || "")
+        .normalize("NFC")
+        .replace(/\s+/g, " ")
+        .trim();
 
     reader.onload = (ev) => {
       try {
         const workbook = XLSX.read(ev.target.result, { type: "binary" });
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
-        const json = XLSX.utils.sheet_to_json(sheet);
+        const json = XLSX.utils.sheet_to_json(sheet, { defval: "" });
 
         const newData = {
           TỐT: { lyThuyet: [], thucHanh: [] },
@@ -233,38 +240,75 @@ const [tab, setTab] = useState(0); // 0 = Lý thuyết, 1 = Thực hành
         };
 
         json.forEach((row) => {
-          const mon = norm(row["Môn"]);
-          const ky = norm(row["Học kỳ"]);
-          const loai = norm(row["Loại"])?.toLowerCase();
-          const level = norm(row["Mức độ"])?.toUpperCase();
-          const text = norm(row["Nội dung"]);
+          const level = norm(
+            row["MỨC ĐẠT"] ?? row["Mức đạt"]
+          ).toUpperCase();
 
-          if (!mon || !ky || !loai || !level || !text) return;
+          const loai = norm(
+            row["LOẠI"] ?? row["Loại"]
+          ).toLowerCase();
 
-          // chỉ lấy đúng view đang chọn
-          if (ky !== "Cuối kỳ") return;
+          const text = norm(
+            row["NỘI DUNG NHẬN XÉT"] ?? row["Nội dung nhận xét"]
+          );
+
+          if (!level || !loai || !text) return;
+
+          // Xác định lý thuyết / thực hành
+          let target = "";
+
+          if (loai.includes("lý")) {
+            target = "lyThuyet";
+          } else if (loai.includes("thực")) {
+            target = "thucHanh";
+          } else {
+            return;
+          }
 
           const item = {
             id: crypto.randomUUID(),
             text,
           };
 
-          const isLyThuyet = loai.includes("lý");
+          switch (level) {
+            case "TỐT":
+              newData.TỐT[target].push(item);
+              break;
 
-          const target = isLyThuyet ? "lyThuyet" : "thucHanh";
+            case "KHÁ":
+              newData.KHÁ[target].push(item);
+              break;
 
-          if (level === "TỐT") newData.TỐT[target].push(item);
-          else if (level === "KHÁ") newData.KHÁ[target].push(item);
-          else if (level === "ĐẠT") newData.ĐẠT[target].push(item);
-          else newData["CHƯA ĐẠT"][target].push(item);
+            case "ĐẠT":
+              newData.ĐẠT[target].push(item);
+              break;
+
+            case "CHƯA ĐẠT":
+              newData["CHƯA ĐẠT"][target].push(item);
+              break;
+
+            default:
+              break;
+          }
         });
 
         setData(newData);
 
         e.target.value = "";
+
+        setSnackbar({
+          open: true,
+          severity: "success",
+          message: "Upload dữ liệu thành công!",
+        });
       } catch (err) {
         console.error(err);
-        alert("File Excel sai định dạng");
+
+        setSnackbar({
+          open: true,
+          severity: "error",
+          message: "File Excel sai định dạng!",
+        });
       }
     };
 
@@ -319,6 +363,141 @@ const [tab, setTab] = useState(0); // 0 = Lý thuyết, 1 = Thực hành
         severity: "error",
       });
     }
+  };
+
+  const handleExport = async () => {
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet("NhanXet", {
+      pageSetup: {
+        paperSize: 9,
+        orientation: "portrait",
+        fitToPage: true,
+      },
+    });
+
+    // =========================
+    // HEADER
+    // =========================
+    sheet.columns = [
+      { header: "MỨC ĐẠT", key: "mucDat", width: 15 },
+      { header: "LOẠI", key: "loai", width: 15 },
+      { header: "NỘI DUNG NHẬN XÉT", key: "noiDung", width: 50 },
+    ];
+
+    const headerRow = sheet.getRow(1);
+    headerRow.height = 35;
+
+    headerRow.eachCell((cell) => {
+      cell.font = {
+        bold: true,
+        color: { argb: "FFFFFFFF" },
+        size: 12,
+      };
+
+      cell.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FF1976D2" },
+      };
+
+      cell.alignment = {
+        horizontal: "center",
+        vertical: "middle",
+        wrapText: true,
+      };
+
+      cell.border = {
+        top: { style: "thin" },
+        bottom: { style: "thin" },
+        left: { style: "thin" },
+        right: { style: "thin" },
+      };
+    });
+
+    // =========================
+    // DATA
+    // =========================
+    const levels = ["TỐT", "KHÁ", "ĐẠT", "CHƯA ĐẠT"];
+
+    levels.forEach((level) => {
+      const lyThuyet = data[level]?.lyThuyet || [];
+      const thucHanh = data[level]?.thucHanh || [];
+
+      lyThuyet.forEach((item) => {
+        const row = sheet.addRow({
+          mucDat: level,
+          loai: "Lí thuyết",
+          noiDung: item.text,
+        });
+
+        formatRow(row);
+      });
+
+      thucHanh.forEach((item) => {
+        const row = sheet.addRow({
+          mucDat: level,
+          loai: "Thực hành",
+          noiDung: item.text,
+        });
+
+        formatRow(row);
+      });
+    });
+
+    function formatRow(row) {
+      row.height = 28;
+
+      row.eachCell((cell, colNumber) => {
+        cell.alignment = {
+          vertical: "middle",
+          wrapText: true,
+          horizontal: colNumber === 3 ? "left" : "center",
+        };
+
+        cell.border = {
+          top: { style: "thin" },
+          bottom: { style: "thin" },
+          left: { style: "thin" },
+          right: { style: "thin" },
+        };
+
+        // Font
+        cell.font = {
+          //name: "Calibri",
+          size: 12,
+        };
+      });
+    }
+
+    // =========================
+    // DROPDOWN RANGE (CHUẨN EXCELJS)
+    // =========================
+    const lastRow = sheet.rowCount;
+    const maxRow = lastRow + 200;
+
+    sheet.dataValidations.add(`A2:A${maxRow}`, {
+      type: "list",
+      allowBlank: true,
+      formulae: ['"TỐT,KHÁ,ĐẠT,CHƯA ĐẠT"'],
+    });
+
+    sheet.dataValidations.add(`B2:B${maxRow}`, {
+      type: "list",
+      allowBlank: true,
+      formulae: ['"Lí thuyết,Thực hành"'],
+    });
+
+    // =========================
+    // EXPORT
+    // =========================
+    const buffer = await workbook.xlsx.writeBuffer();
+
+    const blob = new Blob([buffer], {
+      type:
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+
+    saveAs(blob, `NhanXet_TinHoc.xlsx`);
   };
 
   const currentList = data[selectedLevel]?.[mode] || [];
@@ -387,7 +566,7 @@ const [tab, setTab] = useState(0); // 0 = Lý thuyết, 1 = Thực hành
     <DialogContent sx={{ flex: 1, overflowY: "auto" }}>
       {/* FILTER */}
       <Paper sx={{ p: 2, mb: 2 }}>
-        <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+        <Stack direction="row" spacing={1} alignItems="center" flexWrap="nowrap">
 
           {/* MỨC ĐỘ */}
           <Box sx={{ flex: 1, maxWidth: 130, minWidth: 120 }}>
@@ -427,6 +606,19 @@ const [tab, setTab] = useState(0); // 0 = Lý thuyết, 1 = Thực hành
             }}
           >
             Upload Excel
+          </Button>
+
+          <Button
+            startIcon={<DownloadIcon />}
+            onClick={handleExport}
+            sx={{
+              whiteSpace: "nowrap",
+              minWidth: "auto",
+              px: 1.5,
+              height: 40,
+            }}
+          >
+            Tải Excel
           </Button>
 
         </Stack>
