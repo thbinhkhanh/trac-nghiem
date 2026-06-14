@@ -93,9 +93,10 @@ function AppContent() {
   const handleMenuOpen = (e) => setAnchorEl(e.currentTarget);
   const handleMenuClose = () => setAnchorEl(null);
 
-  const [userGiaoDien, setUserGiaoDien] = useState(
-    localStorage.getItem("giaoDien") || "the_ten"
-  );
+  //const [userGiaoDien, setUserGiaoDien] = useState(
+  //  localStorage.getItem("giaoDien") || "the_ten"
+  //);
+  const [userGiaoDien, setUserGiaoDien] = useState("the_ten");
 
   const toggleGiaoDien = () => {
     setUserGiaoDien((prev) => {
